@@ -1,0 +1,35 @@
+name: HRZones
+options:
+  bundleIdPrefix: com.hrzones
+  deploymentTarget:
+    iOS: "26.0"
+targets:
+  HRZones:
+    type: application
+    platform: iOS
+    sources:
+      - Sources
+    scheme: {}
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hrzones.app
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
+    info:
+      path: Support/Info.plist
+      properties:
+        CFBundleDisplayName: HR Zones
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIBackgroundModes:
+          - audio
+        NSHealthShareUsageDescription: HR Zones reads your heart rate from your AirPods during workouts.
+        NSHealthUpdateUsageDescription: HR Zones saves your workouts to Apple Health.
+    entitlements:
+      path: Support/HRZones.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
