@@ -10,8 +10,8 @@ Built with Flutter. Project brief: `CLAUDE.md`, full spec: `docs/SPEC.md`.
 4. Free Apple ID: the app expires after 7 days – re-run Sideloadly to refresh.
 
 ## Web preview
-Each run also produces **web-preview** (the app running in a browser, native features like beeps stubbed out).
-It is published to GitHub Pages from `main` once Pages is enabled (see CLAUDE.md).
+Open **https://dankarmazin-a11y.github.io/HRzones/** in Safari (Share → Add to Home Screen to keep it as an icon).
+It updates on every push to `main`. Native features like beeps don't work in the browser.
 
 ## Test checklist (current build)
 - [ ] App opens with 4 tabs: Home, Workouts, Progress, Profile.

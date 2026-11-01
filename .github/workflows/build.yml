@@ -1,8 +1,8 @@
 name: Build
 
 # check  – analyze + unit tests (every push and PR, Linux, cheap)
-# web    – Flutter web preview, uploaded as an artifact; deployed to GitHub
-#          Pages from main when the repo variable PAGES_ENABLED is "true"
+# web    – Flutter web preview; deployed to GitHub Pages from main
+#          (https://dankarmazin-a11y.github.io/HRzones/)
 # ios    – unsigned IPA for Sideloadly (main + manual runs; macOS minutes are expensive)
 
 on:
@@ -48,7 +48,7 @@ jobs:
           name: web-preview
 
   deploy-web:
-    if: github.ref == 'refs/heads/main' && vars.PAGES_ENABLED == 'true'
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: web
     runs-on: ubuntu-latest
     permissions:

@@ -38,7 +38,7 @@ The owner is not a developer. Explain steps plainly, keep instructions short, an
 - Done: Flutter project at repo root (`lib/`, `ios/`, `web/`, bundle id `com.hrzones.app`, Flutter 3.47.9 pinned in CI); 4-tab shell; `HeartRateSource` interface + simulated source; 5 zones (220 − age); `ZoneAlertEngine` (5 s grace, 2 bpm hysteresis, cooldown, 15 s no-signal) with unit tests; native iOS beeper ported from Phase 0 (`ios/Runner/BeeperPlugin.swift`, channel `hrzones/beeper`); CI workflow `build.yml` (check → web preview + IPA).
 - Next: local DB (drift), exercise DB seed, templates, live workout logging, BLE HR source, settings persistence.
 - State management: plain `ChangeNotifier` + `InheritedNotifier` (`HrScope`) – no package yet.
-- The repo is **private**: GitHub Pages needs a paid plan (or a public repo). Deploy job runs only when repo variable `PAGES_ENABLED=true`; otherwise download the `web-preview` artifact. iOS job runs only on `main` / manual dispatch to save macOS minutes (10× multiplier on private repos).
+- The repo is **public** (made public 2026-11-01 so GitHub Pages is free). Pages source = GitHub Actions; every push to `main` deploys the web preview to https://dankarmazin-a11y.github.io/HRzones/. The iOS job runs only on `main` / manual dispatch.
 
 ## Working conventions
 - Small, working increments; every push to `main` should build green.
