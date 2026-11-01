@@ -1,44 +1,89 @@
-name: Build IPA
+name: Build
+
+# check  – analyze + unit tests (every push and PR, Linux, cheap)
+# web    – Flutter web preview, uploaded as an artifact; deployed to GitHub
+#          Pages from main when the repo variable PAGES_ENABLED is "true"
+# ios    – unsigned IPA for Sideloadly (main + manual runs; macOS minutes are expensive)
 
 on:
   workflow_dispatch:
+  pull_request:
   push:
-    branches: [main]
     paths-ignore:
       - '**.md'
       - 'docs/**'
 
+env:
+  FLUTTER_VERSION: '3.47.9'
+
 jobs:
-  build:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed lib test
+      - run: flutter analyze
+      - run: flutter test
+
+  web:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter build web --release --base-href "/${{ github.event.repository.name }}/"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+          name: web-preview
+
+  deploy-web:
+    if: github.ref == 'refs/heads/main' && vars.PAGES_ENABLED == 'true'
+    needs: web
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: web-preview
+
+  ios:
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    needs: check
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install XcodeGen
-        run: brew install xcodegen
-
-      - name: Generate Xcode project
-        run: xcodegen generate
-
-      - name: Build app (unsigned)
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Build iOS app (unsigned)
+        run: flutter build ios --release --no-codesign
+      - name: Package IPA
         run: |
-          xcodebuild -project HRZones.xcodeproj -scheme HRZones \
-            -configuration Release -sdk iphoneos \
-            -destination 'generic/platform=iOS' \
-            -derivedDataPath build \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
-            build
-
-      - name: Embed HealthKit entitlement and package IPA
-        run: |
-          APP=build/Build/Products/Release-iphoneos/HRZones.app
-          codesign --force --sign - --entitlements Support/HRZones.entitlements "$APP"
-          echo "Entitlements inside the app:"
-          codesign -d --entitlements - "$APP"
+          APP=build/ios/iphoneos/Runner.app
+          codesign --force --deep --sign - "$APP"
           mkdir -p Payload
           cp -R "$APP" Payload/
           zip -qry HRZones.ipa Payload
-
       - uses: actions/upload-artifact@v4
         with:
           name: HRZones-ipa

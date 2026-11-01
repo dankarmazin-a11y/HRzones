@@ -27,14 +27,21 @@ The owner is not a developer. Explain steps plainly, keep instructions short, an
 
 ## Roadmap
 - **Phase 0 – feasibility (done):** native Swift proof of concept in `Sources/` + `project.yml` (XcodeGen). Keep its HealthKit/beep code as the reference for the Flutter iOS module; remove it once ported.
-- **Phase 1 – Flutter skeleton + strength log (next):** 4 tabs (Home, Workouts, Progress, Profile); local DB; HR source interface with simulated + BLE sources; beep engine (native iOS module); exercise DB with muscle filters; templates; live workout logging (sets, weight, reps, RPE, set types, previous values, rest timer, supersets); post-workout summary and PRs; web preview + IPA in CI.
+- **Phase 1 – Flutter skeleton + strength log (in progress):** 4 tabs (Home, Workouts, Progress, Profile); local DB; HR source interface with simulated + BLE sources; beep engine (native iOS module); exercise DB with muscle filters; templates; live workout logging (sets, weight, reps, RPE, set types, previous values, rest timer, supersets); post-workout summary and PRs; web preview + IPA in CI.
 - **Phase 2 – running:** GPS route + map, pace, km splits, voice announcements, HR zones on route, PRs (1k/5k/10k/HM).
 - **Phase 3 – body & progress:** weight, body fat, circumferences, charts, muscle heat map, weekly stats, export (JSON/CSV).
 - **Gate:** owner uses it for a full month instead of Hevy/NRC → buy Developer account.
 - **Phase 4 – closed beta:** HealthKit + AirPods HR, TestFlight to 20–50 testers, Live Activity.
 - **Phase 5 – public:** cloud sync, Android, design polish, App Store.
 
+### Phase 1 status
+- Done: Flutter project at repo root (`lib/`, `ios/`, `web/`, bundle id `com.hrzones.app`, Flutter 3.47.9 pinned in CI); 4-tab shell; `HeartRateSource` interface + simulated source; 5 zones (220 − age); `ZoneAlertEngine` (5 s grace, 2 bpm hysteresis, cooldown, 15 s no-signal) with unit tests; native iOS beeper ported from Phase 0 (`ios/Runner/BeeperPlugin.swift`, channel `hrzones/beeper`); CI workflow `build.yml` (check → web preview + IPA).
+- Next: local DB (drift), exercise DB seed, templates, live workout logging, BLE HR source, settings persistence.
+- State management: plain `ChangeNotifier` + `InheritedNotifier` (`HrScope`) – no package yet.
+- The repo is **private**: GitHub Pages needs a paid plan (or a public repo). Deploy job runs only when repo variable `PAGES_ENABLED=true`; otherwise download the `web-preview` artifact. iOS job runs only on `main` / manual dispatch to save macOS minutes (10× multiplier on private repos).
+
 ## Working conventions
 - Small, working increments; every push to `main` should build green.
 - Prefer well-maintained packages (e.g. sqflite/drift, flutter_blue_plus, fl_chart); avoid anything that needs a paid entitlement until Phase 4.
 - Keep this file updated when a decision changes or a phase completes.
+- Format Dart with `dart format` (page width 120, set in `analysis_options.yaml`); CI fails on unformatted code.

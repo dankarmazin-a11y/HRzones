@@ -1,26 +1,29 @@
-# HR Zones – Phase 0
+# HR Zones
 
-Proof of concept: live heart rate from AirPods Pro 3 on iPhone, with beeps when you leave your target range.
+One iPhone app for hybrid athletes: strength log, run tracking, body metrics and live heart-rate zone beeps.
+Built with Flutter. Project brief: `CLAUDE.md`, full spec: `docs/SPEC.md`.
 
-## Build (no Mac needed)
-1. Upload this folder's contents to a new GitHub repository (keep the `.github` folder).
-2. Go to **Actions → Build IPA → Run workflow** (it also runs on every push to `main`).
-3. When it finishes (~5–10 min), open the run and download **HRZones-ipa** (a zip containing `HRZones.ipa`).
+## Get the app on your iPhone (no Mac needed)
+1. GitHub → **Actions → Build**. Every push to `main` builds automatically; for another branch use **Run workflow**.
+2. Open the finished run and download **HRZones-ipa** (a zip with `HRZones.ipa`).
+3. Drag `HRZones.ipa` into **Sideloadly**, enter your Apple ID, click Start.
+4. Free Apple ID: the app expires after 7 days – re-run Sideloadly to refresh.
 
-## Install (Windows)
-1. Install iTunes and iCloud from apple.com (not the Microsoft Store versions), then Sideloadly.
-2. Connect the iPhone by USB, tap "Trust" on the phone.
-3. Drag `HRZones.ipa` into Sideloadly, enter your Apple ID, click Start.
-4. On the iPhone: Settings → Privacy & Security → Developer Mode → On (restart), then
-   Settings → General → VPN & Device Management → trust your Apple ID.
-5. Free Apple ID: the app expires after 7 days – re-run Sideloadly to refresh.
+## Web preview
+Each run also produces **web-preview** (the app running in a browser, native features like beeps stubbed out).
+It is published to GitHub Pages from `main` once Pages is enabled (see CLAUDE.md).
 
-## Test checklist
-- [ ] App opens, "Test HIGH/LOW beep" plays sound.
-- [ ] Start workout → Health permission screen appears → allow all.
-- [ ] Heart rate appears within ~30 s (log shows "First heart rate received").
-- [ ] Set Max below your current HR → beeps after ~5 s.
-- [ ] Lock the screen with music playing → beeps still come.
-- [ ] Finish & save → workout appears in the Fitness/Health app.
+## Test checklist (current build)
+- [ ] App opens with 4 tabs: Home, Workouts, Progress, Profile.
+- [ ] Home → "Test HIGH beep" plays 3 high beeps, "Test LOW beep" 2 low beeps.
+- [ ] Start monitoring, drag the simulated HR above the range → after ~5 s: 3 beeps, then every 10 s.
+- [ ] Below the range → 2 low beeps.
+- [ ] "Simulate signal loss" → after 15 s shows "--" and beeps stop.
+- [ ] With music playing: beeps play over the music without stopping it.
+- [ ] Lock the screen while out of range → beeps keep coming.
 
-If something fails, the **Diagnostics log** at the bottom of the screen shows why.
+## Code map
+- `lib/hr/` – heart-rate sources (simulated now; Bluetooth and HealthKit later), zones, alert logic.
+- `lib/beep/` – beep interface (Dart) → `ios/Runner/BeeperPlugin.swift` (native audio).
+- `lib/ui/` – screens.
+- `Sources/`, `project.yml` – Phase 0 Swift proof of concept, kept as reference for the HealthKit port.
