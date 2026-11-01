@@ -33,6 +33,15 @@ class HrMonitor extends ChangeNotifier {
   StreamSubscription<HrReading>? _sub;
   Timer? _ticker;
 
+  // Stats for the current workout (avg/max) and since the last completed set.
+  int _sessionSum = 0;
+  int _sessionCount = 0;
+  int? _sessionMax;
+  int? _intervalMax;
+
+  /// Called when a user-facing setting changes (to persist it).
+  VoidCallback? onSettingsChanged;
+
   int get age => _age;
   HrZones get zones => _zones;
   HrRange get range => engine.range;
@@ -78,6 +87,10 @@ class HrMonitor extends ChangeNotifier {
 
   void _onReading(HrReading r) {
     _bpm = r.bpm;
+    _sessionSum += r.bpm;
+    _sessionCount++;
+    if (_sessionMax == null || r.bpm > _sessionMax!) _sessionMax = r.bpm;
+    if (_intervalMax == null || r.bpm > _intervalMax!) _intervalMax = r.bpm;
     final alert = engine.onReading(r.bpm, r.time);
     if (alert != null) {
       _lastAlert = alert;
@@ -87,25 +100,48 @@ class HrMonitor extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Average HR of the current workout (null without readings).
+  int? get sessionAvg => _sessionCount == 0 ? null : (_sessionSum / _sessionCount).round();
+  int? get sessionMax => _sessionMax;
+
+  void resetSession() {
+    _sessionSum = 0;
+    _sessionCount = 0;
+    _sessionMax = null;
+    _intervalMax = null;
+  }
+
+  /// Max HR since the previous call (used per completed set).
+  int? takeIntervalMax() {
+    final v = _intervalMax;
+    _intervalMax = null;
+    return v;
+  }
+
   void setRange(HrRange range) {
     engine.range = range;
-    notifyListeners();
+    _settingsChanged();
   }
 
   void setAge(int age) {
     _age = age;
     _zones = HrZones.fromAge(age);
-    notifyListeners();
+    _settingsChanged();
   }
 
   void setCooldown(Duration cooldown) {
     engine.settings = engine.settings.copyWith(cooldown: cooldown);
-    notifyListeners();
+    _settingsChanged();
   }
 
   void setVolume(double v) {
     _volume = v;
     beeper.setVolume(v);
+    _settingsChanged();
+  }
+
+  void _settingsChanged() {
+    onSettingsChanged?.call();
     notifyListeners();
   }
 
