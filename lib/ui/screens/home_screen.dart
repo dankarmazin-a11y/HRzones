@@ -7,6 +7,7 @@ import '../../hr/zone_alert_engine.dart';
 import '../../hr/zones.dart';
 import '../../workout/stats.dart';
 import '../history/history_screen.dart';
+import '../number_input.dart';
 import '../zone_colors.dart';
 import 'workouts_screen.dart';
 
@@ -172,12 +173,34 @@ class HrMonitorCard extends StatelessWidget {
               _AlertBanner(alert: m.lastAlert!, at: m.lastAlertAt!),
             ],
             const SizedBox(height: 16),
-            Text('Target range: ${m.range}', style: text.titleSmall),
+            Row(
+              children: [
+                Text('Target range: ', style: text.titleSmall),
+                EditableNumber(
+                  value: m.range.min,
+                  title: 'Range minimum (bpm)',
+                  min: 40,
+                  max: m.range.max - 1,
+                  style: text.titleSmall,
+                  onChanged: (v) => m.setRange(HrRange(min: v.round(), max: m.range.max)),
+                ),
+                Text('–', style: text.titleSmall),
+                EditableNumber(
+                  value: m.range.max,
+                  title: 'Range maximum (bpm)',
+                  min: m.range.min + 1,
+                  max: 240,
+                  style: text.titleSmall,
+                  onChanged: (v) => m.setRange(HrRange(min: m.range.min, max: v.round())),
+                ),
+                Text(' bpm', style: text.titleSmall),
+              ],
+            ),
             RangeSlider(
               min: 60,
               max: 220,
               divisions: 160,
-              values: RangeValues(m.range.min.toDouble(), m.range.max.toDouble()),
+              values: RangeValues(m.range.min.clamp(60, 219).toDouble(), m.range.max.clamp(61, 220).toDouble()),
               labels: RangeLabels('${m.range.min}', '${m.range.max}'),
               onChanged: (v) {
                 if (v.end - v.start >= 1) m.setRange(HrRange(min: v.start.round(), max: v.end.round()));
@@ -196,13 +219,26 @@ class HrMonitorCard extends StatelessWidget {
             ),
             if (sim != null) ...[
               const Divider(height: 32),
-              Text('Simulated HR: ${sim.bpm} bpm', style: text.titleSmall),
+              Row(
+                children: [
+                  Text('Simulated HR: ', style: text.titleSmall),
+                  EditableNumber(
+                    value: sim.bpm,
+                    title: 'Simulated heart rate (bpm)',
+                    min: 30,
+                    max: 240,
+                    style: text.titleSmall,
+                    onChanged: (v) => m.setSimulatedBpm(v.round()),
+                  ),
+                  Text(' bpm', style: text.titleSmall),
+                ],
+              ),
               Slider(
                 key: const Key('simSlider'),
                 min: 40,
                 max: 210,
                 divisions: 170,
-                value: sim.bpm.toDouble(),
+                value: sim.bpm.clamp(40, 210).toDouble(),
                 label: '${sim.bpm}',
                 onChanged: (v) => m.setSimulatedBpm(v.round()),
               ),

@@ -1,16 +1,29 @@
 import 'package:flutter/material.dart';
 
+import '../../app_services.dart';
 import '../../data/database.dart';
 import '../../data/exercise_repository.dart';
 
-class ExerciseDetailScreen extends StatelessWidget {
+class ExerciseDetailScreen extends StatefulWidget {
   const ExerciseDetailScreen({super.key, required this.exercise});
 
   final Exercise exercise;
 
   @override
+  State<ExerciseDetailScreen> createState() => _ExerciseDetailScreenState();
+}
+
+class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
+  late Exercise _exercise = widget.exercise;
+
+  Future<void> _setTracking(TrackingType t) async {
+    final updated = await Services.of(context).exercises.setTrackingType(_exercise.id, t);
+    if (mounted) setState(() => _exercise = updated);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final e = exercise;
+    final e = _exercise;
     final text = Theme.of(context).textTheme;
     final secondary = e.secondaryMuscles.split(',').where((m) => m.isNotEmpty).map(titleCase).join(', ');
     final steps = e.instructions.split('\n').where((s) => s.trim().isNotEmpty).toList();
@@ -39,6 +52,19 @@ class ExerciseDetailScreen extends StatelessWidget {
               if (e.equipment != null) Chip(label: Text(titleCase(e.equipment!))),
               Chip(label: Text(titleCase(e.category))),
             ],
+          ),
+          const SizedBox(height: 16),
+          Text('Log this exercise as', style: text.titleSmall),
+          const SizedBox(height: 8),
+          SegmentedButton<TrackingType>(
+            showSelectedIcon: false,
+            segments: const [
+              ButtonSegment(value: TrackingType.weightReps, label: Text('Weight × reps')),
+              ButtonSegment(value: TrackingType.bodyweightReps, label: Text('Reps')),
+              ButtonSegment(value: TrackingType.duration, label: Text('Time')),
+            ],
+            selected: {e.trackingType == TrackingType.distance ? TrackingType.duration : e.trackingType},
+            onSelectionChanged: (s) => _setTracking(s.first),
           ),
           if (steps.isNotEmpty) ...[
             const SizedBox(height: 16),

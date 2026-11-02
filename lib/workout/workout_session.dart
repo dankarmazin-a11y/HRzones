@@ -67,7 +67,43 @@ class WorkoutSummary {
   }
 }
 
-/// The workout currently being logged + the rest timer.
+enum TimerKind { rest, setTimer, countdown, stopwatch }
+
+/// The one timer shown in the bottom bar of a workout.
+class RunningTimer {
+  RunningTimer({required this.kind, required this.total, this.exercise, this.set}) : startedAt = DateTime.now();
+
+  final TimerKind kind;
+  final DateTime startedAt;
+
+  /// Length in seconds (0 for a stopwatch).
+  int total;
+  final LoggedExercise? exercise;
+  final LoggedSet? set;
+
+  /// Set timer → rest → next timed set: continue automatically.
+  bool chainNext = false;
+  final Duration _paused = Duration.zero;
+
+  int get elapsed => (DateTime.now().difference(startedAt) - _paused).inSeconds;
+
+  int get remaining {
+    final left = DateTime.now().difference(startedAt) - _paused;
+    final ms = total * 1000 - left.inMilliseconds;
+    return ms <= 0 ? 0 : (ms / 1000).ceil();
+  }
+
+  bool get countsDown => kind != TimerKind.stopwatch;
+
+  String get label => switch (kind) {
+    TimerKind.rest => 'Rest',
+    TimerKind.setTimer => exercise?.exercise.name ?? 'Set',
+    TimerKind.countdown => 'Timer',
+    TimerKind.stopwatch => 'Stopwatch',
+  };
+}
+
+/// The workout currently being logged + the timers.
 class WorkoutSession extends ChangeNotifier {
   WorkoutSession({required this.workouts, required this.exercises, required this.hr});
 
@@ -75,27 +111,44 @@ class WorkoutSession extends ChangeNotifier {
   final ExerciseRepository exercises;
   final HrMonitor hr;
 
+  /// Default seconds of rest between sets (saved as a setting).
+  int defaultRestSeconds = 90;
+
+  /// Rest between stretches / timed holds.
+  static const stretchRestSeconds = 10;
+
+  /// Length of a timed set when nothing was entered.
+  static const defaultSetSeconds = 30;
+
   ActiveWorkout? _active;
   ActiveWorkout? get active => _active;
 
   Timer? _saveTimer;
-  Timer? _restTicker;
-  DateTime? _restEndsAt;
-  int _restTotal = 0;
+  Timer? _ticker;
+  RunningTimer? _timer;
+  RunningTimer? get timer => _timer;
 
   /// Seconds left on the rest timer, or null when not resting.
-  int? get restRemaining {
-    final end = _restEndsAt;
-    if (end == null) return null;
-    final left = end.difference(DateTime.now()).inMilliseconds;
-    return left <= 0 ? 0 : (left / 1000).ceil();
-  }
-
-  int get restTotal => _restTotal;
+  int? get restRemaining => _timer?.kind == TimerKind.rest ? _timer!.remaining : null;
 
   Future<void> restore() async {
+    defaultRestSeconds = int.tryParse(await workouts.db.getSetting('defaultRestS') ?? '') ?? defaultRestSeconds;
     _active = await workouts.loadActive();
     notifyListeners();
+  }
+
+  int restFor(Exercise e) => e.isStretch ? stretchRestSeconds : defaultRestSeconds;
+
+  /// Sets the default rest and applies it to every (non-stretch) exercise of
+  /// the current workout.
+  Future<void> setDefaultRest(int seconds) async {
+    defaultRestSeconds = seconds;
+    for (final e in _active?.exercises ?? const <LoggedExercise>[]) {
+      if (!e.exercise.isStretch) e.restSeconds = seconds;
+    }
+    if (_active != null) _changed();
+    notifyListeners();
+    await workouts.db.setSetting('defaultRestS', '$seconds');
   }
 
   Future<void> startEmpty() async {
@@ -134,7 +187,7 @@ class WorkoutSession extends ChangeNotifier {
     final w = _active;
     if (w == null) return;
     for (final ex in list) {
-      final le = LoggedExercise(exercise: ex, restSeconds: ex.defaultRestSeconds);
+      final le = LoggedExercise(exercise: ex, restSeconds: restFor(ex));
       le.previous = await workouts.previousSets(ex.id, excludeWorkoutId: w.id);
       le.sets.add(LoggedSet(type: le.previousFor(0)?.setType ?? SetType.normal));
       w.exercises.add(le);
@@ -143,15 +196,23 @@ class WorkoutSession extends ChangeNotifier {
   }
 
   void removeExercise(LoggedExercise e) {
+    if (_timer?.exercise == e) stopTimer();
     _active?.exercises.remove(e);
     _changed();
   }
 
+  /// [to] is the final index (already adjusted for the removed item).
   void moveExercise(int from, int to) {
     final list = _active?.exercises;
-    if (list == null) return;
+    if (list == null || from == to) return;
     final e = list.removeAt(from);
     list.insert(to.clamp(0, list.length), e);
+    _changed();
+  }
+
+  /// Changes how [e] is logged; also saved for future workouts.
+  Future<void> setTrackingType(LoggedExercise e, TrackingType type) async {
+    e.exercise = await exercises.setTrackingType(e.exercise.id, type);
     _changed();
   }
 
@@ -187,17 +248,9 @@ class WorkoutSession extends ChangeNotifier {
   }
 
   void removeSet(LoggedExercise e, LoggedSet s) {
+    if (_timer?.set == s) stopTimer();
     e.sets.remove(s);
     _changed();
-  }
-
-  void updateSet(LoggedSet s, {double? weightKg, int? reps, int? durationS, double? rpe, bool clearRpe = false}) {
-    if (weightKg != null) s.weightKg = weightKg;
-    if (reps != null) s.reps = reps;
-    if (durationS != null) s.durationS = durationS;
-    if (rpe != null) s.rpe = rpe;
-    if (clearRpe) s.rpe = null;
-    _changed(notify: false);
   }
 
   void setWeight(LoggedSet s, double? v) {
@@ -232,56 +285,148 @@ class WorkoutSession extends ChangeNotifier {
       s.completedAt = null;
       s.maxHr = null;
     } else {
+      if (_timer?.set == s) _timer = null;
       final prev = e.previousFor(e.sets.indexOf(s));
       s.weightKg ??= prev?.weightKg;
       s.reps ??= prev?.reps;
       s.durationS ??= prev?.durationS;
-      s.completedAt = DateTime.now();
-      s.maxHr = hr.takeIntervalMax();
-      // In a superset, rest only after the last exercise of the group.
-      final list = _active!.exercises;
-      final i = list.indexOf(e);
-      final inSupersetBeforeEnd =
-          e.supersetGroup != null && i + 1 < list.length && list[i + 1].supersetGroup == e.supersetGroup;
-      if (!inSupersetBeforeEnd) startRest(e.restSeconds);
+      _complete(e, s);
     }
     _changed();
   }
+
+  void _complete(LoggedExercise e, LoggedSet s, {bool chain = false}) {
+    s.completedAt = DateTime.now();
+    s.maxHr = hr.takeIntervalMax();
+    // In a superset, rest only after the last exercise of the group.
+    final list = _active!.exercises;
+    final i = list.indexOf(e);
+    final inSupersetBeforeEnd =
+        e.supersetGroup != null && i + 1 < list.length && list[i + 1].supersetGroup == e.supersetGroup;
+    if (inSupersetBeforeEnd) {
+      if (chain) _startNextTimedSet(e);
+      return;
+    }
+    if (e.restSeconds > 0) {
+      _start(RunningTimer(kind: TimerKind.rest, total: e.restSeconds)..chainNext = chain);
+      _restChainFrom = chain ? e : null;
+    } else if (chain) {
+      _startNextTimedSet(e);
+    }
+  }
+
+  LoggedExercise? _restChainFrom;
 
   void setRestSeconds(LoggedExercise e, int seconds) {
     e.restSeconds = seconds;
     _changed();
   }
 
+  // ---- Timers ---------------------------------------------------------------
+
   void startRest(int seconds) {
     if (seconds <= 0) return;
-    _restTotal = seconds;
-    _restEndsAt = DateTime.now().add(Duration(seconds: seconds));
-    _restTicker?.cancel();
-    _restTicker = Timer.periodic(const Duration(milliseconds: 500), (_) {
-      if ((restRemaining ?? 0) <= 0) {
-        _restTicker?.cancel();
-        _restEndsAt = null;
-        hr.beeper.beep(frequency: 880, count: 1);
+    _start(RunningTimer(kind: TimerKind.rest, total: seconds));
+  }
+
+  /// Counts down a timed set (stretch, plank…). When it ends the set is
+  /// marked done, rest runs, and the next timed set starts automatically.
+  void startSetTimer(LoggedExercise e, LoggedSet s) {
+    final prev = e.previousFor(e.sets.indexOf(s));
+    final seconds = s.durationS ?? prev?.durationS ?? defaultSetSeconds;
+    s.durationS = seconds;
+    _start(RunningTimer(kind: TimerKind.setTimer, total: seconds, exercise: e, set: s));
+    _changed();
+  }
+
+  void startCountdown(int seconds) => _start(RunningTimer(kind: TimerKind.countdown, total: seconds));
+
+  void startStopwatch() => _start(RunningTimer(kind: TimerKind.stopwatch, total: 0));
+
+  /// Stops the bottom-bar timer. A running set timer counts as done with the
+  /// time held so far.
+  void stopTimer() {
+    final t = _timer;
+    _timer = null;
+    _ticker?.cancel();
+    _restChainFrom = null;
+    if (t != null && t.kind == TimerKind.setTimer && t.exercise != null && t.set != null) {
+      final held = t.elapsed;
+      if (held > 0 && _active?.exercises.contains(t.exercise) == true) {
+        t.set!.durationS = held;
+        _complete(t.exercise!, t.set!);
+        _changed();
       }
-      notifyListeners();
-    });
+    }
     notifyListeners();
   }
 
-  void adjustRest(int delta) {
-    final end = _restEndsAt;
-    if (end == null) return;
-    _restEndsAt = end.add(Duration(seconds: delta));
-    _restTotal = (_restTotal + delta).clamp(1, 3600);
+  /// Kept for older call sites/tests.
+  void skipRest() => stopTimer();
+
+  void adjustTimer(int delta) {
+    final t = _timer;
+    if (t == null || !t.countsDown) return;
+    t.total = (t.total + delta).clamp(1, 3600);
     notifyListeners();
   }
 
-  void skipRest() {
-    _restTicker?.cancel();
-    _restEndsAt = null;
+  void adjustRest(int delta) => adjustTimer(delta);
+
+  void _start(RunningTimer t) {
+    _timer = t;
+    _ticker?.cancel();
+    _ticker = Timer.periodic(const Duration(milliseconds: 250), (_) => _tick());
     notifyListeners();
   }
+
+  void _tick() {
+    final t = _timer;
+    if (t == null) {
+      _ticker?.cancel();
+      return;
+    }
+    if (t.countsDown && t.remaining <= 0) {
+      _ticker?.cancel();
+      _timer = null;
+      switch (t.kind) {
+        case TimerKind.setTimer:
+          hr.beeper.beep(frequency: 880, count: 2);
+          if (t.exercise != null && t.set != null && _active?.exercises.contains(t.exercise) == true) {
+            _complete(t.exercise!, t.set!, chain: true);
+            _changed();
+          }
+        case TimerKind.rest:
+          hr.beeper.beep(frequency: 880, count: 1);
+          final from = _restChainFrom;
+          _restChainFrom = null;
+          if (t.chainNext && from != null) _startNextTimedSet(from);
+        case TimerKind.countdown:
+          hr.beeper.beep(frequency: 880, count: 3);
+        case TimerKind.stopwatch:
+          break;
+      }
+    }
+    notifyListeners();
+  }
+
+  /// Next undone set of [e], or the first undone set of the following
+  /// exercise if that one is timed too.
+  void _startNextTimedSet(LoggedExercise e) {
+    final list = _active?.exercises;
+    if (list == null || !list.contains(e)) return;
+    final candidates = [e, if (list.indexOf(e) + 1 < list.length) list[list.indexOf(e) + 1]];
+    for (final x in candidates) {
+      if (!x.exercise.isTimed) continue;
+      final next = x.sets.where((s) => !s.done).firstOrNull;
+      if (next != null) {
+        startSetTimer(x, next);
+        return;
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
 
   void rename(String name) {
     _active?.name = name;
@@ -292,7 +437,8 @@ class WorkoutSession extends ChangeNotifier {
   Future<WorkoutSummary?> finish() async {
     final w = _active;
     if (w == null) return null;
-    skipRest();
+    _timer = null;
+    _ticker?.cancel();
     for (final e in w.exercises) {
       e.sets.removeWhere((s) => !s.done);
     }
@@ -310,7 +456,8 @@ class WorkoutSession extends ChangeNotifier {
   Future<void> discard() async {
     final w = _active;
     if (w == null) return;
-    skipRest();
+    _timer = null;
+    _ticker?.cancel();
     _saveTimer?.cancel();
     await workouts.delete(w.id);
     _active = null;
@@ -337,7 +484,7 @@ class WorkoutSession extends ChangeNotifier {
   @override
   void dispose() {
     _saveTimer?.cancel();
-    _restTicker?.cancel();
+    _ticker?.cancel();
     super.dispose();
   }
 }

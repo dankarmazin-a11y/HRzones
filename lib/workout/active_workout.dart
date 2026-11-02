@@ -24,7 +24,7 @@ class LoggedExercise {
       sets = sets ?? [];
 
   final String id;
-  final Exercise exercise;
+  Exercise exercise;
   int restSeconds;
   int? supersetGroup;
   String notes = '';

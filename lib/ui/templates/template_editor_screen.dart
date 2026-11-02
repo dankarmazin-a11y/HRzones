@@ -4,6 +4,7 @@ import '../../app_services.dart';
 import '../../data/database.dart';
 import '../../data/template_repository.dart';
 import '../exercises/exercise_library_screen.dart';
+import '../number_input.dart';
 
 /// Create or edit a template: name, exercises (reorderable), sets and rest.
 class TemplateEditorScreen extends StatefulWidget {
@@ -49,7 +50,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
     setState(() {
       for (final e in picked) {
         _exercises[e.id] = e;
-        _slots.add(TemplateSlot(exerciseId: e.id, restSeconds: e.defaultRestSeconds));
+        _slots.add(TemplateSlot(exerciseId: e.id, restSeconds: Services.of(context).session.restFor(e)));
       }
     });
   }
@@ -121,7 +122,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
                 return ListTile(
                   key: ObjectKey(s),
                   title: Text(_exercises[s.exerciseId]?.name ?? '…'),
-                  subtitle: Text('${s.targetSets} sets · rest ${s.restSeconds} s'),
+                  subtitle: Text('Rest ${formatRest(s.restSeconds)} · tap to change'),
                   leading: IconButton(
                     icon: const Icon(Icons.remove_circle_outline),
                     onPressed: () => setState(() => _slots.removeAt(i)),
@@ -133,8 +134,15 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
                         icon: const Icon(Icons.remove),
                         onPressed: s.targetSets > 1 ? () => setState(() => s.targetSets--) : null,
                       ),
+                      EditableNumber(
+                        value: s.targetSets,
+                        title: 'Sets',
+                        min: 1,
+                        max: 30,
+                        display: '${s.targetSets} sets',
+                        onChanged: (v) => setState(() => s.targetSets = v.round()),
+                      ),
                       IconButton(icon: const Icon(Icons.add), onPressed: () => setState(() => s.targetSets++)),
-                      const Icon(Icons.drag_handle),
                     ],
                   ),
                   onTap: () async {
@@ -154,26 +162,4 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
       ),
     );
   }
-}
-
-/// Bottom sheet to choose a rest time.
-Future<int?> pickRestSeconds(BuildContext context, int current) {
-  const options = [0, 30, 45, 60, 90, 120, 150, 180, 240, 300];
-  return showModalBottomSheet<int>(
-    context: context,
-    builder: (c) => SafeArea(
-      child: ListView(
-        shrinkWrap: true,
-        children: [
-          const ListTile(title: Text('Rest timer')),
-          for (final o in options)
-            ListTile(
-              title: Text(o == 0 ? 'Off' : (o < 60 ? '$o s' : '${o ~/ 60}:${(o % 60).toString().padLeft(2, '0')} min')),
-              trailing: o == current ? const Icon(Icons.check) : null,
-              onTap: () => Navigator.pop(c, o),
-            ),
-        ],
-      ),
-    ),
-  );
 }
