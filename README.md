@@ -21,6 +21,12 @@ Strength log:
 - [ ] Close the app mid-workout and reopen → Home shows "Resume".
 - [ ] Finish → summary. Do the same template again with more weight → "PREVIOUS" shows last time, summary shows a 🏆 record.
 - [ ] Workouts → History shows both workouts.
+- [ ] Exercises: popular ones on top (e.g. tap "Chest" → Barbell Bench Press first), then A–Z. "Stretching" filter shows stretches.
+- [ ] In a workout: timer button → pick a rest time → all exercises change. ⋮ on one exercise → change only its rest / switch to "Track: time".
+- [ ] Add 2 stretches, tap ▶ → countdown, beep, 10 s rest, next stretch starts by itself.
+- [ ] Timer button → "1 min" or "Stopwatch" runs in the bottom bar.
+- [ ] Hold an exercise name and drag it to a new position.
+- [ ] Tap any number next to a slider (age, target range, alert gap) and type a value.
 
 Heart rate:
 - [ ] App opens with 4 tabs: Home, Workouts, Progress, Profile.

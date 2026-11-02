@@ -43,9 +43,23 @@ const equipmentTypes = [
 const exerciseImageBase = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
 
 /// Bump when assets/exercises.json changes so existing installs re-seed.
-const exerciseSeedVersion = '1';
+const exerciseSeedVersion = '2';
+
+/// How many popular exercises are listed before the A–Z list.
+const popularCount = 5;
 
 String titleCase(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+
+/// Search result: the most popular matches first, then the rest A–Z.
+class ExerciseSearchResult {
+  const ExerciseSearchResult({required this.popular, required this.others});
+
+  final List<Exercise> popular;
+  final List<Exercise> others;
+
+  int get length => popular.length + others.length;
+  List<Exercise> get all => [...popular, ...others];
+}
 
 class ExerciseRepository {
   ExerciseRepository(this.db);
@@ -56,12 +70,28 @@ class ExerciseRepository {
 
   /// Inserts/updates the bundled exercise list on first launch or when the
   /// seed version changes. [loadJson] returns the contents of exercises.json.
+  /// The user's own choices (tracking type, rest) are kept on update.
   Future<void> seedIfNeeded(Future<String> Function() loadJson) async {
     final current = await db.getSetting('exerciseSeedVersion');
     if (current == exerciseSeedVersion) return;
     final list = (jsonDecode(await loadJson()) as List).cast<Map<String, dynamic>>();
     await db.batch((b) {
-      b.insertAllOnConflictUpdate(db.exercises, [for (final e in list) exerciseFromSeed(e)]);
+      b.insertAll(
+        db.exercises,
+        [for (final e in list) exerciseFromSeed(e)],
+        onConflict: DoUpdate<$ExercisesTable, Exercise>.withExcluded(
+          (old, excluded) => ExercisesCompanion.custom(
+            name: excluded.name,
+            primaryMuscle: excluded.primaryMuscle,
+            secondaryMuscles: excluded.secondaryMuscles,
+            equipment: excluded.equipment,
+            category: excluded.category,
+            instructions: excluded.instructions,
+            imagePath: excluded.imagePath,
+            popularity: excluded.popularity,
+          ),
+        ),
+      );
     });
     await db.setSetting('exerciseSeedVersion', exerciseSeedVersion);
     _cache = null;
@@ -72,6 +102,7 @@ class ExerciseRepository {
     final equipment = e['equipment'] as String?;
     final images = (e['images'] as List?)?.cast<String>() ?? const [];
     final tracking = switch (category) {
+      _ when e['tracking'] == 'duration' => TrackingType.duration,
       'stretching' || 'cardio' => TrackingType.duration,
       _ when equipment == 'body only' || equipment == null => TrackingType.bodyweightReps,
       _ => TrackingType.weightReps,
@@ -86,7 +117,7 @@ class ExerciseRepository {
       trackingType: tracking,
       instructions: Value(((e['instructions'] as List?) ?? const []).join('\n')),
       imagePath: Value(images.firstOrNull),
-      defaultRestSeconds: Value(e['mechanic'] == 'compound' ? 120 : 90),
+      popularity: Value(e['popularity'] as int?),
     );
   }
 
@@ -104,23 +135,29 @@ class ExerciseRepository {
     return _byId[id];
   }
 
-  /// Search by name (all words must match), muscle and equipment.
-  Future<List<Exercise>> search({String query = '', String? muscle, String? equipment}) async {
+  /// Search by name (all words must match), muscle, equipment and type.
+  /// The [popularCount] most popular matches come first, then the rest A–Z.
+  Future<ExerciseSearchResult> search({
+    String query = '',
+    String? muscle,
+    String? equipment,
+    ExerciseGroup? group,
+  }) async {
     final words = query.toLowerCase().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
-    return [
+    final matches = [
       for (final e in await all())
         if ((muscle == null || e.primaryMuscle == muscle || e.secondaryMuscles.split(',').contains(muscle)) &&
             (equipment == null || e.equipment == equipment) &&
+            (group == null || e.group == group) &&
             words.every(e.name.toLowerCase().contains))
           e,
-    ]..sort((a, b) {
-      // Primary-muscle matches first when filtering by muscle.
-      if (muscle != null) {
-        final pa = a.primaryMuscle == muscle ? 0 : 1, pb = b.primaryMuscle == muscle ? 0 : 1;
-        if (pa != pb) return pa - pb;
-      }
-      return a.name.compareTo(b.name);
-    });
+    ];
+    // Popular = ranked exercises whose *primary* muscle matches the filter.
+    final ranked = matches.where((e) => e.popularity != null && (muscle == null || e.primaryMuscle == muscle)).toList()
+      ..sort((a, b) => a.popularity!.compareTo(b.popularity!));
+    final popular = ranked.take(popularCount).toList();
+    final others = matches.where((e) => !popular.contains(e)).toList()..sort((a, b) => a.name.compareTo(b.name));
+    return ExerciseSearchResult(popular: popular, others: others);
   }
 
   Future<Exercise> createCustom({
@@ -143,6 +180,15 @@ class ExerciseRepository {
         );
     _cache = null;
     return row;
+  }
+
+  /// Changes how an exercise is logged (weight × reps, reps, time).
+  Future<Exercise> setTrackingType(String id, TrackingType type) async {
+    await (db.update(db.exercises)..where((e) => e.id.equals(id))).write(
+      ExercisesCompanion(trackingType: Value(type), updatedAt: Value(DateTime.now())),
+    );
+    _cache = null;
+    return (await byId(id))!;
   }
 }
 

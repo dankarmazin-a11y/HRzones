@@ -16,9 +16,9 @@ void main() {
     expect((await s.exercises.byId('Plank'))!.trackingType, TrackingType.duration);
     expect((await s.exercises.byId('Barbell_Bench_Press'))!.trackingType, TrackingType.weightReps);
 
-    expect((await s.exercises.search(query: 'bench')).single.id, 'Barbell_Bench_Press');
+    expect((await s.exercises.search(query: 'bench')).all.single.id, 'Barbell_Bench_Press');
     // Secondary muscles match too, primary first.
-    expect((await s.exercises.search(muscle: 'triceps')).single.id, 'Barbell_Bench_Press');
+    expect((await s.exercises.search(muscle: 'triceps')).all.single.id, 'Barbell_Bench_Press');
     expect((await s.exercises.search(equipment: 'body only')).length, 2);
 
     // Seeding twice does not duplicate.
@@ -31,7 +31,7 @@ void main() {
     final s = await testServices();
     final e = await s.exercises.createCustom(name: 'Landmine Press', primaryMuscle: 'shoulders');
     expect(e.isCustom, isTrue);
-    expect((await s.exercises.search(query: 'landmine')).single.id, e.id);
+    expect((await s.exercises.search(query: 'landmine')).all.single.id, e.id);
     await s.close();
   });
 

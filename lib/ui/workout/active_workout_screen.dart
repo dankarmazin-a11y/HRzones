@@ -11,7 +11,7 @@ import '../../workout/stats.dart';
 import '../../workout/workout_session.dart';
 import '../exercises/exercise_detail_screen.dart';
 import '../exercises/exercise_library_screen.dart';
-import '../templates/template_editor_screen.dart';
+import '../number_input.dart';
 import '../zone_colors.dart';
 import 'workout_summary_screen.dart';
 
@@ -46,6 +46,11 @@ class ActiveWorkoutScreen extends StatelessWidget {
               ),
             ),
             actions: [
+              IconButton(
+                tooltip: 'Timers',
+                icon: const Icon(Icons.timer_outlined),
+                onPressed: () => showTimerSheet(context, session),
+              ),
               const _HrChip(),
               Padding(
                 padding: const EdgeInsets.only(right: 8),
@@ -53,32 +58,50 @@ class ActiveWorkoutScreen extends StatelessWidget {
               ),
             ],
           ),
-          body: ListView(
+          body: ReorderableListView.builder(
+            buildDefaultDragHandles: false,
             padding: const EdgeInsets.only(bottom: 120),
-            children: [
-              for (final (i, e) in w.exercises.indexed) _ExerciseCard(key: ValueKey(e.id), index: i, entry: e),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: FilledButton.tonalIcon(
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add exercises'),
-                  onPressed: () async {
-                    final picked = await ExerciseLibraryScreen.pick(context);
-                    if (picked != null) await session.addExercises(picked);
-                  },
+            itemCount: w.exercises.length,
+            onReorderItem: session.moveExercise,
+            itemBuilder: (context, i) {
+              final e = w.exercises[i];
+              return _ExerciseCard(key: ValueKey(e.id), index: i, entry: e);
+            },
+            footer: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (w.exercises.length > 1)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Tip: hold an exercise name and drag to reorder',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: FilledButton.tonalIcon(
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add exercises'),
+                    onPressed: () async {
+                      final picked = await ExerciseLibraryScreen.pick(context);
+                      if (picked != null) await session.addExercises(picked);
+                    },
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: TextButton(
-                  style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
-                  onPressed: () => _discard(context, session),
-                  child: const Text('Discard workout'),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: TextButton(
+                    style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+                    onPressed: () => _discard(context, session),
+                    child: const Text('Discard workout'),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          bottomNavigationBar: session.restRemaining == null ? null : _RestBar(session: session),
+          bottomNavigationBar: session.timer == null ? null : _TimerBar(session: session),
         );
       },
     );
@@ -183,37 +206,53 @@ class _HrChip extends StatelessWidget {
   }
 }
 
-class _RestBar extends StatelessWidget {
-  const _RestBar({required this.session});
+class _TimerBar extends StatelessWidget {
+  const _TimerBar({required this.session});
 
   final WorkoutSession session;
 
   @override
   Widget build(BuildContext context) {
-    final left = session.restRemaining ?? 0;
-    final total = session.restTotal;
+    final t = session.timer!;
+    final scheme = Theme.of(context).colorScheme;
+    final countsDown = t.countsDown;
+    final shown = countsDown ? t.remaining : t.elapsed;
+    final isSet = t.kind == TimerKind.setTimer;
     return Material(
-      color: Theme.of(context).colorScheme.primaryContainer,
+      color: isSet ? Colors.teal.shade800 : scheme.primaryContainer,
       child: SafeArea(
         top: false,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            LinearProgressIndicator(value: total == 0 ? 0 : left / total),
+            if (countsDown) LinearProgressIndicator(value: t.total == 0 ? 0 : shown / t.total),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
-                  const Icon(Icons.timer_outlined),
+                  Icon(isSet ? Icons.self_improvement : (countsDown ? Icons.timer_outlined : Icons.av_timer)),
                   const SizedBox(width: 8),
-                  Text(
-                    'Rest ${formatDuration(Duration(seconds: left))}',
-                    style: Theme.of(context).textTheme.titleMedium,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(t.label, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.labelMedium),
+                        Text(formatDuration(Duration(seconds: shown)), style: Theme.of(context).textTheme.titleLarge),
+                      ],
+                    ),
                   ),
-                  const Spacer(),
-                  TextButton(onPressed: () => session.adjustRest(-15), child: const Text('−15')),
-                  TextButton(onPressed: () => session.adjustRest(15), child: const Text('+15')),
-                  FilledButton(onPressed: session.skipRest, child: const Text('Skip')),
+                  if (countsDown) ...[
+                    TextButton(onPressed: () => session.adjustTimer(-15), child: const Text('−15')),
+                    TextButton(onPressed: () => session.adjustTimer(15), child: const Text('+15')),
+                  ],
+                  FilledButton(
+                    onPressed: session.stopTimer,
+                    child: Text(switch (t.kind) {
+                      TimerKind.rest => 'Skip',
+                      TimerKind.setTimer => 'Done',
+                      _ => 'Stop',
+                    }),
+                  ),
                 ],
               ),
             ),
@@ -222,6 +261,109 @@ class _RestBar extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Timer button sheet: default rest for all exercises + a standalone timer.
+Future<void> showTimerSheet(BuildContext context, WorkoutSession session) {
+  const restOptions = [30, 60, 90, 120, 180];
+  const timerOptions = [30, 60, 120, 180, 300];
+  return showModalBottomSheet<void>(
+    context: context,
+    builder: (c) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: ListenableBuilder(
+          listenable: session,
+          builder: (c, _) {
+            final text = Theme.of(c).textTheme;
+            final current = session.defaultRestSeconds;
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Rest between sets', style: text.titleMedium),
+                Text(
+                  'Applies to every exercise in this workout and becomes your default. '
+                  'Change a single exercise from its ⋮ menu.',
+                  style: text.bodySmall,
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final o in restOptions)
+                      ChoiceChip(
+                        label: Text(formatRest(o)),
+                        selected: current == o,
+                        onSelected: (_) => session.setDefaultRest(o),
+                      ),
+                    ActionChip(
+                      avatar: const Icon(Icons.edit, size: 16),
+                      label: Text(restOptions.contains(current) ? 'Custom' : formatRest(current)),
+                      onPressed: () async {
+                        final v = await promptNumber(
+                          c,
+                          title: 'Rest (seconds)',
+                          initial: current,
+                          max: 3600,
+                          suffix: 's',
+                        );
+                        if (v != null) await session.setDefaultRest(v.round());
+                      },
+                    ),
+                  ],
+                ),
+                const Divider(height: 32),
+                Text('Start a timer', style: text.titleMedium),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final o in timerOptions)
+                      ActionChip(
+                        label: Text(o < 60 ? '$o s' : '${o ~/ 60} min'),
+                        onPressed: () {
+                          session.startCountdown(o);
+                          Navigator.pop(c);
+                        },
+                      ),
+                    ActionChip(
+                      avatar: const Icon(Icons.edit, size: 16),
+                      label: const Text('Custom'),
+                      onPressed: () async {
+                        final v = await promptNumber(
+                          c,
+                          title: 'Timer (seconds)',
+                          initial: 60,
+                          min: 1,
+                          max: 7200,
+                          suffix: 's',
+                        );
+                        if (v != null && c.mounted) {
+                          session.startCountdown(v.round());
+                          Navigator.pop(c);
+                        }
+                      },
+                    ),
+                    ActionChip(
+                      avatar: const Icon(Icons.av_timer, size: 16),
+                      label: const Text('Stopwatch'),
+                      onPressed: () {
+                        session.startStopwatch();
+                        Navigator.pop(c);
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    ),
+  );
 }
 
 class _ExerciseCard extends StatelessWidget {
@@ -267,6 +409,10 @@ class _ExerciseCard extends StatelessWidget {
                   ),
                 ),
                 if (group != null) Text('Superset', style: text.labelSmall),
+                Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: Text('Rest ${formatRest(e.restSeconds)}', style: text.labelSmall),
+                ),
                 PopupMenuButton<String>(
                   onSelected: (v) async {
                     switch (v) {
@@ -275,6 +421,12 @@ class _ExerciseCard extends StatelessWidget {
                         if (r != null) session.setRestSeconds(e, r);
                       case 'superset':
                         session.toggleSupersetWithNext(e);
+                      case 'track:weightReps':
+                        await session.setTrackingType(e, TrackingType.weightReps);
+                      case 'track:bodyweightReps':
+                        await session.setTrackingType(e, TrackingType.bodyweightReps);
+                      case 'track:duration':
+                        await session.setTrackingType(e, TrackingType.duration);
                       case 'up':
                         session.moveExercise(index, index - 1);
                       case 'down':
@@ -284,7 +436,13 @@ class _ExerciseCard extends StatelessWidget {
                     }
                   },
                   itemBuilder: (_) => [
-                    PopupMenuItem(value: 'rest', child: Text('Rest timer (${e.restSeconds} s)')),
+                    PopupMenuItem(value: 'rest', child: Text('Rest timer (${formatRest(e.restSeconds)})')),
+                    for (final (type, label) in trackingOptions)
+                      CheckedPopupMenuItem(
+                        value: 'track:${type.name}',
+                        checked: e.exercise.trackingType == type,
+                        child: Text(label),
+                      ),
                     if (index + 1 < list.length)
                       PopupMenuItem(
                         value: 'superset',
@@ -297,7 +455,7 @@ class _ExerciseCard extends StatelessWidget {
                 ),
               ],
             ),
-            _HeaderRow(tracking: tracking),
+            _HeaderRow(tracking: tracking, showRpe: !e.exercise.isStretch),
             for (final (i, s) in e.sets.indexed)
               Dismissible(
                 key: ValueKey(s.id),
@@ -323,12 +481,19 @@ class _ExerciseCard extends StatelessWidget {
   }
 }
 
+const trackingOptions = [
+  (TrackingType.weightReps, 'Track: weight × reps'),
+  (TrackingType.bodyweightReps, 'Track: reps (bodyweight)'),
+  (TrackingType.duration, 'Track: time'),
+];
+
 const _setW = 36.0, _prevW = 84.0, _rpeW = 44.0, _doneW = 44.0;
 
 class _HeaderRow extends StatelessWidget {
-  const _HeaderRow({required this.tracking});
+  const _HeaderRow({required this.tracking, required this.showRpe});
 
   final TrackingType tracking;
+  final bool showRpe;
 
   @override
   Widget build(BuildContext context) {
@@ -361,10 +526,11 @@ class _HeaderRow extends StatelessWidget {
               child: Text('REPS', style: s, textAlign: TextAlign.center),
             ),
           ],
-          SizedBox(
-            width: _rpeW,
-            child: Text('RPE', style: s, textAlign: TextAlign.center),
-          ),
+          if (showRpe)
+            SizedBox(
+              width: _rpeW,
+              child: Text('RPE', style: s, textAlign: TextAlign.center),
+            ),
           const SizedBox(width: _doneW, child: Icon(Icons.check, size: 16)),
         ],
       ),
@@ -455,6 +621,35 @@ class _SetRowState extends State<SetRow> {
     });
   }
 
+  /// ✓ for weight/reps sets. Timed sets get ▶ (start countdown) / ■ (stop).
+  Widget _doneButton(WorkoutSession session, LoggedSet s, TrackingType tracking) {
+    if (s.done) {
+      return IconButton(
+        tooltip: 'Undo',
+        icon: const Icon(Icons.check_box, color: Colors.green),
+        onPressed: () => session.toggleDone(widget.entry, s),
+      );
+    }
+    if (tracking == TrackingType.duration) {
+      final running = session.timer?.kind == TimerKind.setTimer && session.timer?.set == s;
+      return IconButton(
+        tooltip: running ? 'Stop' : 'Start timer',
+        icon: Icon(running ? Icons.stop_circle : Icons.play_circle, color: Colors.tealAccent),
+        onPressed: () {
+          FocusScope.of(context).unfocus();
+          running ? session.stopTimer() : session.startSetTimer(widget.entry, s);
+        },
+      );
+    }
+    return IconButton(
+      icon: const Icon(Icons.check_box_outline_blank),
+      onPressed: () {
+        FocusScope.of(context).unfocus();
+        session.toggleDone(widget.entry, s);
+      },
+    );
+  }
+
   Future<void> _pickRpe() async {
     final session = Services.of(context).session;
     const values = [6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0];
@@ -481,6 +676,7 @@ class _SetRowState extends State<SetRow> {
     final prev = widget.entry.previousFor(widget.index);
     final tracking = widget.entry.exercise.trackingType;
     final scheme = Theme.of(context).colorScheme;
+    final running = session.timer?.kind == TimerKind.setTimer && session.timer?.set == s;
 
     Widget field(TextEditingController c, String hint, ValueChanged<String> onChanged, {bool decimal = false}) =>
         Padding(
@@ -537,7 +733,20 @@ class _SetRowState extends State<SetRow> {
             ),
           ),
           if (tracking == TrackingType.duration)
-            Expanded(child: field(_secs, hintOf(prev?.durationS), (v) => session.setDuration(s, int.tryParse(v))))
+            Expanded(
+              child: running
+                  ? Center(
+                      child: Text(
+                        '${session.timer!.remaining} s',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.tealAccent),
+                      ),
+                    )
+                  : field(
+                      _secs,
+                      hintOf(prev?.durationS ?? WorkoutSession.defaultSetSeconds),
+                      (v) => session.setDuration(s, int.tryParse(v)),
+                    ),
+            )
           else ...[
             Expanded(
               child: field(
@@ -549,30 +758,22 @@ class _SetRowState extends State<SetRow> {
             ),
             Expanded(child: field(_reps, hintOf(prev?.reps), (v) => session.setReps(s, int.tryParse(v)))),
           ],
-          SizedBox(
-            width: _rpeW,
-            child: InkWell(
-              onTap: _pickRpe,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                  s.rpe == null ? '–' : formatKg(s.rpe),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: scheme.onSurfaceVariant),
+          if (!widget.entry.exercise.isStretch)
+            SizedBox(
+              width: _rpeW,
+              child: InkWell(
+                onTap: _pickRpe,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    s.rpe == null ? '–' : formatKg(s.rpe),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: scheme.onSurfaceVariant),
+                  ),
                 ),
               ),
             ),
-          ),
-          SizedBox(
-            width: _doneW,
-            child: IconButton(
-              icon: Icon(s.done ? Icons.check_box : Icons.check_box_outline_blank, color: s.done ? Colors.green : null),
-              onPressed: () {
-                FocusScope.of(context).unfocus();
-                session.toggleDone(widget.entry, s);
-              },
-            ),
-          ),
+          SizedBox(width: _doneW, child: _doneButton(session, s, tracking)),
         ],
       ),
     );

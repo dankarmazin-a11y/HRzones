@@ -85,13 +85,13 @@ void main() {
     });
     await tester.pump();
     await tester.scrollUntilVisible(find.byKey(const Key('bpm')), 200);
-    expect(find.text('200'), findsOneWidget);
+    expect(tester.widget<Text>(find.byKey(const Key('bpm'))).data, '200');
     expect(find.text('Above range · Zone 5'), findsOneWidget);
     expect(beeper.calls, contains('start'));
 
     await tester.runAsync(s.hr.stop);
     await tester.pump();
-    expect(find.text('--'), findsOneWidget);
+    expect(tester.widget<Text>(find.byKey(const Key('bpm'))).data, '--');
     await tearDownApp(tester, s);
   });
 }

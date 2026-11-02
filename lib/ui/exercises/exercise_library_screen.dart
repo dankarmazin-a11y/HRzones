@@ -25,7 +25,8 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
   String _query = '';
   String? _muscle;
   String? _equipment;
-  List<Exercise> _results = [];
+  ExerciseGroup? _group;
+  ExerciseSearchResult _results = const ExerciseSearchResult(popular: [], others: []);
   final _selected = <Exercise>[];
 
   @override
@@ -34,9 +35,27 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
     _search();
   }
 
+  int _searchId = 0;
+
   Future<void> _search() async {
-    final r = await Services.of(context).exercises.search(query: _query, muscle: _muscle, equipment: _equipment);
-    if (mounted) setState(() => _results = r);
+    // Only the latest search may update the list (an earlier, slower one
+    // must not overwrite newer filter results).
+    final id = ++_searchId;
+    final r = await Services.of(context).exercises
+        .search(query: _query, muscle: _muscle, equipment: _equipment, group: _group);
+    if (mounted && id == _searchId) setState(() => _results = r);
+  }
+
+  /// Section headers (String) and exercises, in display order.
+  List<Object> get _rows {
+    final r = _results;
+    final groupName = _muscle != null ? titleCase(_muscle!) : (_group != null ? titleCase(_group!.name) : null);
+    return [
+      if (r.popular.isNotEmpty) groupName == null ? 'Most popular' : 'Most popular · $groupName',
+      ...r.popular,
+      if (r.others.isNotEmpty) r.popular.isEmpty ? '${r.length} exercises (A–Z)' : 'All exercises (A–Z)',
+      ...r.others,
+    ];
   }
 
   void _tap(Exercise e) {
@@ -80,6 +99,15 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
             ),
           ),
           _FilterRow(
+            label: 'Type',
+            options: const ['strength', 'stretching', 'cardio'],
+            selected: _group?.name,
+            onChanged: (v) {
+              _group = v == null ? null : ExerciseGroup.values.byName(v);
+              _search();
+            },
+          ),
+          _FilterRow(
             label: 'Muscle',
             options: muscleGroups,
             selected: _muscle,
@@ -97,25 +125,31 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
               _search();
             },
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text('${_results.length} exercises', style: Theme.of(context).textTheme.bodySmall),
-            ),
-          ),
           Expanded(
             child: ListView.builder(
-              itemCount: _results.length,
+              itemCount: _rows.length,
               itemBuilder: (context, i) {
-                final e = _results[i];
+                final row = _rows[i];
+                if (row is String) {
+                  return Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    child: Text(row, style: Theme.of(context).textTheme.titleSmall),
+                  );
+                }
+                final e = row as Exercise;
                 final selected = _selected.contains(e);
                 return ListTile(
                   title: Text(e.name),
                   subtitle: Text(
-                    [titleCase(e.primaryMuscle), if (e.equipment != null) titleCase(e.equipment!)].join(' · '),
+                    [
+                      titleCase(e.primaryMuscle),
+                      if (e.equipment != null) titleCase(e.equipment!),
+                      if (e.isTimed) 'Timed',
+                    ].join(' · '),
                   ),
-                  leading: CircleAvatar(child: Text(e.name.isEmpty ? '?' : e.name[0])),
+                  leading: CircleAvatar(
+                    child: e.isStretch ? const Icon(Icons.self_improvement) : Text(e.name.isEmpty ? '?' : e.name[0]),
+                  ),
                   trailing: widget.pickMode
                       ? Icon(selected ? Icons.check_circle : Icons.radio_button_unchecked)
                       : (e.isCustom ? const Chip(label: Text('Custom')) : null),

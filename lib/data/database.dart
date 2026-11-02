@@ -15,6 +15,22 @@ enum SetType { warmup, normal, drop, failure }
 
 enum WorkoutType { strength, run, walk, cycle, other }
 
+extension ExerciseKind on Exercise {
+  bool get isStretch => category == 'stretching';
+  bool get isTimed => trackingType == TrackingType.duration;
+}
+
+/// Exercise library "type" filter.
+enum ExerciseGroup { strength, stretching, cardio }
+
+extension ExerciseGroupOf on Exercise {
+  ExerciseGroup get group => switch (category) {
+    'stretching' => ExerciseGroup.stretching,
+    'cardio' || 'plyometrics' => ExerciseGroup.cardio,
+    _ => ExerciseGroup.strength,
+  };
+}
+
 /// Every table has a UUID primary key and updatedAt (for cloud sync later).
 mixin SyncColumns on Table {
   TextColumn get id => text().clientDefault(newId)();
@@ -38,6 +54,10 @@ class Exercises extends Table with SyncColumns {
   TextColumn get imagePath => text().nullable()();
   BoolColumn get isCustom => boolean().withDefault(const Constant(false))();
   IntColumn get defaultRestSeconds => integer().withDefault(const Constant(90))();
+
+  /// Lower = more popular (null = not ranked). Used to list the most popular
+  /// exercises of a muscle group first.
+  IntColumn get popularity => integer().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

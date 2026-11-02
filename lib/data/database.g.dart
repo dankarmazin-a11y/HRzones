@@ -123,6 +123,15 @@ class $ExercisesTable extends Exercises with TableInfo<$ExercisesTable, Exercise
     requiredDuringInsert: false,
     defaultValue: const Constant(90),
   );
+  static const VerificationMeta _popularityMeta = const VerificationMeta('popularity');
+  @override
+  late final GeneratedColumn<int> popularity = GeneratedColumn<int>(
+    'popularity',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -137,6 +146,7 @@ class $ExercisesTable extends Exercises with TableInfo<$ExercisesTable, Exercise
     imagePath,
     isCustom,
     defaultRestSeconds,
+    popularity,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -193,6 +203,9 @@ class $ExercisesTable extends Exercises with TableInfo<$ExercisesTable, Exercise
         defaultRestSeconds.isAcceptableOrUnknown(data['default_rest_seconds']!, _defaultRestSecondsMeta),
       );
     }
+    if (data.containsKey('popularity')) {
+      context.handle(_popularityMeta, popularity.isAcceptableOrUnknown(data['popularity']!, _popularityMeta));
+    }
     return context;
   }
 
@@ -222,6 +235,7 @@ class $ExercisesTable extends Exercises with TableInfo<$ExercisesTable, Exercise
         DriftSqlType.int,
         data['${effectivePrefix}default_rest_seconds'],
       )!,
+      popularity: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}popularity']),
     );
   }
 
@@ -254,6 +268,10 @@ class Exercise extends DataClass implements Insertable<Exercise> {
   final String? imagePath;
   final bool isCustom;
   final int defaultRestSeconds;
+
+  /// Lower = more popular (null = not ranked). Used to list the most popular
+  /// exercises of a muscle group first.
+  final int? popularity;
   const Exercise({
     required this.id,
     required this.updatedAt,
@@ -267,6 +285,7 @@ class Exercise extends DataClass implements Insertable<Exercise> {
     this.imagePath,
     required this.isCustom,
     required this.defaultRestSeconds,
+    this.popularity,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -289,6 +308,9 @@ class Exercise extends DataClass implements Insertable<Exercise> {
     }
     map['is_custom'] = Variable<bool>(isCustom);
     map['default_rest_seconds'] = Variable<int>(defaultRestSeconds);
+    if (!nullToAbsent || popularity != null) {
+      map['popularity'] = Variable<int>(popularity);
+    }
     return map;
   }
 
@@ -306,6 +328,7 @@ class Exercise extends DataClass implements Insertable<Exercise> {
       imagePath: imagePath == null && nullToAbsent ? const Value.absent() : Value(imagePath),
       isCustom: Value(isCustom),
       defaultRestSeconds: Value(defaultRestSeconds),
+      popularity: popularity == null && nullToAbsent ? const Value.absent() : Value(popularity),
     );
   }
 
@@ -324,6 +347,7 @@ class Exercise extends DataClass implements Insertable<Exercise> {
       imagePath: serializer.fromJson<String?>(json['imagePath']),
       isCustom: serializer.fromJson<bool>(json['isCustom']),
       defaultRestSeconds: serializer.fromJson<int>(json['defaultRestSeconds']),
+      popularity: serializer.fromJson<int?>(json['popularity']),
     );
   }
   @override
@@ -342,6 +366,7 @@ class Exercise extends DataClass implements Insertable<Exercise> {
       'imagePath': serializer.toJson<String?>(imagePath),
       'isCustom': serializer.toJson<bool>(isCustom),
       'defaultRestSeconds': serializer.toJson<int>(defaultRestSeconds),
+      'popularity': serializer.toJson<int?>(popularity),
     };
   }
 
@@ -358,6 +383,7 @@ class Exercise extends DataClass implements Insertable<Exercise> {
     Value<String?> imagePath = const Value.absent(),
     bool? isCustom,
     int? defaultRestSeconds,
+    Value<int?> popularity = const Value.absent(),
   }) => Exercise(
     id: id ?? this.id,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -371,6 +397,7 @@ class Exercise extends DataClass implements Insertable<Exercise> {
     imagePath: imagePath.present ? imagePath.value : this.imagePath,
     isCustom: isCustom ?? this.isCustom,
     defaultRestSeconds: defaultRestSeconds ?? this.defaultRestSeconds,
+    popularity: popularity.present ? popularity.value : this.popularity,
   );
   Exercise copyWithCompanion(ExercisesCompanion data) {
     return Exercise(
@@ -386,6 +413,7 @@ class Exercise extends DataClass implements Insertable<Exercise> {
       imagePath: data.imagePath.present ? data.imagePath.value : this.imagePath,
       isCustom: data.isCustom.present ? data.isCustom.value : this.isCustom,
       defaultRestSeconds: data.defaultRestSeconds.present ? data.defaultRestSeconds.value : this.defaultRestSeconds,
+      popularity: data.popularity.present ? data.popularity.value : this.popularity,
     );
   }
 
@@ -403,7 +431,8 @@ class Exercise extends DataClass implements Insertable<Exercise> {
           ..write('instructions: $instructions, ')
           ..write('imagePath: $imagePath, ')
           ..write('isCustom: $isCustom, ')
-          ..write('defaultRestSeconds: $defaultRestSeconds')
+          ..write('defaultRestSeconds: $defaultRestSeconds, ')
+          ..write('popularity: $popularity')
           ..write(')'))
         .toString();
   }
@@ -422,6 +451,7 @@ class Exercise extends DataClass implements Insertable<Exercise> {
     imagePath,
     isCustom,
     defaultRestSeconds,
+    popularity,
   );
   @override
   bool operator ==(Object other) =>
@@ -438,7 +468,8 @@ class Exercise extends DataClass implements Insertable<Exercise> {
           other.instructions == this.instructions &&
           other.imagePath == this.imagePath &&
           other.isCustom == this.isCustom &&
-          other.defaultRestSeconds == this.defaultRestSeconds);
+          other.defaultRestSeconds == this.defaultRestSeconds &&
+          other.popularity == this.popularity);
 }
 
 class ExercisesCompanion extends UpdateCompanion<Exercise> {
@@ -454,6 +485,7 @@ class ExercisesCompanion extends UpdateCompanion<Exercise> {
   final Value<String?> imagePath;
   final Value<bool> isCustom;
   final Value<int> defaultRestSeconds;
+  final Value<int?> popularity;
   final Value<int> rowid;
   const ExercisesCompanion({
     this.id = const Value.absent(),
@@ -468,6 +500,7 @@ class ExercisesCompanion extends UpdateCompanion<Exercise> {
     this.imagePath = const Value.absent(),
     this.isCustom = const Value.absent(),
     this.defaultRestSeconds = const Value.absent(),
+    this.popularity = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ExercisesCompanion.insert({
@@ -483,6 +516,7 @@ class ExercisesCompanion extends UpdateCompanion<Exercise> {
     this.imagePath = const Value.absent(),
     this.isCustom = const Value.absent(),
     this.defaultRestSeconds = const Value.absent(),
+    this.popularity = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : name = Value(name),
        primaryMuscle = Value(primaryMuscle),
@@ -500,6 +534,7 @@ class ExercisesCompanion extends UpdateCompanion<Exercise> {
     Expression<String>? imagePath,
     Expression<bool>? isCustom,
     Expression<int>? defaultRestSeconds,
+    Expression<int>? popularity,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -515,6 +550,7 @@ class ExercisesCompanion extends UpdateCompanion<Exercise> {
       if (imagePath != null) 'image_path': imagePath,
       if (isCustom != null) 'is_custom': isCustom,
       if (defaultRestSeconds != null) 'default_rest_seconds': defaultRestSeconds,
+      if (popularity != null) 'popularity': popularity,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -532,6 +568,7 @@ class ExercisesCompanion extends UpdateCompanion<Exercise> {
     Value<String?>? imagePath,
     Value<bool>? isCustom,
     Value<int>? defaultRestSeconds,
+    Value<int?>? popularity,
     Value<int>? rowid,
   }) {
     return ExercisesCompanion(
@@ -547,6 +584,7 @@ class ExercisesCompanion extends UpdateCompanion<Exercise> {
       imagePath: imagePath ?? this.imagePath,
       isCustom: isCustom ?? this.isCustom,
       defaultRestSeconds: defaultRestSeconds ?? this.defaultRestSeconds,
+      popularity: popularity ?? this.popularity,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -590,6 +628,9 @@ class ExercisesCompanion extends UpdateCompanion<Exercise> {
     if (defaultRestSeconds.present) {
       map['default_rest_seconds'] = Variable<int>(defaultRestSeconds.value);
     }
+    if (popularity.present) {
+      map['popularity'] = Variable<int>(popularity.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -611,6 +652,7 @@ class ExercisesCompanion extends UpdateCompanion<Exercise> {
           ..write('imagePath: $imagePath, ')
           ..write('isCustom: $isCustom, ')
           ..write('defaultRestSeconds: $defaultRestSeconds, ')
+          ..write('popularity: $popularity, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3244,6 +3286,7 @@ typedef $$ExercisesTableCreateCompanionBuilder = ExercisesCompanion Function({
   Value<String?> imagePath,
   Value<bool> isCustom,
   Value<int> defaultRestSeconds,
+  Value<int?> popularity,
   Value<int> rowid,
 });
 typedef $$ExercisesTableUpdateCompanionBuilder = ExercisesCompanion Function({
@@ -3259,6 +3302,7 @@ typedef $$ExercisesTableUpdateCompanionBuilder = ExercisesCompanion Function({
   Value<String?> imagePath,
   Value<bool> isCustom,
   Value<int> defaultRestSeconds,
+  Value<int?> popularity,
   Value<int> rowid,
 });
 
@@ -3348,6 +3392,9 @@ class $$ExercisesTableFilterComposer extends Composer<_$AppDatabase, $ExercisesT
 
   ColumnFilters<int> get defaultRestSeconds =>
       $composableBuilder(column: $table.defaultRestSeconds, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get popularity =>
+      $composableBuilder(column: $table.popularity, builder: (column) => ColumnFilters(column));
 
   Expression<bool> templateExercisesRefs(Expression<bool> Function($$TemplateExercisesTableFilterComposer f) f) {
     final $$TemplateExercisesTableFilterComposer composer = $composerBuilder(
@@ -3446,6 +3493,9 @@ class $$ExercisesTableOrderingComposer extends Composer<_$AppDatabase, $Exercise
 
   ColumnOrderings<int> get defaultRestSeconds =>
       $composableBuilder(column: $table.defaultRestSeconds, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get popularity =>
+      $composableBuilder(column: $table.popularity, builder: (column) => ColumnOrderings(column));
 }
 
 class $$ExercisesTableAnnotationComposer extends Composer<_$AppDatabase, $ExercisesTable> {
@@ -3484,6 +3534,8 @@ class $$ExercisesTableAnnotationComposer extends Composer<_$AppDatabase, $Exerci
 
   GeneratedColumn<int> get defaultRestSeconds =>
       $composableBuilder(column: $table.defaultRestSeconds, builder: (column) => column);
+
+  GeneratedColumn<int> get popularity => $composableBuilder(column: $table.popularity, builder: (column) => column);
 
   Expression<T> templateExercisesRefs<T extends Object>(
     Expression<T> Function($$TemplateExercisesTableAnnotationComposer a) f,
@@ -3581,6 +3633,7 @@ class $$ExercisesTableTableManager
                 Value<String?> imagePath = const Value.absent(),
                 Value<bool> isCustom = const Value.absent(),
                 Value<int> defaultRestSeconds = const Value.absent(),
+                Value<int?> popularity = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ExercisesCompanion(
                 id: id,
@@ -3595,6 +3648,7 @@ class $$ExercisesTableTableManager
                 imagePath: imagePath,
                 isCustom: isCustom,
                 defaultRestSeconds: defaultRestSeconds,
+                popularity: popularity,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -3611,6 +3665,7 @@ class $$ExercisesTableTableManager
                 Value<String?> imagePath = const Value.absent(),
                 Value<bool> isCustom = const Value.absent(),
                 Value<int> defaultRestSeconds = const Value.absent(),
+                Value<int?> popularity = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ExercisesCompanion.insert(
                 id: id,
@@ -3625,6 +3680,7 @@ class $$ExercisesTableTableManager
                 imagePath: imagePath,
                 isCustom: isCustom,
                 defaultRestSeconds: defaultRestSeconds,
+                popularity: popularity,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
