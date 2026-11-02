@@ -20,40 +20,8 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('HR Zones')),
       body: ListView(
         padding: const EdgeInsets.all(16),
-        children: const [
-          _ResumeBanner(),
-          _QuickStart(),
-          SizedBox(height: 8),
-          _RecentWorkouts(),
-          SizedBox(height: 8),
-          HrMonitorCard(),
-        ],
+        children: const [_QuickStart(), SizedBox(height: 8), _RecentWorkouts(), SizedBox(height: 8), HrMonitorCard()],
       ),
-    );
-  }
-}
-
-class _ResumeBanner extends StatelessWidget {
-  const _ResumeBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    final session = Services.of(context).session;
-    return ListenableBuilder(
-      listenable: session,
-      builder: (context, _) {
-        final w = session.active;
-        if (w == null) return const SizedBox.shrink();
-        return Card(
-          color: Theme.of(context).colorScheme.primaryContainer,
-          child: ListTile(
-            leading: const Icon(Icons.fitness_center),
-            title: Text('${w.name} in progress'),
-            subtitle: Text('${w.completedSets.length} sets done'),
-            trailing: FilledButton(onPressed: () => openActiveWorkout(context), child: const Text('Resume')),
-          ),
-        );
-      },
     );
   }
 }

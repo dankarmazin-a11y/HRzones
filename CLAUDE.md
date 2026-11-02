@@ -45,6 +45,14 @@ The owner is not a developer. Explain steps plainly, keep instructions short, an
   - Timed sets (stretches, plank…): ▶ starts a countdown (default 30 s), beep at the end, set marked done, rest, then the next timed set starts automatically (same exercise, or the next exercise if it is timed). One `RunningTimer` in `WorkoutSession` drives rest / set timer / standalone countdown / stopwatch (bottom bar).
   - Hold an exercise name and drag to reorder in a workout.
   - Every slider/± value can also be typed (`lib/ui/number_input.dart`: `EditableNumber`, `promptNumber`, rest picker with Custom).
+- Done (owner feedback round 2, 2026-11-02):
+  - Stretching session: stretches added to a workout/template are grouped into one "Stretching" card (container exercise `hz_stretching`, hidden from the list); each row is a different stretch (`workout_sets.sub_exercise_id`, `template_exercises.sub_exercise_ids`, schema v3) with optional +KG (assisted) and seconds; ▶ chains through the rows. Records/muscles use the row's stretch.
+  - Timed exercises show +KG and SECONDS.
+  - Timer bar: tap a stretch timer → full-screen sideways timer (`FullScreenTimer`, RotatedBox because the app is portrait-only) that follows the chain and shows "Next: …"; tap other timers → bar grows. Workout time in the header is larger.
+  - Exercise pictures: `ExerciseAvatar` (first free-exercise-db photo, letter fallback; off in tests).
+  - `TrackingToggle` chip on each card: tap cycles kg×reps → reps → time.
+  - Hold an exercise name → compact reorder sheet (`reorder_sheet.dart`).
+  - `RunningWorkoutBar` above the tabs while a workout runs (name, time, % done, current timer); replaces the Home resume banner.
 - Next: BLE HR source (flutter_blue_plus), plate/1RM calculators, exercise history/progress chart, edit past workouts, swap exercise, template folders, body-map muscle filter.
 - Owner preferences: clean, short exercise names; popular items first; everything adjustable both by tapping presets and by typing a value.
 - **DB changes checklist** (a forgotten migration broke the live preview on 2026-11-02): add the column as nullable/defaulted, bump `schemaVersion`, add an `onUpgrade` step, and extend `test/migration_test.dart` (it builds an old-version DB file and opens it with the current code). `_addMissingColumns()` in `beforeOpen` is only a safety net.

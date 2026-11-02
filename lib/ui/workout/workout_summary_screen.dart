@@ -99,7 +99,8 @@ class WorkoutSummaryScreen extends StatelessWidget {
                     const SizedBox(height: 4),
                     for (final (i, set) in e.sets.indexed)
                       Text(
-                        '${i + 1}. ${_setText(e.exercise.trackingType, set.type, set.weightKg, set.reps, set.durationS)}'
+                        '${i + 1}. ${set.subExercise != null ? '${set.subExercise!.name}: ' : ''}'
+                        '${_setText(e.exercise.trackingType, set.type, set.weightKg, set.reps, set.durationS)}'
                         '${set.rpe != null ? ' @ RPE ${formatKg(set.rpe)}' : ''}'
                         '${set.maxHr != null ? '  ♥ ${set.maxHr}' : ''}',
                       ),
@@ -123,7 +124,9 @@ class WorkoutSummaryScreen extends StatelessWidget {
       SetType.failure => 'Failure: ',
       SetType.normal => '',
     };
-    if (t == TrackingType.duration) return '$prefix${secs ?? 0} s';
+    if (t == TrackingType.duration) {
+      return (w == null || w == 0) ? '$prefix${secs ?? 0} s' : '$prefix${secs ?? 0} s with +${formatKg(w)} kg';
+    }
     if (w == null || w == 0) return '$prefix${reps ?? 0} reps';
     return '$prefix${formatKg(w)} kg × ${reps ?? 0}';
   }

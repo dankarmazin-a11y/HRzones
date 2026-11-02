@@ -11,7 +11,13 @@ void main() {
   test('seeds exercises with tracking types and search filters', () async {
     final s = await testServices();
     final all = await s.exercises.all();
-    expect(all.map((e) => e.name), ['Barbell Bench Press', 'Plank', 'Pullups']);
+    expect(all.map((e) => e.name), [
+      'Barbell Bench Press',
+      'Plank',
+      'Pullups',
+      'Standing Hamstring Stretch',
+      'Stretching',
+    ]);
     expect((await s.exercises.byId('Pullups'))!.trackingType, TrackingType.bodyweightReps);
     expect((await s.exercises.byId('Plank'))!.trackingType, TrackingType.duration);
     expect((await s.exercises.byId('Barbell_Bench_Press'))!.trackingType, TrackingType.weightReps);
@@ -19,11 +25,11 @@ void main() {
     expect((await s.exercises.search(query: 'bench')).all.single.id, 'Barbell_Bench_Press');
     // Secondary muscles match too, primary first.
     expect((await s.exercises.search(muscle: 'triceps')).all.single.id, 'Barbell_Bench_Press');
-    expect((await s.exercises.search(equipment: 'body only')).length, 2);
+    expect((await s.exercises.search(equipment: 'body only')).length, 3); // Stretching container hidden
 
     // Seeding twice does not duplicate.
     await s.exercises.seedIfNeeded(() async => testExercisesJson);
-    expect((await s.exercises.all()).length, 3);
+    expect((await s.exercises.all()).length, 5);
     await s.close();
   });
 

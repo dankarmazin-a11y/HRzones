@@ -70,6 +70,7 @@ class WorkoutRepository {
                 rpe: Value(s.rpe),
                 maxHr: Value(s.maxHr),
                 completedAt: Value(s.completedAt),
+                subExerciseId: Value(s.subExercise?.id),
               ),
             );
           }
@@ -111,7 +112,8 @@ class WorkoutRepository {
         le.sets.add(
           LoggedSet(id: s.id, type: s.setType, weightKg: s.weightKg, reps: s.reps, durationS: s.durationS, rpe: s.rpe)
             ..maxHr = s.maxHr
-            ..completedAt = s.completedAt,
+            ..completedAt = s.completedAt
+            ..subExercise = s.subExerciseId == null ? null : await exercises.byId(s.subExerciseId!),
         );
       }
       le.previous = await previousSets(ex.id, excludeWorkoutId: row.id);
@@ -155,7 +157,7 @@ class WorkoutRepository {
     final q =
         db.select(db.workoutSets).join([innerJoin(db.workouts, db.workouts.id.equalsExp(db.workoutSets.workoutId))])
           ..where(
-            db.workoutSets.exerciseId.isIn(ids) &
+            (db.workoutSets.exerciseId.isIn(ids) | db.workoutSets.subExerciseId.isIn(ids)) &
                 db.workouts.endedAt.isNotNull() &
                 db.workoutSets.completedAt.isNotNull() &
                 (excludeWorkoutId == null ? const Constant(true) : db.workouts.id.equals(excludeWorkoutId).not()) &

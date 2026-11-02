@@ -25,6 +25,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
         targetSets: s.targetSets,
         restSeconds: s.restSeconds,
         supersetGroup: s.supersetGroup,
+        subExerciseIds: [...s.subExerciseIds],
       ),
   ];
   final _exercises = <String, Exercise>{};
@@ -38,19 +39,37 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
   Future<void> _loadNames() async {
     final repo = Services.of(context).exercises;
     for (final s in _slots) {
-      final e = await repo.byId(s.exerciseId);
-      if (e != null) _exercises[e.id] = e;
+      for (final id in [s.exerciseId, ...s.subExerciseIds]) {
+        final e = await repo.byId(id);
+        if (e != null) _exercises[e.id] = e;
+      }
     }
     if (mounted) setState(() {});
   }
 
   Future<void> _add() async {
     final picked = await ExerciseLibraryScreen.pick(context);
-    if (picked == null) return;
+    if (picked == null || !mounted) return;
+    final session = Services.of(context).session;
+    final container = await Services.of(context).exercises.byId(stretchingSessionId);
     setState(() {
-      for (final e in picked) {
+      // Stretches go into one "Stretching" slot (the last one if it is last).
+      final stretches = picked.where((e) => e.isStretch && !e.isStretchSession).toList();
+      if (stretches.isNotEmpty && container != null) {
+        _exercises[container.id] = container;
+        var slot = _slots.lastOrNull;
+        if (slot == null || slot.exerciseId != stretchingSessionId) {
+          slot = TemplateSlot(exerciseId: stretchingSessionId, targetSets: 1, restSeconds: session.restFor(container));
+          _slots.add(slot);
+        }
+        for (final e in stretches) {
+          _exercises[e.id] = e;
+          slot.subExerciseIds.add(e.id);
+        }
+      }
+      for (final e in picked.where((e) => !stretches.contains(e))) {
         _exercises[e.id] = e;
-        _slots.add(TemplateSlot(exerciseId: e.id, restSeconds: Services.of(context).session.restFor(e)));
+        _slots.add(TemplateSlot(exerciseId: e.id, restSeconds: session.restFor(e)));
       }
     });
   }
@@ -119,32 +138,39 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
               onReorderItem: (from, to) => setState(() => _slots.insert(to, _slots.removeAt(from))),
               itemBuilder: (context, i) {
                 final s = _slots[i];
+                final isSession = s.exerciseId == stretchingSessionId;
                 return ListTile(
                   key: ObjectKey(s),
                   title: Text(_exercises[s.exerciseId]?.name ?? '…'),
-                  subtitle: Text('Rest ${formatRest(s.restSeconds)} · tap to change'),
+                  subtitle: Text(
+                    isSession
+                        ? s.subExerciseIds.map((id) => _exercises[id]?.name ?? '…').join(', ')
+                        : 'Rest ${formatRest(s.restSeconds)} · tap to change',
+                  ),
                   leading: IconButton(
                     icon: const Icon(Icons.remove_circle_outline),
                     onPressed: () => setState(() => _slots.removeAt(i)),
                   ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.remove),
-                        onPressed: s.targetSets > 1 ? () => setState(() => s.targetSets--) : null,
-                      ),
-                      EditableNumber(
-                        value: s.targetSets,
-                        title: 'Sets',
-                        min: 1,
-                        max: 30,
-                        display: '${s.targetSets} sets',
-                        onChanged: (v) => setState(() => s.targetSets = v.round()),
-                      ),
-                      IconButton(icon: const Icon(Icons.add), onPressed: () => setState(() => s.targetSets++)),
-                    ],
-                  ),
+                  trailing: isSession
+                      ? Text('${s.subExerciseIds.length} stretches')
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.remove),
+                              onPressed: s.targetSets > 1 ? () => setState(() => s.targetSets--) : null,
+                            ),
+                            EditableNumber(
+                              value: s.targetSets,
+                              title: 'Sets',
+                              min: 1,
+                              max: 30,
+                              display: '${s.targetSets} sets',
+                              onChanged: (v) => setState(() => s.targetSets = v.round()),
+                            ),
+                            IconButton(icon: const Icon(Icons.add), onPressed: () => setState(() => s.targetSets++)),
+                          ],
+                        ),
                   onTap: () async {
                     final rest = await pickRestSeconds(context, s.restSeconds);
                     if (rest != null) setState(() => s.restSeconds = rest);

@@ -16,17 +16,19 @@ void main() {
     final plank = (await s.exercises.byId('Plank'))!; // stretching category in the test data
     await s.session.addExercises([bench, plank]);
     final w = s.session.active!;
-    expect(w.exercises[0].restSeconds, 90);
-    expect(w.exercises[1].restSeconds, WorkoutSession.stretchRestSeconds);
+    final benchCard = w.exercises.firstWhere((e) => e.exercise.id == bench.id);
+    final stretchCard = w.exercises.firstWhere((e) => e.exercise.isStretchSession);
+    expect(benchCard.restSeconds, 90);
+    expect(stretchCard.restSeconds, WorkoutSession.stretchRestSeconds);
 
     await s.session.setDefaultRest(120);
-    expect(w.exercises[0].restSeconds, 120);
-    expect(w.exercises[1].restSeconds, WorkoutSession.stretchRestSeconds);
+    expect(benchCard.restSeconds, 120);
+    expect(stretchCard.restSeconds, WorkoutSession.stretchRestSeconds);
     expect(await s.db.getSetting('defaultRestS'), '120');
 
     // Per-exercise override still works.
-    s.session.setRestSeconds(w.exercises[0], 45);
-    expect(w.exercises[0].restSeconds, 45);
+    s.session.setRestSeconds(benchCard, 45);
+    expect(benchCard.restSeconds, 45);
     await s.session.discard();
     await s.close();
   });

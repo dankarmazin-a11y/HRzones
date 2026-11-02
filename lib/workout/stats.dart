@@ -7,8 +7,13 @@ double estimated1RM(double weightKg, int reps) => reps <= 1 ? weightKg : weightK
 class SetStat {
   const SetStat({required this.exerciseId, required this.type, this.weightKg, this.reps, this.durationS});
 
-  factory SetStat.fromRow(WorkoutSet s) =>
-      SetStat(exerciseId: s.exerciseId, type: s.setType, weightKg: s.weightKg, reps: s.reps, durationS: s.durationS);
+  factory SetStat.fromRow(WorkoutSet s) => SetStat(
+    exerciseId: s.subExerciseId ?? s.exerciseId,
+    type: s.setType,
+    weightKg: s.weightKg,
+    reps: s.reps,
+    durationS: s.durationS,
+  );
 
   final String exerciseId;
   final SetType type;

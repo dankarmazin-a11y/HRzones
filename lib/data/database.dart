@@ -15,8 +15,12 @@ enum SetType { warmup, normal, drop, failure }
 
 enum WorkoutType { strength, run, walk, cycle, other }
 
+/// Id of the "Stretching" session container exercise.
+const stretchingSessionId = 'hz_stretching';
+
 extension ExerciseKind on Exercise {
   bool get isStretch => category == 'stretching';
+  bool get isStretchSession => id == stretchingSessionId;
   bool get isTimed => trackingType == TrackingType.duration;
 }
 
@@ -81,6 +85,9 @@ class TemplateExercises extends Table with SyncColumns {
   IntColumn get restSeconds => integer().withDefault(const Constant(90))();
   IntColumn get supersetGroup => integer().nullable()();
 
+  /// For the "Stretching" session slot: the stretches, comma-separated ids.
+  TextColumn get subExerciseIds => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -124,6 +131,9 @@ class WorkoutSets extends Table with SyncColumns {
   IntColumn get durationS => integer().nullable()();
   RealColumn get distanceM => real().nullable()();
   RealColumn get rpe => real().nullable()();
+
+  /// In a "Stretching" session: which stretch this row is.
+  TextColumn get subExerciseId => text().nullable()();
   IntColumn get maxHr => integer().nullable()();
 
   /// Null = not completed (not counted in stats).
@@ -147,12 +157,16 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (m, from, to) async {
       if (from < 2) await m.addColumn(exercises, exercises.popularity);
+      if (from < 3) {
+        await m.addColumn(workoutSets, workoutSets.subExerciseId);
+        await m.addColumn(templateExercises, templateExercises.subExerciseIds);
+      }
     },
     beforeOpen: (details) async {
       await _addMissingColumns();

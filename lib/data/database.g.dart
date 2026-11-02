@@ -1085,6 +1085,15 @@ class $TemplateExercisesTable extends TemplateExercises with TableInfo<$Template
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _subExerciseIdsMeta = const VerificationMeta('subExerciseIds');
+  @override
+  late final GeneratedColumn<String> subExerciseIds = GeneratedColumn<String>(
+    'sub_exercise_ids',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1095,6 +1104,7 @@ class $TemplateExercisesTable extends TemplateExercises with TableInfo<$Template
     targetSets,
     restSeconds,
     supersetGroup,
+    subExerciseIds,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1138,6 +1148,12 @@ class $TemplateExercisesTable extends TemplateExercises with TableInfo<$Template
         supersetGroup.isAcceptableOrUnknown(data['superset_group']!, _supersetGroupMeta),
       );
     }
+    if (data.containsKey('sub_exercise_ids')) {
+      context.handle(
+        _subExerciseIdsMeta,
+        subExerciseIds.isAcceptableOrUnknown(data['sub_exercise_ids']!, _subExerciseIdsMeta),
+      );
+    }
     return context;
   }
 
@@ -1155,6 +1171,10 @@ class $TemplateExercisesTable extends TemplateExercises with TableInfo<$Template
       targetSets: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}target_sets'])!,
       restSeconds: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}rest_seconds'])!,
       supersetGroup: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}superset_group']),
+      subExerciseIds: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sub_exercise_ids'],
+      ),
     );
   }
 
@@ -1173,6 +1193,9 @@ class TemplateExercise extends DataClass implements Insertable<TemplateExercise>
   final int targetSets;
   final int restSeconds;
   final int? supersetGroup;
+
+  /// For the "Stretching" session slot: the stretches, comma-separated ids.
+  final String? subExerciseIds;
   const TemplateExercise({
     required this.id,
     required this.updatedAt,
@@ -1182,6 +1205,7 @@ class TemplateExercise extends DataClass implements Insertable<TemplateExercise>
     required this.targetSets,
     required this.restSeconds,
     this.supersetGroup,
+    this.subExerciseIds,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1196,6 +1220,9 @@ class TemplateExercise extends DataClass implements Insertable<TemplateExercise>
     if (!nullToAbsent || supersetGroup != null) {
       map['superset_group'] = Variable<int>(supersetGroup);
     }
+    if (!nullToAbsent || subExerciseIds != null) {
+      map['sub_exercise_ids'] = Variable<String>(subExerciseIds);
+    }
     return map;
   }
 
@@ -1209,6 +1236,7 @@ class TemplateExercise extends DataClass implements Insertable<TemplateExercise>
       targetSets: Value(targetSets),
       restSeconds: Value(restSeconds),
       supersetGroup: supersetGroup == null && nullToAbsent ? const Value.absent() : Value(supersetGroup),
+      subExerciseIds: subExerciseIds == null && nullToAbsent ? const Value.absent() : Value(subExerciseIds),
     );
   }
 
@@ -1223,6 +1251,7 @@ class TemplateExercise extends DataClass implements Insertable<TemplateExercise>
       targetSets: serializer.fromJson<int>(json['targetSets']),
       restSeconds: serializer.fromJson<int>(json['restSeconds']),
       supersetGroup: serializer.fromJson<int?>(json['supersetGroup']),
+      subExerciseIds: serializer.fromJson<String?>(json['subExerciseIds']),
     );
   }
   @override
@@ -1237,6 +1266,7 @@ class TemplateExercise extends DataClass implements Insertable<TemplateExercise>
       'targetSets': serializer.toJson<int>(targetSets),
       'restSeconds': serializer.toJson<int>(restSeconds),
       'supersetGroup': serializer.toJson<int?>(supersetGroup),
+      'subExerciseIds': serializer.toJson<String?>(subExerciseIds),
     };
   }
 
@@ -1249,6 +1279,7 @@ class TemplateExercise extends DataClass implements Insertable<TemplateExercise>
     int? targetSets,
     int? restSeconds,
     Value<int?> supersetGroup = const Value.absent(),
+    Value<String?> subExerciseIds = const Value.absent(),
   }) => TemplateExercise(
     id: id ?? this.id,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -1258,6 +1289,7 @@ class TemplateExercise extends DataClass implements Insertable<TemplateExercise>
     targetSets: targetSets ?? this.targetSets,
     restSeconds: restSeconds ?? this.restSeconds,
     supersetGroup: supersetGroup.present ? supersetGroup.value : this.supersetGroup,
+    subExerciseIds: subExerciseIds.present ? subExerciseIds.value : this.subExerciseIds,
   );
   TemplateExercise copyWithCompanion(TemplateExercisesCompanion data) {
     return TemplateExercise(
@@ -1269,6 +1301,7 @@ class TemplateExercise extends DataClass implements Insertable<TemplateExercise>
       targetSets: data.targetSets.present ? data.targetSets.value : this.targetSets,
       restSeconds: data.restSeconds.present ? data.restSeconds.value : this.restSeconds,
       supersetGroup: data.supersetGroup.present ? data.supersetGroup.value : this.supersetGroup,
+      subExerciseIds: data.subExerciseIds.present ? data.subExerciseIds.value : this.subExerciseIds,
     );
   }
 
@@ -1282,14 +1315,24 @@ class TemplateExercise extends DataClass implements Insertable<TemplateExercise>
           ..write('position: $position, ')
           ..write('targetSets: $targetSets, ')
           ..write('restSeconds: $restSeconds, ')
-          ..write('supersetGroup: $supersetGroup')
+          ..write('supersetGroup: $supersetGroup, ')
+          ..write('subExerciseIds: $subExerciseIds')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, updatedAt, templateId, exerciseId, position, targetSets, restSeconds, supersetGroup);
+  int get hashCode => Object.hash(
+    id,
+    updatedAt,
+    templateId,
+    exerciseId,
+    position,
+    targetSets,
+    restSeconds,
+    supersetGroup,
+    subExerciseIds,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1301,7 +1344,8 @@ class TemplateExercise extends DataClass implements Insertable<TemplateExercise>
           other.position == this.position &&
           other.targetSets == this.targetSets &&
           other.restSeconds == this.restSeconds &&
-          other.supersetGroup == this.supersetGroup);
+          other.supersetGroup == this.supersetGroup &&
+          other.subExerciseIds == this.subExerciseIds);
 }
 
 class TemplateExercisesCompanion extends UpdateCompanion<TemplateExercise> {
@@ -1313,6 +1357,7 @@ class TemplateExercisesCompanion extends UpdateCompanion<TemplateExercise> {
   final Value<int> targetSets;
   final Value<int> restSeconds;
   final Value<int?> supersetGroup;
+  final Value<String?> subExerciseIds;
   final Value<int> rowid;
   const TemplateExercisesCompanion({
     this.id = const Value.absent(),
@@ -1323,6 +1368,7 @@ class TemplateExercisesCompanion extends UpdateCompanion<TemplateExercise> {
     this.targetSets = const Value.absent(),
     this.restSeconds = const Value.absent(),
     this.supersetGroup = const Value.absent(),
+    this.subExerciseIds = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   TemplateExercisesCompanion.insert({
@@ -1334,6 +1380,7 @@ class TemplateExercisesCompanion extends UpdateCompanion<TemplateExercise> {
     this.targetSets = const Value.absent(),
     this.restSeconds = const Value.absent(),
     this.supersetGroup = const Value.absent(),
+    this.subExerciseIds = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : templateId = Value(templateId),
        exerciseId = Value(exerciseId),
@@ -1347,6 +1394,7 @@ class TemplateExercisesCompanion extends UpdateCompanion<TemplateExercise> {
     Expression<int>? targetSets,
     Expression<int>? restSeconds,
     Expression<int>? supersetGroup,
+    Expression<String>? subExerciseIds,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1358,6 +1406,7 @@ class TemplateExercisesCompanion extends UpdateCompanion<TemplateExercise> {
       if (targetSets != null) 'target_sets': targetSets,
       if (restSeconds != null) 'rest_seconds': restSeconds,
       if (supersetGroup != null) 'superset_group': supersetGroup,
+      if (subExerciseIds != null) 'sub_exercise_ids': subExerciseIds,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1371,6 +1420,7 @@ class TemplateExercisesCompanion extends UpdateCompanion<TemplateExercise> {
     Value<int>? targetSets,
     Value<int>? restSeconds,
     Value<int?>? supersetGroup,
+    Value<String?>? subExerciseIds,
     Value<int>? rowid,
   }) {
     return TemplateExercisesCompanion(
@@ -1382,6 +1432,7 @@ class TemplateExercisesCompanion extends UpdateCompanion<TemplateExercise> {
       targetSets: targetSets ?? this.targetSets,
       restSeconds: restSeconds ?? this.restSeconds,
       supersetGroup: supersetGroup ?? this.supersetGroup,
+      subExerciseIds: subExerciseIds ?? this.subExerciseIds,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1413,6 +1464,9 @@ class TemplateExercisesCompanion extends UpdateCompanion<TemplateExercise> {
     if (supersetGroup.present) {
       map['superset_group'] = Variable<int>(supersetGroup.value);
     }
+    if (subExerciseIds.present) {
+      map['sub_exercise_ids'] = Variable<String>(subExerciseIds.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1430,6 +1484,7 @@ class TemplateExercisesCompanion extends UpdateCompanion<TemplateExercise> {
           ..write('targetSets: $targetSets, ')
           ..write('restSeconds: $restSeconds, ')
           ..write('supersetGroup: $supersetGroup, ')
+          ..write('subExerciseIds: $subExerciseIds, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2496,6 +2551,15 @@ class $WorkoutSetsTable extends WorkoutSets with TableInfo<$WorkoutSetsTable, Wo
     type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _subExerciseIdMeta = const VerificationMeta('subExerciseId');
+  @override
+  late final GeneratedColumn<String> subExerciseId = GeneratedColumn<String>(
+    'sub_exercise_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _maxHrMeta = const VerificationMeta('maxHr');
   @override
   late final GeneratedColumn<int> maxHr = GeneratedColumn<int>(
@@ -2528,6 +2592,7 @@ class $WorkoutSetsTable extends WorkoutSets with TableInfo<$WorkoutSetsTable, Wo
     durationS,
     distanceM,
     rpe,
+    subExerciseId,
     maxHr,
     completedAt,
   ];
@@ -2584,6 +2649,12 @@ class $WorkoutSetsTable extends WorkoutSets with TableInfo<$WorkoutSetsTable, Wo
     if (data.containsKey('rpe')) {
       context.handle(_rpeMeta, rpe.isAcceptableOrUnknown(data['rpe']!, _rpeMeta));
     }
+    if (data.containsKey('sub_exercise_id')) {
+      context.handle(
+        _subExerciseIdMeta,
+        subExerciseId.isAcceptableOrUnknown(data['sub_exercise_id']!, _subExerciseIdMeta),
+      );
+    }
     if (data.containsKey('max_hr')) {
       context.handle(_maxHrMeta, maxHr.isAcceptableOrUnknown(data['max_hr']!, _maxHrMeta));
     }
@@ -2616,6 +2687,7 @@ class $WorkoutSetsTable extends WorkoutSets with TableInfo<$WorkoutSetsTable, Wo
       durationS: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}duration_s']),
       distanceM: attachedDatabase.typeMapping.read(DriftSqlType.double, data['${effectivePrefix}distance_m']),
       rpe: attachedDatabase.typeMapping.read(DriftSqlType.double, data['${effectivePrefix}rpe']),
+      subExerciseId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}sub_exercise_id']),
       maxHr: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}max_hr']),
       completedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}completed_at']),
     );
@@ -2642,6 +2714,9 @@ class WorkoutSet extends DataClass implements Insertable<WorkoutSet> {
   final int? durationS;
   final double? distanceM;
   final double? rpe;
+
+  /// In a "Stretching" session: which stretch this row is.
+  final String? subExerciseId;
   final int? maxHr;
 
   /// Null = not completed (not counted in stats).
@@ -2659,6 +2734,7 @@ class WorkoutSet extends DataClass implements Insertable<WorkoutSet> {
     this.durationS,
     this.distanceM,
     this.rpe,
+    this.subExerciseId,
     this.maxHr,
     this.completedAt,
   });
@@ -2689,6 +2765,9 @@ class WorkoutSet extends DataClass implements Insertable<WorkoutSet> {
     if (!nullToAbsent || rpe != null) {
       map['rpe'] = Variable<double>(rpe);
     }
+    if (!nullToAbsent || subExerciseId != null) {
+      map['sub_exercise_id'] = Variable<String>(subExerciseId);
+    }
     if (!nullToAbsent || maxHr != null) {
       map['max_hr'] = Variable<int>(maxHr);
     }
@@ -2712,6 +2791,7 @@ class WorkoutSet extends DataClass implements Insertable<WorkoutSet> {
       durationS: durationS == null && nullToAbsent ? const Value.absent() : Value(durationS),
       distanceM: distanceM == null && nullToAbsent ? const Value.absent() : Value(distanceM),
       rpe: rpe == null && nullToAbsent ? const Value.absent() : Value(rpe),
+      subExerciseId: subExerciseId == null && nullToAbsent ? const Value.absent() : Value(subExerciseId),
       maxHr: maxHr == null && nullToAbsent ? const Value.absent() : Value(maxHr),
       completedAt: completedAt == null && nullToAbsent ? const Value.absent() : Value(completedAt),
     );
@@ -2732,6 +2812,7 @@ class WorkoutSet extends DataClass implements Insertable<WorkoutSet> {
       durationS: serializer.fromJson<int?>(json['durationS']),
       distanceM: serializer.fromJson<double?>(json['distanceM']),
       rpe: serializer.fromJson<double?>(json['rpe']),
+      subExerciseId: serializer.fromJson<String?>(json['subExerciseId']),
       maxHr: serializer.fromJson<int?>(json['maxHr']),
       completedAt: serializer.fromJson<DateTime?>(json['completedAt']),
     );
@@ -2752,6 +2833,7 @@ class WorkoutSet extends DataClass implements Insertable<WorkoutSet> {
       'durationS': serializer.toJson<int?>(durationS),
       'distanceM': serializer.toJson<double?>(distanceM),
       'rpe': serializer.toJson<double?>(rpe),
+      'subExerciseId': serializer.toJson<String?>(subExerciseId),
       'maxHr': serializer.toJson<int?>(maxHr),
       'completedAt': serializer.toJson<DateTime?>(completedAt),
     };
@@ -2770,6 +2852,7 @@ class WorkoutSet extends DataClass implements Insertable<WorkoutSet> {
     Value<int?> durationS = const Value.absent(),
     Value<double?> distanceM = const Value.absent(),
     Value<double?> rpe = const Value.absent(),
+    Value<String?> subExerciseId = const Value.absent(),
     Value<int?> maxHr = const Value.absent(),
     Value<DateTime?> completedAt = const Value.absent(),
   }) => WorkoutSet(
@@ -2785,6 +2868,7 @@ class WorkoutSet extends DataClass implements Insertable<WorkoutSet> {
     durationS: durationS.present ? durationS.value : this.durationS,
     distanceM: distanceM.present ? distanceM.value : this.distanceM,
     rpe: rpe.present ? rpe.value : this.rpe,
+    subExerciseId: subExerciseId.present ? subExerciseId.value : this.subExerciseId,
     maxHr: maxHr.present ? maxHr.value : this.maxHr,
     completedAt: completedAt.present ? completedAt.value : this.completedAt,
   );
@@ -2802,6 +2886,7 @@ class WorkoutSet extends DataClass implements Insertable<WorkoutSet> {
       durationS: data.durationS.present ? data.durationS.value : this.durationS,
       distanceM: data.distanceM.present ? data.distanceM.value : this.distanceM,
       rpe: data.rpe.present ? data.rpe.value : this.rpe,
+      subExerciseId: data.subExerciseId.present ? data.subExerciseId.value : this.subExerciseId,
       maxHr: data.maxHr.present ? data.maxHr.value : this.maxHr,
       completedAt: data.completedAt.present ? data.completedAt.value : this.completedAt,
     );
@@ -2822,6 +2907,7 @@ class WorkoutSet extends DataClass implements Insertable<WorkoutSet> {
           ..write('durationS: $durationS, ')
           ..write('distanceM: $distanceM, ')
           ..write('rpe: $rpe, ')
+          ..write('subExerciseId: $subExerciseId, ')
           ..write('maxHr: $maxHr, ')
           ..write('completedAt: $completedAt')
           ..write(')'))
@@ -2842,6 +2928,7 @@ class WorkoutSet extends DataClass implements Insertable<WorkoutSet> {
     durationS,
     distanceM,
     rpe,
+    subExerciseId,
     maxHr,
     completedAt,
   );
@@ -2861,6 +2948,7 @@ class WorkoutSet extends DataClass implements Insertable<WorkoutSet> {
           other.durationS == this.durationS &&
           other.distanceM == this.distanceM &&
           other.rpe == this.rpe &&
+          other.subExerciseId == this.subExerciseId &&
           other.maxHr == this.maxHr &&
           other.completedAt == this.completedAt);
 }
@@ -2878,6 +2966,7 @@ class WorkoutSetsCompanion extends UpdateCompanion<WorkoutSet> {
   final Value<int?> durationS;
   final Value<double?> distanceM;
   final Value<double?> rpe;
+  final Value<String?> subExerciseId;
   final Value<int?> maxHr;
   final Value<DateTime?> completedAt;
   final Value<int> rowid;
@@ -2894,6 +2983,7 @@ class WorkoutSetsCompanion extends UpdateCompanion<WorkoutSet> {
     this.durationS = const Value.absent(),
     this.distanceM = const Value.absent(),
     this.rpe = const Value.absent(),
+    this.subExerciseId = const Value.absent(),
     this.maxHr = const Value.absent(),
     this.completedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -2911,6 +3001,7 @@ class WorkoutSetsCompanion extends UpdateCompanion<WorkoutSet> {
     this.durationS = const Value.absent(),
     this.distanceM = const Value.absent(),
     this.rpe = const Value.absent(),
+    this.subExerciseId = const Value.absent(),
     this.maxHr = const Value.absent(),
     this.completedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -2931,6 +3022,7 @@ class WorkoutSetsCompanion extends UpdateCompanion<WorkoutSet> {
     Expression<int>? durationS,
     Expression<double>? distanceM,
     Expression<double>? rpe,
+    Expression<String>? subExerciseId,
     Expression<int>? maxHr,
     Expression<DateTime>? completedAt,
     Expression<int>? rowid,
@@ -2948,6 +3040,7 @@ class WorkoutSetsCompanion extends UpdateCompanion<WorkoutSet> {
       if (durationS != null) 'duration_s': durationS,
       if (distanceM != null) 'distance_m': distanceM,
       if (rpe != null) 'rpe': rpe,
+      if (subExerciseId != null) 'sub_exercise_id': subExerciseId,
       if (maxHr != null) 'max_hr': maxHr,
       if (completedAt != null) 'completed_at': completedAt,
       if (rowid != null) 'rowid': rowid,
@@ -2967,6 +3060,7 @@ class WorkoutSetsCompanion extends UpdateCompanion<WorkoutSet> {
     Value<int?>? durationS,
     Value<double?>? distanceM,
     Value<double?>? rpe,
+    Value<String?>? subExerciseId,
     Value<int?>? maxHr,
     Value<DateTime?>? completedAt,
     Value<int>? rowid,
@@ -2984,6 +3078,7 @@ class WorkoutSetsCompanion extends UpdateCompanion<WorkoutSet> {
       durationS: durationS ?? this.durationS,
       distanceM: distanceM ?? this.distanceM,
       rpe: rpe ?? this.rpe,
+      subExerciseId: subExerciseId ?? this.subExerciseId,
       maxHr: maxHr ?? this.maxHr,
       completedAt: completedAt ?? this.completedAt,
       rowid: rowid ?? this.rowid,
@@ -3029,6 +3124,9 @@ class WorkoutSetsCompanion extends UpdateCompanion<WorkoutSet> {
     if (rpe.present) {
       map['rpe'] = Variable<double>(rpe.value);
     }
+    if (subExerciseId.present) {
+      map['sub_exercise_id'] = Variable<String>(subExerciseId.value);
+    }
     if (maxHr.present) {
       map['max_hr'] = Variable<int>(maxHr.value);
     }
@@ -3056,6 +3154,7 @@ class WorkoutSetsCompanion extends UpdateCompanion<WorkoutSet> {
           ..write('durationS: $durationS, ')
           ..write('distanceM: $distanceM, ')
           ..write('rpe: $rpe, ')
+          ..write('subExerciseId: $subExerciseId, ')
           ..write('maxHr: $maxHr, ')
           ..write('completedAt: $completedAt, ')
           ..write('rowid: $rowid')
@@ -4020,6 +4119,7 @@ typedef $$TemplateExercisesTableCreateCompanionBuilder = TemplateExercisesCompan
   Value<int> targetSets,
   Value<int> restSeconds,
   Value<int?> supersetGroup,
+  Value<String?> subExerciseIds,
   Value<int> rowid,
 });
 typedef $$TemplateExercisesTableUpdateCompanionBuilder = TemplateExercisesCompanion Function({
@@ -4031,6 +4131,7 @@ typedef $$TemplateExercisesTableUpdateCompanionBuilder = TemplateExercisesCompan
   Value<int> targetSets,
   Value<int> restSeconds,
   Value<int?> supersetGroup,
+  Value<String?> subExerciseIds,
   Value<int> rowid,
 });
 
@@ -4087,6 +4188,9 @@ class $$TemplateExercisesTableFilterComposer extends Composer<_$AppDatabase, $Te
 
   ColumnFilters<int> get supersetGroup =>
       $composableBuilder(column: $table.supersetGroup, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get subExerciseIds =>
+      $composableBuilder(column: $table.subExerciseIds, builder: (column) => ColumnFilters(column));
 
   $$TemplatesTableFilterComposer get templateId {
     final $$TemplatesTableFilterComposer composer = $composerBuilder(
@@ -4150,6 +4254,9 @@ class $$TemplateExercisesTableOrderingComposer extends Composer<_$AppDatabase, $
   ColumnOrderings<int> get supersetGroup =>
       $composableBuilder(column: $table.supersetGroup, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get subExerciseIds =>
+      $composableBuilder(column: $table.subExerciseIds, builder: (column) => ColumnOrderings(column));
+
   $$TemplatesTableOrderingComposer get templateId {
     final $$TemplatesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -4207,6 +4314,9 @@ class $$TemplateExercisesTableAnnotationComposer extends Composer<_$AppDatabase,
 
   GeneratedColumn<int> get supersetGroup =>
       $composableBuilder(column: $table.supersetGroup, builder: (column) => column);
+
+  GeneratedColumn<String> get subExerciseIds =>
+      $composableBuilder(column: $table.subExerciseIds, builder: (column) => column);
 
   $$TemplatesTableAnnotationComposer get templateId {
     final $$TemplatesTableAnnotationComposer composer = $composerBuilder(
@@ -4278,6 +4388,7 @@ class $$TemplateExercisesTableTableManager
                 Value<int> targetSets = const Value.absent(),
                 Value<int> restSeconds = const Value.absent(),
                 Value<int?> supersetGroup = const Value.absent(),
+                Value<String?> subExerciseIds = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TemplateExercisesCompanion(
                 id: id,
@@ -4288,6 +4399,7 @@ class $$TemplateExercisesTableTableManager
                 targetSets: targetSets,
                 restSeconds: restSeconds,
                 supersetGroup: supersetGroup,
+                subExerciseIds: subExerciseIds,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -4300,6 +4412,7 @@ class $$TemplateExercisesTableTableManager
                 Value<int> targetSets = const Value.absent(),
                 Value<int> restSeconds = const Value.absent(),
                 Value<int?> supersetGroup = const Value.absent(),
+                Value<String?> subExerciseIds = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TemplateExercisesCompanion.insert(
                 id: id,
@@ -4310,6 +4423,7 @@ class $$TemplateExercisesTableTableManager
                 targetSets: targetSets,
                 restSeconds: restSeconds,
                 supersetGroup: supersetGroup,
+                subExerciseIds: subExerciseIds,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -5201,6 +5315,7 @@ typedef $$WorkoutSetsTableCreateCompanionBuilder = WorkoutSetsCompanion Function
   Value<int?> durationS,
   Value<double?> distanceM,
   Value<double?> rpe,
+  Value<String?> subExerciseId,
   Value<int?> maxHr,
   Value<DateTime?> completedAt,
   Value<int> rowid,
@@ -5218,6 +5333,7 @@ typedef $$WorkoutSetsTableUpdateCompanionBuilder = WorkoutSetsCompanion Function
   Value<int?> durationS,
   Value<double?> distanceM,
   Value<double?> rpe,
+  Value<String?> subExerciseId,
   Value<int?> maxHr,
   Value<DateTime?> completedAt,
   Value<int> rowid,
@@ -5297,6 +5413,9 @@ class $$WorkoutSetsTableFilterComposer extends Composer<_$AppDatabase, $WorkoutS
       $composableBuilder(column: $table.distanceM, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<double> get rpe => $composableBuilder(column: $table.rpe, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get subExerciseId =>
+      $composableBuilder(column: $table.subExerciseId, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get maxHr => $composableBuilder(column: $table.maxHr, builder: (column) => ColumnFilters(column));
 
@@ -5392,6 +5511,9 @@ class $$WorkoutSetsTableOrderingComposer extends Composer<_$AppDatabase, $Workou
   ColumnOrderings<double> get rpe =>
       $composableBuilder(column: $table.rpe, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get subExerciseId =>
+      $composableBuilder(column: $table.subExerciseId, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<int> get maxHr =>
       $composableBuilder(column: $table.maxHr, builder: (column) => ColumnOrderings(column));
 
@@ -5479,6 +5601,9 @@ class $$WorkoutSetsTableAnnotationComposer extends Composer<_$AppDatabase, $Work
   GeneratedColumn<double> get distanceM => $composableBuilder(column: $table.distanceM, builder: (column) => column);
 
   GeneratedColumn<double> get rpe => $composableBuilder(column: $table.rpe, builder: (column) => column);
+
+  GeneratedColumn<String> get subExerciseId =>
+      $composableBuilder(column: $table.subExerciseId, builder: (column) => column);
 
   GeneratedColumn<int> get maxHr => $composableBuilder(column: $table.maxHr, builder: (column) => column);
 
@@ -5577,6 +5702,7 @@ class $$WorkoutSetsTableTableManager
                 Value<int?> durationS = const Value.absent(),
                 Value<double?> distanceM = const Value.absent(),
                 Value<double?> rpe = const Value.absent(),
+                Value<String?> subExerciseId = const Value.absent(),
                 Value<int?> maxHr = const Value.absent(),
                 Value<DateTime?> completedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -5593,6 +5719,7 @@ class $$WorkoutSetsTableTableManager
                 durationS: durationS,
                 distanceM: distanceM,
                 rpe: rpe,
+                subExerciseId: subExerciseId,
                 maxHr: maxHr,
                 completedAt: completedAt,
                 rowid: rowid,
@@ -5611,6 +5738,7 @@ class $$WorkoutSetsTableTableManager
                 Value<int?> durationS = const Value.absent(),
                 Value<double?> distanceM = const Value.absent(),
                 Value<double?> rpe = const Value.absent(),
+                Value<String?> subExerciseId = const Value.absent(),
                 Value<int?> maxHr = const Value.absent(),
                 Value<DateTime?> completedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -5627,6 +5755,7 @@ class $$WorkoutSetsTableTableManager
                 durationS: durationS,
                 distanceM: distanceM,
                 rpe: rpe,
+                subExerciseId: subExerciseId,
                 maxHr: maxHr,
                 completedAt: completedAt,
                 rowid: rowid,

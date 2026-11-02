@@ -25,7 +25,10 @@ Strength log:
 - [ ] In a workout: timer button → pick a rest time → all exercises change. ⋮ on one exercise → change only its rest / switch to "Track: time".
 - [ ] Add 2 stretches, tap ▶ → countdown, beep, 10 s rest, next stretch starts by itself.
 - [ ] Timer button → "1 min" or "Stopwatch" runs in the bottom bar.
-- [ ] Hold an exercise name and drag it to a new position.
+- [ ] Hold an exercise name → a compact list opens → drag to reorder.
+- [ ] Tap "Stretching" in a workout, pick 3 stretches → one Stretching card. ▶ runs them one after another; tap the bar → big sideways timer.
+- [ ] Tap the small "kg×reps" button on a card → reps → time.
+- [ ] Minimise a workout (⌄) → the bar above the tabs shows time and % done; tap it to go back.
 - [ ] Tap any number next to a slider (age, target range, alert gap) and type a value.
 
 Heart rate:

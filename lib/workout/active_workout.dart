@@ -15,6 +15,9 @@ class LoggedSet {
   int? maxHr;
   DateTime? completedAt;
 
+  /// In a "Stretching" session card: which stretch this row is.
+  Exercise? subExercise;
+
   bool get done => completedAt != null;
 }
 
@@ -33,7 +36,9 @@ class LoggedExercise {
   /// Sets from the last finished workout with this exercise, by index.
   List<WorkoutSet> previous = const [];
 
-  WorkoutSet? previousFor(int index) => index < previous.length ? previous[index] : null;
+  /// Stretching sessions have different stretches per row, so no
+  /// "previous" by position.
+  WorkoutSet? previousFor(int index) => exercise.isStretchSession || index >= previous.length ? null : previous[index];
 }
 
 class ActiveWorkout {
