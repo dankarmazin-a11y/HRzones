@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'app_services.dart';
 import 'hr/hr_monitor.dart';
 import 'ui/screens/home_screen.dart';
 import 'ui/screens/profile_screen.dart';
@@ -7,9 +8,9 @@ import 'ui/screens/progress_screen.dart';
 import 'ui/screens/workouts_screen.dart';
 
 class HrZonesApp extends StatelessWidget {
-  const HrZonesApp({super.key, required this.monitor});
+  const HrZonesApp({super.key, required this.services});
 
-  final HrMonitor monitor;
+  final AppServices services;
 
   @override
   Widget build(BuildContext context) {
@@ -17,15 +18,18 @@ class HrZonesApp extends StatelessWidget {
       colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFE53935), brightness: b),
       useMaterial3: true,
     );
-    return HrScope(
-      monitor: monitor,
-      child: MaterialApp(
-        title: 'HR Zones',
-        debugShowCheckedModeBanner: false,
-        theme: theme(Brightness.light),
-        darkTheme: theme(Brightness.dark),
-        themeMode: ThemeMode.dark,
-        home: const HomeShell(),
+    return Services(
+      services: services,
+      child: HrScope(
+        monitor: services.hr,
+        child: MaterialApp(
+          title: 'HR Zones',
+          debugShowCheckedModeBanner: false,
+          theme: theme(Brightness.light),
+          darkTheme: theme(Brightness.dark),
+          themeMode: ThemeMode.dark,
+          home: const HomeShell(),
+        ),
       ),
     );
   }

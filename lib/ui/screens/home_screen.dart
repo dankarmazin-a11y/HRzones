@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../../app_services.dart';
+import '../../data/workout_repository.dart';
 import '../../hr/hr_monitor.dart';
 import '../../hr/zone_alert_engine.dart';
 import '../../hr/zones.dart';
-import '../placeholder_section.dart';
+import '../../workout/stats.dart';
+import '../history/history_screen.dart';
 import '../zone_colors.dart';
+import 'workouts_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -16,12 +20,114 @@ class HomeScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: const [
-          HrMonitorCard(),
+          _ResumeBanner(),
+          _QuickStart(),
           SizedBox(height: 8),
-          PlaceholderTile(icon: Icons.calendar_view_week, title: 'This week', subtitle: 'Workouts, volume and km'),
-          PlaceholderTile(icon: Icons.play_arrow, title: 'Quick start', subtitle: 'Strength, run or a template'),
+          _RecentWorkouts(),
+          SizedBox(height: 8),
+          HrMonitorCard(),
         ],
       ),
+    );
+  }
+}
+
+class _ResumeBanner extends StatelessWidget {
+  const _ResumeBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final session = Services.of(context).session;
+    return ListenableBuilder(
+      listenable: session,
+      builder: (context, _) {
+        final w = session.active;
+        if (w == null) return const SizedBox.shrink();
+        return Card(
+          color: Theme.of(context).colorScheme.primaryContainer,
+          child: ListTile(
+            leading: const Icon(Icons.fitness_center),
+            title: Text('${w.name} in progress'),
+            subtitle: Text('${w.completedSets.length} sets done'),
+            trailing: FilledButton(onPressed: () => openActiveWorkout(context), child: const Text('Resume')),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _QuickStart extends StatelessWidget {
+  const _QuickStart();
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Quick start', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              icon: const Icon(Icons.fitness_center),
+              label: const Text('Start strength workout'),
+              onPressed: () => startEmptyWorkout(context),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Templates are on the Workouts tab. Running comes in Phase 2.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RecentWorkouts extends StatelessWidget {
+  const _RecentWorkouts();
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return StreamBuilder<List<WorkoutListItem>>(
+      stream: Services.of(context).workouts.watchFinished(),
+      builder: (context, snap) {
+        final list = snap.data ?? const <WorkoutListItem>[];
+        final now = DateTime.now();
+        final monday = DateTime(now.year, now.month, now.day).subtract(Duration(days: now.weekday - 1));
+        final week = list.where((i) => !i.workout.startedAt.isBefore(monday)).toList();
+        final volume = week.fold(0.0, (v, i) => v + i.volume);
+        final sets = week.fold(0, (v, i) => v + i.setCount);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('This week', style: text.titleMedium),
+                    const SizedBox(height: 8),
+                    Text('${week.length} workouts · $sets sets · ${formatKg(volume)} kg'),
+                  ],
+                ),
+              ),
+            ),
+            if (list.isNotEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
+                child: Text('Last workout', style: text.titleMedium),
+              ),
+              WorkoutTile(item: list.first),
+            ],
+          ],
+        );
+      },
     );
   }
 }
