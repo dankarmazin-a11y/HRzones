@@ -4,12 +4,21 @@ import 'database.dart';
 
 /// One exercise slot in a template (editable, in memory).
 class TemplateSlot {
-  TemplateSlot({required this.exerciseId, this.targetSets = 3, this.restSeconds = 90, this.supersetGroup});
+  TemplateSlot({
+    required this.exerciseId,
+    this.targetSets = 3,
+    this.restSeconds = 90,
+    this.supersetGroup,
+    List<String>? subExerciseIds,
+  }) : subExerciseIds = subExerciseIds ?? [];
 
   String exerciseId;
   int targetSets;
   int restSeconds;
   int? supersetGroup;
+
+  /// For a "Stretching" session slot: the stretches in order.
+  final List<String> subExerciseIds;
 }
 
 class TemplateWithSlots {
@@ -39,6 +48,7 @@ class TemplateRepository {
                   targetSets: s.targetSets,
                   restSeconds: s.restSeconds,
                   supersetGroup: s.supersetGroup,
+                  subExerciseIds: (s.subExerciseIds ?? '').split(',').where((x) => x.isNotEmpty).toList(),
                 ),
             ],
           ),
@@ -73,6 +83,7 @@ class TemplateRepository {
               targetSets: Value(s.targetSets),
               restSeconds: Value(s.restSeconds),
               supersetGroup: Value(s.supersetGroup),
+              subExerciseIds: Value(s.subExerciseIds.isEmpty ? null : s.subExerciseIds.join(',')),
             ),
         ]);
       });

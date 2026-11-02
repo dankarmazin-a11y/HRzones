@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app_services.dart';
 import '../../data/database.dart';
 import '../../data/exercise_repository.dart';
+import 'exercise_progress.dart';
 
 class ExerciseDetailScreen extends StatefulWidget {
   const ExerciseDetailScreen({super.key, required this.exercise});
@@ -66,6 +67,7 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
             selected: {e.trackingType == TrackingType.distance ? TrackingType.duration : e.trackingType},
             onSelectionChanged: (s) => _setTracking(s.first),
           ),
+          ExerciseProgressSection(key: ValueKey(e.trackingType), exercise: e),
           if (steps.isNotEmpty) ...[
             const SizedBox(height: 16),
             Text('How to', style: text.titleMedium),

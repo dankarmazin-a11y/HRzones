@@ -25,24 +25,39 @@ class WorkoutSummary {
     for (final e in workout.exercises)
       for (final s in e.sets)
         if (s.done)
-          SetStat(exerciseId: e.exercise.id, type: s.type, weightKg: s.weightKg, reps: s.reps, durationS: s.durationS),
+          SetStat(
+            exerciseId: (s.subExercise ?? e.exercise).id,
+            type: s.type,
+            weightKg: s.weightKg,
+            reps: s.reps,
+            durationS: s.durationS,
+          ),
   ];
 
   double get volume => totalVolume(sets);
   int get setCount => sets.length;
 
-  /// Working sets per primary muscle.
+  /// Working sets per primary muscle (stretching rows count for their stretch).
   Map<String, int> get setsPerMuscle {
     final out = <String, int>{};
     for (final e in workout.exercises) {
-      final n = e.sets.where((s) => s.done && s.type != SetType.warmup).length;
-      if (n > 0) out.update(e.exercise.primaryMuscle, (v) => v + n, ifAbsent: () => n);
+      for (final s in e.sets) {
+        if (!s.done || s.type == SetType.warmup) continue;
+        out.update((s.subExercise ?? e.exercise).primaryMuscle, (v) => v + 1, ifAbsent: () => 1);
+      }
     }
     return out;
   }
 
-  String exerciseName(String id) =>
-      workout.exercises.firstWhere((e) => e.exercise.id == id, orElse: () => workout.exercises.first).exercise.name;
+  String exerciseName(String id) {
+    for (final e in workout.exercises) {
+      if (e.exercise.id == id) return e.exercise.name;
+      for (final s in e.sets) {
+        if (s.subExercise?.id == id) return s.subExercise!.name;
+      }
+    }
+    return '';
+  }
 
   static Future<WorkoutSummary> build(
     WorkoutRepository repo,
@@ -97,7 +112,7 @@ class RunningTimer {
 
   String get label => switch (kind) {
     TimerKind.rest => 'Rest',
-    TimerKind.setTimer => exercise?.exercise.name ?? 'Set',
+    TimerKind.setTimer => set?.subExercise?.name ?? exercise?.exercise.name ?? 'Set',
     TimerKind.countdown => 'Timer',
     TimerKind.stopwatch => 'Stopwatch',
   };
@@ -164,6 +179,14 @@ class WorkoutSession extends ChangeNotifier {
       final ex = await exercises.byId(slot.exerciseId);
       if (ex == null) continue;
       final le = LoggedExercise(exercise: ex, restSeconds: slot.restSeconds, supersetGroup: slot.supersetGroup);
+      if (ex.isStretchSession) {
+        for (final id in slot.subExerciseIds) {
+          final stretch = await exercises.byId(id);
+          if (stretch != null) le.sets.add(LoggedSet(durationS: defaultSetSeconds)..subExercise = stretch);
+        }
+        w.exercises.add(le);
+        continue;
+      }
       le.previous = await workouts.previousSets(ex.id);
       for (var i = 0; i < slot.targetSets; i++) {
         final prev = le.previousFor(i);
@@ -183,9 +206,24 @@ class WorkoutSession extends ChangeNotifier {
     return '$part workout';
   }
 
+  /// Adds exercises. Stretches are grouped into one "Stretching" card (rows =
+  /// stretches), added to the last Stretching card if it is the last exercise.
   Future<void> addExercises(List<Exercise> list) async {
     final w = _active;
     if (w == null) return;
+    final stretches = list.where((e) => e.isStretch && !e.isStretchSession).toList();
+    if (stretches.isNotEmpty) {
+      final session = await exercises.byId(stretchingSessionId);
+      if (session != null) {
+        var card = w.exercises.lastOrNull;
+        if (card == null || !card.exercise.isStretchSession) {
+          card = LoggedExercise(exercise: session, restSeconds: stretchRestSeconds);
+          w.exercises.add(card);
+        }
+        _addStretchRows(card, stretches);
+        list = list.where((e) => !stretches.contains(e)).toList();
+      }
+    }
     for (final ex in list) {
       final le = LoggedExercise(exercise: ex, restSeconds: restFor(ex));
       le.previous = await workouts.previousSets(ex.id, excludeWorkoutId: w.id);
@@ -193,6 +231,18 @@ class WorkoutSession extends ChangeNotifier {
       w.exercises.add(le);
     }
     _changed();
+  }
+
+  /// Adds stretches as rows of a "Stretching" card.
+  void addStretches(LoggedExercise card, List<Exercise> stretches) {
+    _addStretchRows(card, stretches);
+    _changed();
+  }
+
+  void _addStretchRows(LoggedExercise card, List<Exercise> stretches) {
+    for (final s in stretches) {
+      card.sets.add(LoggedSet(durationS: defaultSetSeconds)..subExercise = s);
+    }
   }
 
   void removeExercise(LoggedExercise e) {
@@ -207,6 +257,16 @@ class WorkoutSession extends ChangeNotifier {
     if (list == null || from == to) return;
     final e = list.removeAt(from);
     list.insert(to.clamp(0, list.length), e);
+    _changed();
+  }
+
+  /// Replaces the exercise of [e] (keeps the sets; "previous" comes from the
+  /// new exercise).
+  Future<void> swapExercise(LoggedExercise e, Exercise next) async {
+    final w = _active;
+    if (w == null) return;
+    e.exercise = next;
+    e.previous = await workouts.previousSets(next.id, excludeWorkoutId: w.id);
     _changed();
   }
 
@@ -242,7 +302,7 @@ class WorkoutSession extends ChangeNotifier {
         weightKg: last?.weightKg,
         reps: last?.reps,
         durationS: last?.durationS,
-      ),
+      )..subExercise = last?.subExercise,
     );
     _changed();
   }
@@ -413,17 +473,40 @@ class WorkoutSession extends ChangeNotifier {
   /// Next undone set of [e], or the first undone set of the following
   /// exercise if that one is timed too.
   void _startNextTimedSet(LoggedExercise e) {
+    final next = _nextTimedSet(e);
+    if (next != null) startSetTimer(next.$1, next.$2);
+  }
+
+  (LoggedExercise, LoggedSet)? _nextTimedSet(LoggedExercise e, {LoggedSet? skip}) {
     final list = _active?.exercises;
-    if (list == null || !list.contains(e)) return;
+    if (list == null || !list.contains(e)) return null;
     final candidates = [e, if (list.indexOf(e) + 1 < list.length) list[list.indexOf(e) + 1]];
     for (final x in candidates) {
       if (!x.exercise.isTimed) continue;
-      final next = x.sets.where((s) => !s.done).firstOrNull;
-      if (next != null) {
-        startSetTimer(x, next);
-        return;
-      }
+      final next = x.sets.where((s) => !s.done && s != skip).firstOrNull;
+      if (next != null) return (x, next);
     }
+    return null;
+  }
+
+  /// What starts next in a timed chain (shown as "Next: …"), if anything.
+  String? get nextUpLabel {
+    final t = _timer;
+    if (t == null) return null;
+    final (LoggedExercise, LoggedSet)? next = switch (t.kind) {
+      TimerKind.setTimer when t.exercise != null => _nextTimedSet(t.exercise!, skip: t.set),
+      TimerKind.rest when t.chainNext && _restChainFrom != null => _nextTimedSet(_restChainFrom!),
+      _ => null,
+    };
+    if (next == null) return null;
+    return (next.$2.subExercise ?? next.$1.exercise).name;
+  }
+
+  /// Share of sets ticked done (0–1).
+  double get progress {
+    final all = _active?.exercises.expand((e) => e.sets).toList() ?? const [];
+    if (all.isEmpty) return 0;
+    return all.where((s) => s.done).length / all.length;
   }
 
   // ---------------------------------------------------------------------------

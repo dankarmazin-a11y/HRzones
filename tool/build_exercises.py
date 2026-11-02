@@ -335,6 +335,10 @@ ADDITIONS = [
         instructions=['Place a band around your legs, sit into a half squat and step sideways.']),
     new('hz_burpee', 'Burpee', 'quadriceps', 'body only', category='plyometrics', secondary=['chest'],
         instructions=['Squat down, jump the feet back to a plank, return and jump up.']),
+    # Container for a stretching session: one card in a workout whose rows are
+    # different stretches (each timed). Hidden from the exercise list.
+    new('hz_stretching', 'Stretching', 'full body', 'body only', category='stretching', mechanic=None,
+        instructions=['A set of stretches, each held for a time (30 s by default).']),
     # Stretches
     new('hz_pigeon_pose', 'Pigeon Pose', 'glutes', 'body only', category='stretching', mechanic=None,
         images_from='Ankle_On_The_Knee',

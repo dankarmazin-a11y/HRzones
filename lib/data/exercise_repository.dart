@@ -43,7 +43,7 @@ const equipmentTypes = [
 const exerciseImageBase = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
 
 /// Bump when assets/exercises.json changes so existing installs re-seed.
-const exerciseSeedVersion = '2';
+const exerciseSeedVersion = '3';
 
 /// How many popular exercises are listed before the A–Z list.
 const popularCount = 5;
@@ -149,6 +149,7 @@ class ExerciseRepository {
         if ((muscle == null || e.primaryMuscle == muscle || e.secondaryMuscles.split(',').contains(muscle)) &&
             (equipment == null || e.equipment == equipment) &&
             (group == null || e.group == group) &&
+            !e.isStretchSession &&
             words.every(e.name.toLowerCase().contains))
           e,
     ];

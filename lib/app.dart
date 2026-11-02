@@ -6,6 +6,7 @@ import 'ui/screens/home_screen.dart';
 import 'ui/screens/profile_screen.dart';
 import 'ui/screens/progress_screen.dart';
 import 'ui/screens/workouts_screen.dart';
+import 'ui/workout/running_workout_bar.dart';
 
 class HrZonesApp extends StatelessWidget {
   const HrZonesApp({super.key, required this.services});
@@ -51,22 +52,32 @@ class _HomeShellState extends State<HomeShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(index: _index, children: _screens),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
-          NavigationDestination(
-            icon: Icon(Icons.fitness_center_outlined),
-            selectedIcon: Icon(Icons.fitness_center),
-            label: 'Workouts',
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const RunningWorkoutBar(),
+          NavigationBar(
+            selectedIndex: _index,
+            onDestinationSelected: (i) => setState(() => _index = i),
+            destinations: const [
+              NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
+              NavigationDestination(
+                icon: Icon(Icons.fitness_center_outlined),
+                selectedIcon: Icon(Icons.fitness_center),
+                label: 'Workouts',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.show_chart_outlined),
+                selectedIcon: Icon(Icons.show_chart),
+                label: 'Progress',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.person_outline),
+                selectedIcon: Icon(Icons.person),
+                label: 'Profile',
+              ),
+            ],
           ),
-          NavigationDestination(
-            icon: Icon(Icons.show_chart_outlined),
-            selectedIcon: Icon(Icons.show_chart),
-            label: 'Progress',
-          ),
-          NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );

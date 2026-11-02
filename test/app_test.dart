@@ -47,7 +47,7 @@ void main() {
     await settle(tester);
     expect(find.text('Finish'), findsOneWidget);
 
-    await tester.tap(find.text('Add exercises'));
+    await tester.tap(find.text('Exercises'));
     await settle(tester);
     await tester.tap(find.text('Barbell Bench Press'));
     await settle(tester);
@@ -73,7 +73,7 @@ void main() {
     await tearDownApp(tester, s);
   });
 
-  testWidgets('hold an exercise name and drag to reorder', (tester) async {
+  testWidgets('hold an exercise name → compact list → drag to reorder', (tester) async {
     final s = (await tester.runAsync(testServices))!;
     await tester.runAsync(() async {
       await s.session.startEmpty();
@@ -84,19 +84,82 @@ void main() {
     });
     await tester.pumpWidget(HrZonesApp(services: s));
     await settle(tester);
-    await tester.tap(find.text('Resume'));
+    // The running-workout bar above the tabs opens the workout.
+    expect(find.byKey(const Key('runningWorkoutBar')), findsOneWidget);
+    expect(find.textContaining('0% done'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('runningWorkoutBar')));
     await settle(tester);
     expect(s.session.active!.exercises.map((e) => e.exercise.name), ['Barbell Bench Press', 'Pullups']);
 
-    final gesture = await tester.startGesture(tester.getCenter(find.text('Barbell Bench Press')));
-    await tester.pump(const Duration(milliseconds: 700)); // long press
+    await tester.longPress(find.text('Barbell Bench Press'));
+    await settle(tester);
+    expect(find.text('Drag to reorder'), findsOneWidget);
+    final handle = find.byIcon(Icons.drag_handle).first;
+    final gesture = await tester.startGesture(tester.getCenter(handle));
     for (var i = 0; i < 10; i++) {
-      await gesture.moveBy(const Offset(0, 40));
+      await gesture.moveBy(const Offset(0, 20));
       await tester.pump(const Duration(milliseconds: 50));
     }
     await gesture.up();
     await settle(tester);
     expect(s.session.active!.exercises.map((e) => e.exercise.name), ['Pullups', 'Barbell Bench Press']);
+    await tester.tap(find.text('Done'));
+    await settle(tester);
+    await tester.runAsync(s.session.discard);
+    await tearDownApp(tester, s);
+  });
+
+  testWidgets('measure-type button cycles weight × reps → reps → time', (tester) async {
+    final s = (await tester.runAsync(testServices))!;
+    await tester.runAsync(() async {
+      await s.session.startEmpty();
+      await s.session.addExercises([(await s.exercises.byId('Barbell_Bench_Press'))!]);
+    });
+    await tester.pumpWidget(HrZonesApp(services: s));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('runningWorkoutBar')));
+    await settle(tester);
+    expect(find.text('kg×reps'), findsOneWidget);
+    for (final next in ['reps', 'time', 'kg×reps']) {
+      await tester.tap(find.byKey(const Key('trackingToggle')));
+      await settle(tester);
+      expect(find.text(next), findsOneWidget);
+    }
+    await tester.runAsync(s.session.discard);
+    await tearDownApp(tester, s);
+  });
+
+  testWidgets('rest bar grows on tap; stretch timer opens full screen', (tester) async {
+    final s = (await tester.runAsync(testServices))!;
+    await tester.runAsync(() async {
+      await s.session.startEmpty();
+      await s.session.addExercises([(await s.exercises.byId('Hamstring_Stretch'))!]);
+    });
+    await tester.pumpWidget(HrZonesApp(services: s));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('runningWorkoutBar')));
+    await settle(tester);
+
+    s.session.startRest(90);
+    await tester.pump();
+    final small = tester.getSize(find.byKey(const Key('timerBar'))).height;
+    await tester.tap(find.byKey(const Key('timerBar')));
+    await settle(tester);
+    expect(tester.getSize(find.byKey(const Key('timerBar'))).height, greaterThan(small));
+    s.session.stopTimer();
+    await tester.pump();
+
+    final card = s.session.active!.exercises.single;
+    s.session.startSetTimer(card, card.sets.single);
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('timerBar')));
+    await settle(tester);
+    expect(find.byKey(const Key('closeFullScreen')), findsOneWidget);
+    expect(find.text('Standing Hamstring Stretch'), findsWidgets);
+    await tester.tap(find.byKey(const Key('closeFullScreen')));
+    await settle(tester);
+    s.session.stopTimer();
+    s.session.stopTimer();
     await tester.runAsync(s.session.discard);
     await tearDownApp(tester, s);
   });

@@ -44,6 +44,9 @@ void main() {
   test('formatting', () {
     expect(formatKg(60), '60');
     expect(formatKg(62.5), '62.5');
+    expect(formatKg(61.25), '61.25');
+    expect(formatKg(100.0), '100');
+    expect(formatKg(0.5), '0.5');
     expect(formatDuration(const Duration(minutes: 75, seconds: 3)), '1:15:03');
   });
 }

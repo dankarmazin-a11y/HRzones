@@ -4,18 +4,26 @@ import '../../app_services.dart';
 import '../../data/database.dart';
 import '../../data/exercise_repository.dart';
 import 'custom_exercise_screen.dart';
+import 'exercise_avatar.dart';
 import 'exercise_detail_screen.dart';
 
 /// Browse/search all exercises. With [pickMode] it returns the selected
 /// exercises (multi-select) via Navigator.pop.
 class ExerciseLibraryScreen extends StatefulWidget {
-  const ExerciseLibraryScreen({super.key, this.pickMode = false});
+  const ExerciseLibraryScreen({super.key, this.pickMode = false, this.initialGroup});
 
   final bool pickMode;
 
-  static Future<List<Exercise>?> pick(BuildContext context) => Navigator.of(context).push<List<Exercise>>(
-    MaterialPageRoute(builder: (_) => const ExerciseLibraryScreen(pickMode: true), fullscreenDialog: true),
-  );
+  /// Start with this type filter (e.g. stretching).
+  final ExerciseGroup? initialGroup;
+
+  static Future<List<Exercise>?> pick(BuildContext context, {ExerciseGroup? group}) => Navigator.of(context)
+      .push<List<Exercise>>(
+        MaterialPageRoute(
+          builder: (_) => ExerciseLibraryScreen(pickMode: true, initialGroup: group),
+          fullscreenDialog: true,
+        ),
+      );
 
   @override
   State<ExerciseLibraryScreen> createState() => _ExerciseLibraryScreenState();
@@ -25,7 +33,7 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
   String _query = '';
   String? _muscle;
   String? _equipment;
-  ExerciseGroup? _group;
+  late ExerciseGroup? _group = widget.initialGroup;
   ExerciseSearchResult _results = const ExerciseSearchResult(popular: [], others: []);
   final _selected = <Exercise>[];
 
@@ -78,7 +86,11 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.pickMode ? 'Add exercises' : 'Exercises'),
+        title: Text(
+          !widget.pickMode
+              ? 'Exercises'
+              : (widget.initialGroup == ExerciseGroup.stretching ? 'Add stretches' : 'Add exercises'),
+        ),
         actions: [IconButton(tooltip: 'Custom exercise', icon: const Icon(Icons.add), onPressed: _createCustom)],
       ),
       body: Column(
@@ -147,9 +159,7 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
                       if (e.isTimed) 'Timed',
                     ].join(' · '),
                   ),
-                  leading: CircleAvatar(
-                    child: e.isStretch ? const Icon(Icons.self_improvement) : Text(e.name.isEmpty ? '?' : e.name[0]),
-                  ),
+                  leading: ExerciseAvatar(exercise: e),
                   trailing: widget.pickMode
                       ? Icon(selected ? Icons.check_circle : Icons.radio_button_unchecked)
                       : (e.isCustom ? const Chip(label: Text('Custom')) : null),

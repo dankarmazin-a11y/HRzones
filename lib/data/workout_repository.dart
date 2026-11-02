@@ -14,6 +14,14 @@ class WorkoutListItem {
   final double volume;
 }
 
+/// One workout's sets of a single exercise (for the exercise history).
+class ExerciseSession {
+  ExerciseSession({required this.workout, required this.sets});
+
+  final Workout workout;
+  final List<WorkoutSet> sets;
+}
+
 class WorkoutRepository {
   WorkoutRepository(this.db, this.exercises);
 
@@ -70,6 +78,7 @@ class WorkoutRepository {
                 rpe: Value(s.rpe),
                 maxHr: Value(s.maxHr),
                 completedAt: Value(s.completedAt),
+                subExerciseId: Value(s.subExercise?.id),
               ),
             );
           }
@@ -111,7 +120,8 @@ class WorkoutRepository {
         le.sets.add(
           LoggedSet(id: s.id, type: s.setType, weightKg: s.weightKg, reps: s.reps, durationS: s.durationS, rpe: s.rpe)
             ..maxHr = s.maxHr
-            ..completedAt = s.completedAt,
+            ..completedAt = s.completedAt
+            ..subExercise = s.subExerciseId == null ? null : await exercises.byId(s.subExerciseId!),
         );
       }
       le.previous = await previousSets(ex.id, excludeWorkoutId: row.id);
@@ -155,7 +165,7 @@ class WorkoutRepository {
     final q =
         db.select(db.workoutSets).join([innerJoin(db.workouts, db.workouts.id.equalsExp(db.workoutSets.workoutId))])
           ..where(
-            db.workoutSets.exerciseId.isIn(ids) &
+            (db.workoutSets.exerciseId.isIn(ids) | db.workoutSets.subExerciseId.isIn(ids)) &
                 db.workouts.endedAt.isNotNull() &
                 db.workoutSets.completedAt.isNotNull() &
                 (excludeWorkoutId == null ? const Constant(true) : db.workouts.id.equals(excludeWorkoutId).not()) &
@@ -183,6 +193,25 @@ class WorkoutRepository {
       }
       return out;
     });
+  }
+
+  /// Every finished workout that contains [exerciseId] (as an exercise or as
+  /// a stretch row), newest first, with its completed sets of that exercise.
+  Future<List<ExerciseSession>> exerciseHistory(String exerciseId) async {
+    final q =
+        db.select(db.workoutSets).join([innerJoin(db.workouts, db.workouts.id.equalsExp(db.workoutSets.workoutId))])
+          ..where(
+            (db.workoutSets.exerciseId.equals(exerciseId) | db.workoutSets.subExerciseId.equals(exerciseId)) &
+                db.workouts.endedAt.isNotNull() &
+                db.workoutSets.completedAt.isNotNull(),
+          )
+          ..orderBy([OrderingTerm.desc(db.workouts.startedAt), OrderingTerm.asc(db.workoutSets.setIndex)]);
+    final out = <String, ExerciseSession>{};
+    for (final r in await q.get()) {
+      final w = r.readTable(db.workouts);
+      out.putIfAbsent(w.id, () => ExerciseSession(workout: w, sets: [])).sets.add(r.readTable(db.workoutSets));
+    }
+    return out.values.toList();
   }
 
   Future<void> delete(String id) => (db.delete(db.workouts)..where((w) => w.id.equals(id))).go();

@@ -7,6 +7,7 @@ import 'package:hrzones/beep/beeper.dart';
 import 'package:hrzones/data/database.dart';
 import 'package:hrzones/hr/hr_monitor.dart';
 import 'package:hrzones/hr/simulated_hr_source.dart';
+import 'package:hrzones/ui/exercises/exercise_avatar.dart';
 
 /// Small exercise list instead of the full 873-entry asset.
 final testExercisesJson = jsonEncode([
@@ -33,6 +34,29 @@ final testExercisesJson = jsonEncode([
     'mechanic': 'compound',
   },
   {
+    'id': 'hz_stretching',
+    'name': 'Stretching',
+    'category': 'stretching',
+    'equipment': 'body only',
+    'primaryMuscles': ['full body'],
+    'secondaryMuscles': [],
+    'instructions': [],
+    'images': [],
+    'mechanic': null,
+  },
+  {
+    'id': 'Hamstring_Stretch',
+    'name': 'Standing Hamstring Stretch',
+    'category': 'stretching',
+    'equipment': 'body only',
+    'primaryMuscles': ['hamstrings'],
+    'secondaryMuscles': [],
+    'instructions': [],
+    'images': [],
+    'mechanic': null,
+    'popularity': 1000,
+  },
+  {
     'id': 'Plank',
     'name': 'Plank',
     'category': 'stretching',
@@ -46,6 +70,7 @@ final testExercisesJson = jsonEncode([
 ]);
 
 AppDatabase memoryDb() {
+  ExerciseAvatar.loadImages = false; // no network in tests
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
   return AppDatabase(NativeDatabase.memory());
 }
