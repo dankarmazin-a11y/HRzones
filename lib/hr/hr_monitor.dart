@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 
 import '../beep/beeper.dart';
+import 'ble_hr_source.dart';
 import 'heart_rate_source.dart';
 import 'simulated_hr_source.dart';
 import 'zone_alert_engine.dart';
@@ -12,14 +13,35 @@ import 'zones.dart';
 /// exposes live state to the UI.
 class HrMonitor extends ChangeNotifier {
   HrMonitor({HeartRateSource? source, Beeper? beeper, int age = 30})
-    : source = source ?? SimulatedHrSource(),
+    : _source = source ?? SimulatedHrSource(),
       beeper = beeper ?? Beeper.create(),
       _zones = HrZones.fromAge(age),
       _age = age {
     engine = ZoneAlertEngine(range: _zones.rangeForZone(2));
   }
 
-  final HeartRateSource source;
+  HeartRateSource _source;
+  HeartRateSource get source => _source;
+
+  /// Called when the user picks another source (to persist the choice).
+  ValueChanged<HeartRateSource>? onSourceChanged;
+
+  /// Switches the heart-rate source; keeps monitoring if it was running.
+  Future<void> setSource(HeartRateSource next) async {
+    final wasRunning = _running;
+    if (wasRunning) await stop();
+    final old = _source;
+    _source = next;
+    if (old is BleHrSource) old.status.removeListener(notifyListeners);
+    if (next is BleHrSource) next.status.addListener(notifyListeners);
+    old.dispose();
+    onSourceChanged?.call(next);
+    notifyListeners();
+    if (wasRunning) await start();
+  }
+
+  /// Connection status for a Bluetooth strap, null for other sources.
+  String? get sourceStatus => _source is BleHrSource ? (_source as BleHrSource).status.value : null;
   final Beeper beeper;
   late final ZoneAlertEngine engine;
 

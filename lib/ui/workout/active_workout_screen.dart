@@ -14,6 +14,7 @@ import '../exercises/exercise_detail_screen.dart';
 import '../exercises/exercise_library_screen.dart';
 import '../number_input.dart';
 import '../zone_colors.dart';
+import 'calculators_sheet.dart';
 import 'reorder_sheet.dart';
 import 'timer_widgets.dart';
 import 'workout_summary_screen.dart';
@@ -339,6 +340,15 @@ class _ExerciseCard extends StatelessWidget {
                         if (r != null) session.setRestSeconds(e, r);
                       case 'superset':
                         session.toggleSupersetWithNext(e);
+                      case 'swap':
+                        final picked = await ExerciseLibraryScreen.pick(context);
+                        final next = picked?.where((x) => !x.isStretchSession).firstOrNull;
+                        if (next != null) await session.swapExercise(e, next);
+                      case 'calc':
+                        final last = e.sets.lastWhere((x) => x.weightKg != null, orElse: () => e.sets.first);
+                        if (context.mounted) {
+                          await showCalculators(context, weightKg: last.weightKg, reps: last.reps);
+                        }
                       case 'reorder':
                         if (context.mounted) await showReorderSheet(context, session);
                       case 'remove':
@@ -352,6 +362,9 @@ class _ExerciseCard extends StatelessWidget {
                         value: 'superset',
                         child: Text(linkedToNext ? 'Remove superset with next' : 'Superset with next'),
                       ),
+                    if (!isSession) const PopupMenuItem(value: 'swap', child: Text('Swap exercise')),
+                    if (tracking == TrackingType.weightReps && e.sets.isNotEmpty)
+                      const PopupMenuItem(value: 'calc', child: Text('Plate & 1RM calculator')),
                     if (list.length > 1) const PopupMenuItem(value: 'reorder', child: Text('Reorder exercises')),
                     const PopupMenuItem(value: 'remove', child: Text('Remove exercise')),
                   ],

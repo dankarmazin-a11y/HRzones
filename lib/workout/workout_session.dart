@@ -260,6 +260,16 @@ class WorkoutSession extends ChangeNotifier {
     _changed();
   }
 
+  /// Replaces the exercise of [e] (keeps the sets; "previous" comes from the
+  /// new exercise).
+  Future<void> swapExercise(LoggedExercise e, Exercise next) async {
+    final w = _active;
+    if (w == null) return;
+    e.exercise = next;
+    e.previous = await workouts.previousSets(next.id, excludeWorkoutId: w.id);
+    _changed();
+  }
+
   /// Changes how [e] is logged; also saved for future workouts.
   Future<void> setTrackingType(LoggedExercise e, TrackingType type) async {
     e.exercise = await exercises.setTrackingType(e.exercise.id, type);

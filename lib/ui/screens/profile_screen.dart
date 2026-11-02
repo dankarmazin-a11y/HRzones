@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../hr/hr_monitor.dart';
 import '../../app_services.dart';
+import '../hr_source_section.dart';
 import '../number_input.dart';
 import '../zone_colors.dart';
 
@@ -18,6 +19,8 @@ class ProfileScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const HrSourceSection(),
+          const Divider(height: 32),
           Text('Heart-rate zones', style: text.titleMedium),
           const SizedBox(height: 8),
           Row(
@@ -101,17 +104,6 @@ class ProfileScreen extends StatelessWidget {
                 if (v != null) await session.setDefaultRest(v);
               },
             ),
-          ),
-          const Divider(height: 32),
-          const ListTile(
-            leading: Icon(Icons.bluetooth),
-            title: Text('Bluetooth heart-rate strap'),
-            subtitle: Text('Coming soon'),
-          ),
-          const ListTile(
-            leading: Icon(Icons.headphones),
-            title: Text('AirPods / Apple Health'),
-            subtitle: Text('Needs the paid Apple Developer account'),
           ),
         ],
       ),

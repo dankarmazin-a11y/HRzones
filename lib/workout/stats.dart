@@ -104,7 +104,8 @@ List<PersonalRecord> findRecords({required Iterable<SetStat> current, required I
 
 String formatKg(double? kg) {
   if (kg == null) return '';
-  return kg == kg.roundToDouble() ? kg.toStringAsFixed(0) : kg.toStringAsFixed(1);
+  // Up to 2 decimals (1.25 kg plates), no trailing zeros: 60, 62.5, 61.25.
+  return kg.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
 }
 
 String formatDuration(Duration d) {
@@ -118,3 +119,34 @@ String formatRecord(RecordKind kind, double v) => switch (kind) {
   RecordKind.longestDuration => formatDuration(Duration(seconds: v.round())),
   _ => '${formatKg(v)} kg',
 };
+
+/// What the progress chart of an exercise shows.
+enum ProgressMetric { est1RM, maxReps, longestTime }
+
+ProgressMetric metricFor(TrackingType t) => switch (t) {
+  TrackingType.weightReps => ProgressMetric.est1RM,
+  TrackingType.bodyweightReps => ProgressMetric.maxReps,
+  TrackingType.duration || TrackingType.distance => ProgressMetric.longestTime,
+};
+
+extension ProgressMetricLabel on ProgressMetric {
+  String get label => switch (this) {
+    ProgressMetric.est1RM => 'Best est. 1RM (kg)',
+    ProgressMetric.maxReps => 'Most reps in a set',
+    ProgressMetric.longestTime => 'Longest hold (s)',
+  };
+}
+
+/// The value of one workout for [metric] (working sets only), or null.
+double? sessionValue(ProgressMetric metric, Iterable<SetStat> sets) {
+  double? best;
+  for (final s in sets.where((s) => s.countsForRecords)) {
+    final v = switch (metric) {
+      ProgressMetric.est1RM => (s.weightKg ?? 0) > 0 && (s.reps ?? 0) > 0 ? estimated1RM(s.weightKg!, s.reps!) : null,
+      ProgressMetric.maxReps => (s.reps ?? 0) > 0 ? s.reps!.toDouble() : null,
+      ProgressMetric.longestTime => (s.durationS ?? 0) > 0 ? s.durationS!.toDouble() : null,
+    };
+    if (v != null && (best == null || v > best)) best = v;
+  }
+  return best;
+}

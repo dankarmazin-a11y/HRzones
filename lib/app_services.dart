@@ -6,6 +6,7 @@ import 'data/database.dart';
 import 'data/exercise_repository.dart';
 import 'data/template_repository.dart';
 import 'data/workout_repository.dart';
+import 'hr/ble_hr_source.dart';
 import 'hr/hr_monitor.dart';
 import 'hr/zones.dart';
 import 'workout/workout_session.dart';
@@ -48,6 +49,15 @@ class AppServices {
     if (min != null && max != null && min < max) hr.setRange(HrRange(min: min, max: max));
     if (cooldown != null) hr.setCooldown(Duration(seconds: cooldown));
     if (volume != null) hr.setVolume(volume);
+    // Saved heart-rate source: "ble|<id>|<name>" or "simulated".
+    final src = (await db.getSetting('hrSource'))?.split('|');
+    if (src != null && src.length == 3 && src[0] == 'ble' && bluetoothSupported) {
+      await hr.setSource(BleHrSource(deviceId: src[1], deviceName: src[2]));
+    }
+    hr.onSourceChanged = (s) => db.setSetting(
+      'hrSource',
+      s is BleHrSource ? 'ble|${s.deviceId}|${s.deviceName.replaceAll('|', ' ')}' : 'simulated',
+    );
     hr.onSettingsChanged = () {
       _settingsTimer?.cancel();
       _settingsTimer = Timer(const Duration(milliseconds: 500), _saveSettings);
