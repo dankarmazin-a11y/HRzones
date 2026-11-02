@@ -47,6 +47,7 @@ The owner is not a developer. Explain steps plainly, keep instructions short, an
   - Every slider/± value can also be typed (`lib/ui/number_input.dart`: `EditableNumber`, `promptNumber`, rest picker with Custom).
 - Next: BLE HR source (flutter_blue_plus), plate/1RM calculators, exercise history/progress chart, edit past workouts, swap exercise, template folders, body-map muscle filter.
 - Owner preferences: clean, short exercise names; popular items first; everything adjustable both by tapping presets and by typing a value.
+- **DB changes checklist** (a forgotten migration broke the live preview on 2026-11-02): add the column as nullable/defaulted, bump `schemaVersion`, add an `onUpgrade` step, and extend `test/migration_test.dart` (it builds an old-version DB file and opens it with the current code). `_addMissingColumns()` in `beforeOpen` is only a safety net.
 - State management: plain `ChangeNotifier` + `InheritedWidget` (`Services`, `HrScope`) – no package yet.
 - Tests: `flutter test`. Widget tests use an in-memory DB; don't close it inside `testWidgets` (hangs in the fake clock).
 - The repo is **public** (made public 2026-11-01 so GitHub Pages is free). Pages source = GitHub Actions; every push to `main` deploys the web preview to https://dankarmazin-a11y.github.io/HRzones/. The iOS job runs only on `main` / manual dispatch.

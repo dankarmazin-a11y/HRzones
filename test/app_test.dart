@@ -73,6 +73,34 @@ void main() {
     await tearDownApp(tester, s);
   });
 
+  testWidgets('hold an exercise name and drag to reorder', (tester) async {
+    final s = (await tester.runAsync(testServices))!;
+    await tester.runAsync(() async {
+      await s.session.startEmpty();
+      await s.session.addExercises([
+        (await s.exercises.byId('Barbell_Bench_Press'))!,
+        (await s.exercises.byId('Pullups'))!,
+      ]);
+    });
+    await tester.pumpWidget(HrZonesApp(services: s));
+    await settle(tester);
+    await tester.tap(find.text('Resume'));
+    await settle(tester);
+    expect(s.session.active!.exercises.map((e) => e.exercise.name), ['Barbell Bench Press', 'Pullups']);
+
+    final gesture = await tester.startGesture(tester.getCenter(find.text('Barbell Bench Press')));
+    await tester.pump(const Duration(milliseconds: 700)); // long press
+    for (var i = 0; i < 10; i++) {
+      await gesture.moveBy(const Offset(0, 40));
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    await gesture.up();
+    await settle(tester);
+    expect(s.session.active!.exercises.map((e) => e.exercise.name), ['Pullups', 'Barbell Bench Press']);
+    await tester.runAsync(s.session.discard);
+    await tearDownApp(tester, s);
+  });
+
   testWidgets('monitoring shows simulated bpm and the status', (tester) async {
     final beeper = SilentBeeper();
     final s = (await tester.runAsync(() => testServices(beeper: beeper, source: SimulatedHrSource(bpm: 200))))!;

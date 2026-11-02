@@ -147,14 +147,33 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+    onUpgrade: (m, from, to) async {
+      if (from < 2) await m.addColumn(exercises, exercises.popularity);
+    },
     beforeOpen: (details) async {
+      await _addMissingColumns();
       await customStatement('PRAGMA foreign_keys = ON');
     },
   );
+
+  /// Safety net for upgrades: adds any column the code expects but the stored
+  /// table lacks (e.g. if a migration step was forgotten). Only works for
+  /// nullable/defaulted columns – keep new columns that way.
+  Future<void> _addMissingColumns() async {
+    final m = createMigrator();
+    for (final table in allTables) {
+      final rows = await customSelect('PRAGMA table_info("${table.actualTableName}")').get();
+      if (rows.isEmpty) continue; // table not created yet
+      final existing = {for (final r in rows) r.read<String>('name')};
+      for (final column in table.$columns) {
+        if (!existing.contains(column.name)) await m.addColumn(table, column);
+      }
+    }
+  }
 
   static QueryExecutor _open() => driftDatabase(
     name: 'hrzones',

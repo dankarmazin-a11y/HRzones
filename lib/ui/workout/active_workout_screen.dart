@@ -398,13 +398,20 @@ class _ExerciseCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: InkWell(
-                    onTap: () =>
-                        Navigator.of(context)
-                            .push(MaterialPageRoute(builder: (_) => ExerciseDetailScreen(exercise: e.exercise))),
-                    child: Text(
-                      e.exercise.name,
-                      style: text.titleMedium?.copyWith(color: Theme.of(context).colorScheme.primary),
+                  // Hold the name and drag to reorder; tap opens the details.
+                  child: ReorderableDelayedDragStartListener(
+                    index: index,
+                    child: InkWell(
+                      onTap: () =>
+                          Navigator.of(context)
+                              .push(MaterialPageRoute(builder: (_) => ExerciseDetailScreen(exercise: e.exercise))),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Text(
+                          e.exercise.name,
+                          style: text.titleMedium?.copyWith(color: Theme.of(context).colorScheme.primary),
+                        ),
+                      ),
                     ),
                   ),
                 ),
