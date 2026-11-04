@@ -108,6 +108,14 @@ The owner is not a developer. Explain steps plainly, keep instructions short, an
 - **CI macOS capacity** (2026-11-04): GitHub had no free macOS arm64 runners for hours ("not acquired by Runner of type hosted", job cancelled after 15 min, 0 steps). Manual runs take an `ios_runner` input (macos-26 / macos-15 / macos-15-intel). Not a code problem – just retry later.
 - **Per-tab scroll controllers** (2026-11-04, `HomeShell` in `app.dart`): each tab gets its own `PrimaryScrollController` (inherit on all platforms). On iOS every tab's ListView used to attach to the same route-wide primary controller, so positions mixed up (Profile seemed stuck at the bottom). Tapping the current tab scrolls it to the top. Web/tests didn't show it (primary inheritance is mobile-only) – `test/tab_scroll_test.dart`.
 - **Phase 1 is feature-complete.** Next: owner uses it for real workouts (incl. a real BLE strap and locked-screen beeps) → fix feedback → Phase 2 (running).
+- **Owner backlog (2026-11-04, after the first real-phone test – not started yet):**
+  1. Tools tab: an information / tutorial box (what each tool does, how to use it).
+  2. Sounds: a new sound (test beep, any beep) must **cut off** the one still playing instead of queueing after it (BeeperPlugin schedules buffers → stop/reset the player before scheduling).
+  3. Goals: after adding one goal there was no button to add more (check `GoalsSection` add button visibility).
+  4. Typing a weight in a set fills the **following** sets of that exercise (those still empty / not done).
+  5. End of the rest timer: play a distinct "ding" (not just a beep) so the user knows rest is over.
+  6. Show the active workout on the **lock screen and in the Dynamic Island** (Live Activity: ActivityKit widget extension). Planned for Phase 4; check whether it works with Sideloadly + free Apple ID (extensions/app groups) or needs the paid account.
+  - Open question from the owner's video: interval timer looked like it raced through rounds – probably the ⏭ skip button; ask if unsure.
 - Owner preferences: clean, short exercise names; popular items first; everything adjustable both by tapping presets and by typing a value.
 - **DB changes checklist** (a forgotten migration broke the live preview on 2026-11-02): add the column as nullable/defaulted, bump `schemaVersion`, add an `onUpgrade` step, and extend `test/migration_test.dart` (it builds an old-version DB file and opens it with the current code). `_addMissingColumns()` in `beforeOpen` is only a safety net.
 - State management: plain `ChangeNotifier` + `InheritedWidget` (`Services`, `HrScope`) – no package yet.
