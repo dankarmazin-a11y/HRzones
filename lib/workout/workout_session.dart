@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
+import '../beep/sounds.dart';
 import '../data/database.dart';
 import '../data/template_repository.dart';
 import '../data/workout_repository.dart';
@@ -9,6 +11,7 @@ import '../data/exercise_repository.dart';
 import '../hr/hr_monitor.dart';
 import '../data/preset_repository.dart';
 import '../hr/zones.dart';
+import '../notify/rest_notifier.dart';
 
 import 'active_workout.dart';
 import 'training_place.dart';
@@ -330,6 +333,39 @@ class WorkoutSession extends ChangeNotifier {
   /// Heart-rate zones switched on (Tools › Heart-rate zones). Off: presets
   /// are never applied, so monitoring/beeps don't start by themselves.
   bool zonesEnabled = true;
+
+  /// End of rest: a light vibration (setting `restVibrate`, default on) and,
+  /// if turned on, a notification for when the phone is locked / in another
+  /// app (setting `restNotify`).
+  bool vibrateRestOver = true;
+  bool notifyRestOver = false;
+  RestNotifier? restNotifier;
+
+  /// How many times rest ended with a vibration (for tests).
+  int restVibrations = 0;
+
+  void _restOver() {
+    if (!vibrateRestOver) return;
+    restVibrations++;
+    try {
+      HapticFeedback.lightImpact().catchError((Object _) {});
+    } catch (_) {
+      // No vibration available (tests).
+    }
+  }
+
+  /// Schedules (or cancels) the "Rest is over" notification for the timer
+  /// that is running now.
+  void _syncRestNotice() {
+    final t = _timer;
+    final n = restNotifier;
+    if (n == null) return;
+    if (t != null && t.kind == TimerKind.rest && !t.switchSides && notifyRestOver && !editMode) {
+      n.scheduleRestOver(Duration(milliseconds: t.remaining * 1000));
+    } else {
+      n.cancel();
+    }
+  }
 
   /// Hybrid trainers pick the place when a workout starts: gym, home or
   /// outdoors. Filters the exercise list during that workout.
@@ -808,6 +844,7 @@ class WorkoutSession extends ChangeNotifier {
     _timer = null;
     _ticker?.cancel();
     _releaseAudio();
+    _syncRestNotice();
     _restChainFrom = null;
     if (t != null && t.kind == TimerKind.setTimer && t.exercise != null && t.set != null) {
       final held = t.elapsed;
@@ -827,6 +864,7 @@ class WorkoutSession extends ChangeNotifier {
     final t = _timer;
     if (t == null || !t.countsDown) return;
     t.total = (t.total + delta).clamp(1, 3600);
+    _syncRestNotice();
     notifyListeners();
   }
 
@@ -836,6 +874,7 @@ class WorkoutSession extends ChangeNotifier {
     if (editMode) return; // no timers while editing a past workout
     _holdAudio();
     _timer = t;
+    _syncRestNotice();
     _ticker?.cancel();
     _ticker = Timer.periodic(const Duration(milliseconds: 250), (_) => _tick());
     notifyListeners();
@@ -864,20 +903,21 @@ class WorkoutSession extends ChangeNotifier {
       _releaseAudio(); // kept if the next timer starts right away
       switch (t.kind) {
         case TimerKind.setTimer:
-          hr.beeper.beep(frequency: 880, count: 2);
+          hr.beeper.play(SoundEvent.setTimerOver);
           if (t.exercise != null && t.set != null && _active?.exercises.contains(t.exercise) == true) {
             _complete(t.exercise!, t.set!, chain: true);
             _changed();
           }
         case TimerKind.rest:
           // Rest is over – a bell, not a beep. "Switch sides" gets a short beep.
-          t.switchSides ? hr.beeper.beep(frequency: 1100, count: 1) : hr.beeper.ding();
+          hr.beeper.play(t.switchSides ? SoundEvent.switchSides : SoundEvent.restOver);
+          if (!t.switchSides) _restOver();
 
           final from = _restChainFrom;
           _restChainFrom = null;
           if (t.chainNext && from != null) _startNextTimedSet(from);
         case TimerKind.countdown:
-          hr.beeper.beep(frequency: 880, count: 3);
+          hr.beeper.play(SoundEvent.countdownOver);
         case TimerKind.stopwatch:
           break;
       }
@@ -960,6 +1000,7 @@ class WorkoutSession extends ChangeNotifier {
   Future<WorkoutSummary> _finish(ActiveWorkout w, DateTime? endedAt) async {
     _timer = null;
     _ticker?.cancel();
+    _syncRestNotice();
     for (final e in w.exercises) {
       e.sets.removeWhere((s) => !s.done);
     }
@@ -987,6 +1028,7 @@ class WorkoutSession extends ChangeNotifier {
     }
     _timer = null;
     _ticker?.cancel();
+    _syncRestNotice();
     _saveTimer?.cancel();
     await workouts.delete(w.id);
     _active = null;

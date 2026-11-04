@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../hr/zone_alert_engine.dart';
+import 'sounds.dart';
 
 /// Plays alert beeps. On iOS this is a native module (AVAudioEngine, mixes
 /// over music, keeps working with the screen locked). On web it is a stub.
@@ -42,11 +43,30 @@ abstract class Beeper {
   /// A bell-like "ding" (end of rest).
   Future<void> ding();
 
-  /// 3 high beeps above range, 2 low beeps below.
-  Future<void> alert(ZoneAlert alert) => switch (alert) {
-    ZoneAlert.high => beep(frequency: 1200, count: 3),
-    ZoneAlert.low => beep(frequency: 500, count: 2),
+  /// One of the generated sounds ([SoundChoice] other than classic/high/low),
+  /// played [count] times.
+  Future<void> sound(String name, {int count = 1});
+
+  /// The sound picked for each event (Settings › Sounds); missing = classic.
+  final choices = <SoundEvent, SoundChoice>{};
+
+  /// Plays the sound for [event] with the user's choice.
+  Future<void> play(SoundEvent event) => preview(event, choices[event] ?? SoundChoice.classic);
+
+  /// Plays [event] as [choice] (also used to preview a choice).
+  Future<void> preview(SoundEvent event, SoundChoice choice) => switch (choice) {
+    SoundChoice.classic => event.classicDing ? ding() : beep(frequency: event.frequency, count: event.count),
+    SoundChoice.high => beep(frequency: 1200, count: event.count),
+    SoundChoice.low => beep(frequency: 500, count: event.count),
+    SoundChoice.ding => event.count == 1 ? ding() : sound('ding', count: event.count),
+    _ => sound(choice.name, count: event.count),
   };
+
+  /// 3 high beeps above range, 2 low beeps below (or the chosen sounds).
+  Future<void> alert(ZoneAlert alert) => play(switch (alert) {
+    ZoneAlert.high => SoundEvent.zoneHigh,
+    ZoneAlert.low => SoundEvent.zoneLow,
+  });
 
   static Beeper create() => kIsWeb ? SilentBeeper() : NativeBeeper();
 }
@@ -79,6 +99,9 @@ class NativeBeeper extends Beeper {
 
   @override
   Future<void> ding() => _call('ding');
+
+  @override
+  Future<void> sound(String name, {int count = 1}) => _call('sound', {'name': name, 'count': count});
 }
 
 /// Used on web and in tests: records calls instead of making sound.
@@ -100,4 +123,7 @@ class SilentBeeper extends Beeper {
 
   @override
   Future<void> ding() async => calls.add('ding');
+
+  @override
+  Future<void> sound(String name, {int count = 1}) async => calls.add('sound ${name}x$count');
 }

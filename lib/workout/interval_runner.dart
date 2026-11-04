@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../beep/beeper.dart';
+import '../beep/sounds.dart';
 import '../data/preset_repository.dart';
 
 /// One step of a running interval timer.
@@ -103,7 +104,7 @@ class IntervalRunner extends ChangeNotifier {
     // 3-2-1 ticks before the next step – for "get ready" and steps of 30 s+.
     final ticks = gettingReady || stepTotal >= countdownMinSeconds;
     if (ticks && whole != _lastWholeSecond && whole >= 1 && whole <= 3 && _remainingMs > 0) {
-      beeper.beep(frequency: 880, count: 1); // 3-2-1
+      beeper.play(SoundEvent.intervalTick); // 3-2-1
     }
     _lastWholeSecond = whole;
     // Catch up through every step that ended (e.g. app was in the background).
@@ -117,7 +118,7 @@ class IntervalRunner extends ChangeNotifier {
     _index++;
     if (finished) {
       _timer?.cancel();
-      beeper.beep(frequency: 1200, count: 3);
+      beeper.play(SoundEvent.intervalDone);
       // Let the last beeps play before the audio may stop.
       beeper.stop('intervals', const Duration(seconds: 3));
       return;
@@ -125,7 +126,7 @@ class IntervalRunner extends ChangeNotifier {
     final step = steps[_index];
     _remainingMs = step.seconds * 1000 - carry;
     _lastWholeSecond = -1;
-    step.work ? beeper.beep(frequency: 1100, count: 2) : beeper.beep(frequency: 550, count: 1);
+    beeper.play(step.work ? SoundEvent.intervalWork : SoundEvent.intervalRest);
   }
 
   void togglePause([DateTime? now]) {
