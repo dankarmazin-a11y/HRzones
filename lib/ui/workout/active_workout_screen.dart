@@ -873,9 +873,12 @@ class _SetRowState extends State<SetRow> {
         field(_weight, hint, (v) => session.setWeight(s, double.tryParse(v.replaceAll(',', '.'))), decimal: true);
     Widget secondsCell() => running
         ? Center(
-            child: Text(
-              '${session.timer!.remaining} s',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: timedColor(context)),
+            child: ListenableBuilder(
+              listenable: session.ticks,
+              builder: (context, _) => Text(
+                '${session.timer?.remaining ?? 0} s',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: timedColor(context)),
+              ),
             ),
           )
         : field(

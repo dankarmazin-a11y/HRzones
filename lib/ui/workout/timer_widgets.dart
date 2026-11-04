@@ -25,10 +25,15 @@ class TimerBar extends StatefulWidget {
 class _TimerBarState extends State<TimerBar> {
   bool _expanded = false;
 
+  // Repaints only this bar once per second (see WorkoutSession.ticks).
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      ListenableBuilder(listenable: widget.session.ticks, builder: (context, _) => _bar(context));
+
+  Widget _bar(BuildContext context) {
     final session = widget.session;
-    final t = session.timer!;
+    final t = session.timer;
+    if (t == null) return const SizedBox.shrink();
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
     final countsDown = t.countsDown;
@@ -153,7 +158,10 @@ class _FullScreenTimerState extends State<FullScreenTimer> {
         child: RotatedBox(
           // The app is portrait-only, so turn the content sideways instead.
           quarterTurns: portrait ? 1 : 0,
-          child: ListenableBuilder(listenable: widget.session, builder: (context, _) => _content(context)),
+          child: ListenableBuilder(
+            listenable: Listenable.merge([widget.session, widget.session.ticks]),
+            builder: (context, _) => _content(context),
+          ),
         ),
       ),
     );

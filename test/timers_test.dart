@@ -107,4 +107,38 @@ void main() {
     await s.session.discard();
     await s.close();
   });
+
+  test('a running timer does not rebuild the whole workout screen (smooth scrolling)', () async {
+    final s = await testServices();
+    await s.session.startEmpty();
+    var screenRebuilds = 0, clockTicks = 0;
+    s.session.addListener(() => screenRebuilds++);
+    s.session.ticks.addListener(() => clockTicks++);
+    s.session.startRest(30);
+    screenRebuilds = 0;
+    await wait(2300);
+    expect(screenRebuilds, 0); // was ~9 (4 per second)
+    expect(clockTicks, inInclusiveRange(2, 3)); // once per second
+    s.session.stopTimer();
+    await s.session.discard();
+    await s.close();
+  });
+
+  test('finished-workout list does not re-emit while the running workout is saved', () async {
+    final s = await testServices();
+    final emissions = <int>[];
+    final sub = s.workouts.watchFinished().listen((l) => emissions.add(l.length));
+    await wait(50);
+    await s.session.startEmpty();
+    await s.session.addExercises([(await s.exercises.byId('Pullups'))!]);
+    for (var i = 0; i < 5; i++) {
+      s.session.setReps(s.session.active!.exercises.single.sets.single, i + 1);
+      await s.session.flush();
+    }
+    await wait(100);
+    expect(emissions, [0]); // nothing finished → no new lists
+    await sub.cancel();
+    await s.session.discard();
+    await s.close();
+  });
 }

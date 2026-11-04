@@ -176,24 +176,68 @@ class WorkoutRepository {
     return [for (final r in await q.get()) SetStat.fromRow(r.readTable(db.workoutSets))];
   }
 
-  Stream<List<WorkoutListItem>> watchFinished() {
+  Stream<List<WorkoutListItem>>? _finishedShared;
+  List<WorkoutListItem>? _lastFinished;
+
+  /// Finished workouts, newest first. One query shared by all listeners; it
+  /// only emits when the finished workouts actually change (the running
+  /// workout is saved after every edit – that must not rebuild Home/History).
+  Stream<List<WorkoutListItem>> watchFinished() async* {
+    final last = _lastFinished;
+    if (last != null) yield last;
+    _finishedShared ??= _watchFinishedRaw()
+        .distinct(_sameItems)
+        .map((l) => _lastFinished = l)
+        .asBroadcastStream(
+          onCancel: (sub) {
+            sub.cancel();
+            _finishedShared = null;
+          },
+        );
+    yield* _finishedShared!.where((l) => !identical(l, last));
+  }
+
+  static bool _sameItems(List<WorkoutListItem> a, List<WorkoutListItem> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      final x = a[i], y = b[i];
+      if (x.workout != y.workout ||
+          x.setCount != y.setCount ||
+          x.volume != y.volume ||
+          x.exerciseNames.join() != y.exerciseNames.join()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  Stream<List<WorkoutListItem>> _watchFinishedRaw() {
     final q = db.select(db.workouts)
       ..where((w) => w.endedAt.isNotNull())
       ..orderBy([(w) => OrderingTerm.desc(w.startedAt)]);
     return q.watch().asyncMap((rows) async {
-      final sets = await (db.select(db.workoutSets)..where((s) => s.completedAt.isNotNull())).get();
-      final wes = await (db.select(db.workoutExercises)..orderBy([(e) => OrderingTerm.asc(e.position)])).get();
-      final out = <WorkoutListItem>[];
-      for (final w in rows) {
-        final ws = sets.where((s) => s.workoutId == w.id).map(SetStat.fromRow).toList();
-        final names = <String>[];
-        for (final we in wes.where((e) => e.workoutId == w.id)) {
-          final ex = await exercises.byId(we.exerciseId);
-          if (ex != null) names.add(ex.name);
-        }
-        out.add(WorkoutListItem(workout: w, exerciseNames: names, setCount: ws.length, volume: totalVolume(ws)));
+      final ids = {for (final w in rows) w.id};
+      // Group once (linear), instead of filtering all sets for every workout.
+      final setsBy = <String, List<SetStat>>{};
+      for (final s in await (db.select(db.workoutSets)..where((s) => s.completedAt.isNotNull())).get()) {
+        if (ids.contains(s.workoutId)) setsBy.putIfAbsent(s.workoutId, () => []).add(SetStat.fromRow(s));
       }
-      return out;
+      final namesBy = <String, List<String>>{};
+      final wes = await (db.select(db.workoutExercises)..orderBy([(e) => OrderingTerm.asc(e.position)])).get();
+      for (final we in wes) {
+        if (!ids.contains(we.workoutId)) continue;
+        final ex = await exercises.byId(we.exerciseId);
+        if (ex != null) namesBy.putIfAbsent(we.workoutId, () => []).add(ex.name);
+      }
+      return [
+        for (final w in rows)
+          WorkoutListItem(
+            workout: w,
+            exerciseNames: namesBy[w.id] ?? const [],
+            setCount: setsBy[w.id]?.length ?? 0,
+            volume: totalVolume(setsBy[w.id] ?? const []),
+          ),
+      ];
     });
   }
 
