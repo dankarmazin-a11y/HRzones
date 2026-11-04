@@ -43,12 +43,24 @@ const equipmentTypes = [
 const exerciseImageBase = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
 
 /// Bump when assets/exercises.json changes so existing installs re-seed.
-const exerciseSeedVersion = '3';
+const exerciseSeedVersion = '4';
 
 /// How many popular exercises are listed before the A–Z list.
 const popularCount = 5;
 
-String titleCase(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+/// Friendlier labels for database terms ("abductors" and "adductors" look
+/// like a duplicate to most people).
+const _labels = {
+  'abductors': 'Outer thighs',
+  'adductors': 'Inner thighs',
+  'body only': 'Bodyweight',
+  'e-z curl bar': 'EZ bar',
+  'kettlebells': 'Kettlebell',
+  'lats': 'Lats (upper back)',
+};
+
+/// Display label for a muscle / equipment / category value.
+String titleCase(String s) => _labels[s] ?? (s.isEmpty ? s : s[0].toUpperCase() + s.substring(1));
 
 /// Search result: the most popular matches first, then the rest A–Z.
 class ExerciseSearchResult {
@@ -89,6 +101,7 @@ class ExerciseRepository {
             instructions: excluded.instructions,
             imagePath: excluded.imagePath,
             popularity: excluded.popularity,
+            hidden: excluded.hidden,
           ),
         ),
       );
@@ -118,6 +131,7 @@ class ExerciseRepository {
       instructions: Value(((e['instructions'] as List?) ?? const []).join('\n')),
       imagePath: Value(images.firstOrNull),
       popularity: Value(e['popularity'] as int?),
+      hidden: Value(e['hidden'] == true),
     );
   }
 
@@ -150,6 +164,7 @@ class ExerciseRepository {
             (equipment == null || e.equipment == equipment) &&
             (group == null || e.group == group) &&
             !e.isStretchSession &&
+            !e.hidden &&
             words.every(e.name.toLowerCase().contains))
           e,
     ];

@@ -29,7 +29,7 @@ The owner is not a developer. Explain steps plainly, keep instructions short, an
 - **Phase 0 – feasibility (done):** native Swift proof of concept in `Sources/` + `project.yml` (XcodeGen). Keep its HealthKit/beep code as the reference for the Flutter iOS module; remove it once ported.
 - **Phase 1 – Flutter skeleton + strength log (feature-complete, owner testing):** 4 tabs (Home, Workouts, Progress, Profile); local DB; HR source interface with simulated + BLE sources; beep engine (native iOS module); exercise DB with muscle filters; templates; live workout logging (sets, weight, reps, RPE, set types, previous values, rest timer, supersets); post-workout summary and PRs; web preview + IPA in CI.
 - **Phase 2 – running:** GPS route + map, pace, km splits, voice announcements, HR zones on route, PRs (1k/5k/10k/HM).
-- **Phase 3 – body & progress:** weight, body fat, circumferences, charts, muscle heat map, weekly stats, export (JSON/CSV).
+- **Phase 3 – body & progress:** ~~weight, body fat, circumferences, charts~~ (done early in Profile), muscle heat map, weekly stats, export (JSON/CSV).
 - **Gate:** owner uses it for a full month instead of Hevy/NRC → buy Developer account.
 - **Phase 4 – closed beta:** HealthKit + AirPods HR, TestFlight to 20–50 testers, Live Activity.
 - **Phase 5 – public:** cloud sync, Android, design polish, App Store.
@@ -62,6 +62,13 @@ The owner is not a developer. Explain steps plainly, keep instructions short, an
   - Edit past workouts and log a past workout: an edit-mode `WorkoutSession(editMode: true)` (no timers, no auto-save; `saveEdits()` writes, sets with values count as done; Cancel never deletes). `ActiveWorkoutScreen(session: …)` + `SessionScope` give the workout widgets the right session. Entry: ✎ on a past workout's summary; History → "Log past workout" (date, time, minutes).
   - Template folders (optional folder field with existing-folder chips; Workouts tab groups by folder) and duplicate/delete from the template ⋮ menu.
   - Body map (`lib/ui/body_map.dart`, CustomPainter front/back, tappable regions → muscle filter in the exercise list). Takes a `heat` map for the Phase 3 muscle heat map.
+- Done (owner feedback round 3, 2026-11-04):
+  - **Navigation: 5 tabs** – Home (dashboard: streak, Start tiles Strength/Run/HR Zones, goals preview, this week, last workout), Strength (old Workouts tab), Run (Phase 2 placeholder), Zones (HR monitor card, strap, zones, alerts – moved from Home/Profile), Profile (streak with weekly target, goals, body measurements, settings). `AppShell.of(context).goTo(AppTab.x)` switches tabs. Progress tab removed.
+  - **Templates are edited in the workout view** (`WorkoutSession(templateMode: true)`, `openTemplateEditor`): per-set targets saved in `template_exercises.sets_json` (`TemplateSet`) and prefilled (not ticked) when a workout starts from the template. Old `TemplateEditorScreen` removed.
+  - **Duplicates**: `HIDDEN` map in `tool/build_exercises.py` → `exercises.hidden` (kept for old workouts, excluded from search). Labels: abductors → "Outer thighs", adductors → "Inner thighs" etc. (`titleCase`).
+  - **Body measurements** (`body_measurements` table, `BodyRepository`, `measurementKinds`), **goals** (`goals` table, `GoalRepository`: lift weight = heaviest working set, measurement = latest value, progress from start value), **weekly streak** (`lib/workout/streak.dart`, setting `weeklyTarget`).
+  - Finish guard: a workout open > 4 h offers to end at the last set's time.
+  - Schema **v4** (exercises.hidden, template_exercises.sets_json, body_measurements, goals); `_addMissingColumns` now also creates missing tables.
 - **Phase 1 is feature-complete.** Next: owner uses it for real workouts (incl. a real BLE strap and locked-screen beeps) → fix feedback → Phase 2 (running).
 - Owner preferences: clean, short exercise names; popular items first; everything adjustable both by tapping presets and by typing a value.
 - **DB changes checklist** (a forgotten migration broke the live preview on 2026-11-02): add the column as nullable/defaulted, bump `schemaVersion`, add an `onUpgrade` step, and extend `test/migration_test.dart` (it builds an old-version DB file and opens it with the current code). `_addMissingColumns()` in `beforeOpen` is only a safety net.

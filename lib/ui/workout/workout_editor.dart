@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app_services.dart';
+import '../../data/template_repository.dart';
 import '../../workout/workout_session.dart';
 import '../number_input.dart';
 import 'active_workout_screen.dart';
@@ -17,6 +18,17 @@ Future<void> openWorkoutEditor(BuildContext context, String workoutId) async {
   await Navigator.of(
     context,
   ).pushReplacement(MaterialPageRoute(builder: (_) => ActiveWorkoutScreen(session: session), fullscreenDialog: true));
+  session.dispose();
+}
+
+/// Builds or edits a template in the same view as a live workout.
+Future<void> openTemplateEditor(BuildContext context, TemplateWithSlots? template) async {
+  final s = Services.of(context);
+  final session = WorkoutSession(workouts: s.workouts, exercises: s.exercises, hr: s.hr, templateMode: true);
+  await session.loadTemplate(template);
+  if (!context.mounted) return;
+  await Navigator.of(context)
+      .push(MaterialPageRoute(builder: (_) => ActiveWorkoutScreen(session: session), fullscreenDialog: true));
   session.dispose();
 }
 

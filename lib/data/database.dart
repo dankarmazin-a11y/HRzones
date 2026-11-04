@@ -63,6 +63,9 @@ class Exercises extends Table with SyncColumns {
   /// exercises of a muscle group first.
   IntColumn get popularity => integer().nullable()();
 
+  /// Duplicates hidden from the list (kept so old workouts still show them).
+  BoolColumn get hidden => boolean().withDefault(const Constant(false))();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -87,6 +90,9 @@ class TemplateExercises extends Table with SyncColumns {
 
   /// For the "Stretching" session slot: the stretches, comma-separated ids.
   TextColumn get subExerciseIds => text().nullable()();
+
+  /// Target sets as JSON: [{"t": setType, "w": kg, "r": reps, "s": seconds}].
+  TextColumn get setsJson => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -144,6 +150,36 @@ class WorkoutSets extends Table with SyncColumns {
 }
 
 /// Simple key/value store for user settings.
+/// Body measurements: weight, body fat, circumferences…
+class BodyMeasurements extends Table with SyncColumns {
+  DateTimeColumn get date => dateTime()();
+
+  /// Key from `measurementKinds` (e.g. "weight", "waist") or a custom name.
+  TextColumn get kind => text()();
+  RealColumn get value => real()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+enum GoalType { workoutsPerWeek, liftWeight, measurement }
+
+class Goals extends Table with SyncColumns {
+  IntColumn get type => intEnum<GoalType>()();
+  RealColumn get target => real()();
+
+  /// Where the user started (for measurement goals: weight 85 → 80).
+  RealColumn get startValue => real().nullable()();
+  TextColumn get exerciseId => text().nullable()();
+  TextColumn get measurementKind => text().nullable()();
+  DateTimeColumn get deadline => dateTime().nullable()();
+  DateTimeColumn get createdAt => dateTime().clientDefault(DateTime.now)();
+  DateTimeColumn get achievedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 class Settings extends Table {
   TextColumn get key => text()();
   TextColumn get value => text()();
@@ -152,12 +188,24 @@ class Settings extends Table {
   Set<Column> get primaryKey => {key};
 }
 
-@DriftDatabase(tables: [Exercises, Templates, TemplateExercises, Workouts, WorkoutExercises, WorkoutSets, Settings])
+@DriftDatabase(
+  tables: [
+    Exercises,
+    Templates,
+    TemplateExercises,
+    Workouts,
+    WorkoutExercises,
+    WorkoutSets,
+    Settings,
+    BodyMeasurements,
+    Goals,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -166,6 +214,12 @@ class AppDatabase extends _$AppDatabase {
       if (from < 3) {
         await m.addColumn(workoutSets, workoutSets.subExerciseId);
         await m.addColumn(templateExercises, templateExercises.subExerciseIds);
+      }
+      if (from < 4) {
+        await m.addColumn(exercises, exercises.hidden);
+        await m.addColumn(templateExercises, templateExercises.setsJson);
+        await m.createTable(bodyMeasurements);
+        await m.createTable(goals);
       }
     },
     beforeOpen: (details) async {
@@ -181,7 +235,11 @@ class AppDatabase extends _$AppDatabase {
     final m = createMigrator();
     for (final table in allTables) {
       final rows = await customSelect('PRAGMA table_info("${table.actualTableName}")').get();
-      if (rows.isEmpty) continue; // table not created yet
+      if (rows.isEmpty) {
+        // A whole table is missing (forgotten createTable in a migration).
+        await m.createTable(table as TableInfo<Table, dynamic>);
+        continue;
+      }
       final existing = {for (final r in rows) r.read<String>('name')};
       for (final column in table.$columns) {
         if (!existing.contains(column.name)) await m.addColumn(table, column);

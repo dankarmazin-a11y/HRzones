@@ -4,7 +4,7 @@ import '../../app_services.dart';
 import '../../data/template_repository.dart';
 import '../exercises/exercise_library_screen.dart';
 import '../history/history_screen.dart';
-import '../templates/template_editor_screen.dart';
+import '../workout/workout_editor.dart';
 import '../workout/active_workout_screen.dart';
 
 class WorkoutsScreen extends StatelessWidget {
@@ -14,7 +14,7 @@ class WorkoutsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = Services.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Workouts')),
+      appBar: AppBar(title: const Text('Strength')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -52,8 +52,7 @@ class WorkoutsScreen extends StatelessWidget {
               TextButton.icon(
                 icon: const Icon(Icons.add),
                 label: const Text('New'),
-                onPressed: () =>
-                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const TemplateEditorScreen())),
+                onPressed: () => openTemplateEditor(context, null),
               ),
             ],
           ),
@@ -124,8 +123,7 @@ class TemplateCard extends StatelessWidget {
                 final repo = Services.of(context).templates;
                 switch (v) {
                   case 'edit':
-                    await Navigator.of(context)
-                        .push(MaterialPageRoute(builder: (_) => TemplateEditorScreen(existing: template)));
+                    await openTemplateEditor(context, template);
                   case 'duplicate':
                     await repo.duplicate(template);
                   case 'delete':

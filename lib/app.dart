@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 import 'app_services.dart';
+import 'app_shell.dart';
 import 'hr/hr_monitor.dart';
 import 'ui/screens/home_screen.dart';
 import 'ui/screens/profile_screen.dart';
-import 'ui/screens/progress_screen.dart';
+import 'ui/screens/run_screen.dart';
+import 'ui/screens/zones_screen.dart';
 import 'ui/screens/workouts_screen.dart';
 import 'ui/workout/running_workout_bar.dart';
 
@@ -44,41 +46,49 @@ class HomeShell extends StatefulWidget {
 }
 
 class _HomeShellState extends State<HomeShell> {
-  int _index = 0;
+  AppTab _tab = AppTab.home;
 
-  static const _screens = [HomeScreen(), WorkoutsScreen(), ProgressScreen(), ProfileScreen()];
+  static const _screens = [HomeScreen(), WorkoutsScreen(), RunScreen(), ZonesScreen(), ProfileScreen()];
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(index: _index, children: _screens),
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const RunningWorkoutBar(),
-          NavigationBar(
-            selectedIndex: _index,
-            onDestinationSelected: (i) => setState(() => _index = i),
-            destinations: const [
-              NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
-              NavigationDestination(
-                icon: Icon(Icons.fitness_center_outlined),
-                selectedIcon: Icon(Icons.fitness_center),
-                label: 'Workouts',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.show_chart_outlined),
-                selectedIcon: Icon(Icons.show_chart),
-                label: 'Progress',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.person_outline),
-                selectedIcon: Icon(Icons.person),
-                label: 'Profile',
-              ),
-            ],
-          ),
-        ],
+    return AppShell(
+      goTo: (t) => setState(() => _tab = t),
+      child: Scaffold(
+        body: IndexedStack(index: _tab.index, children: _screens),
+        bottomNavigationBar: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const RunningWorkoutBar(),
+            NavigationBar(
+              selectedIndex: _tab.index,
+              onDestinationSelected: (i) => setState(() => _tab = AppTab.values[i]),
+              destinations: const [
+                NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
+                NavigationDestination(
+                  icon: Icon(Icons.fitness_center_outlined),
+                  selectedIcon: Icon(Icons.fitness_center),
+                  label: 'Strength',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.directions_run_outlined),
+                  selectedIcon: Icon(Icons.directions_run),
+                  label: 'Run',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.monitor_heart_outlined),
+                  selectedIcon: Icon(Icons.monitor_heart),
+                  label: 'Zones',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.person_outline),
+                  selectedIcon: Icon(Icons.person),
+                  label: 'Profile',
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

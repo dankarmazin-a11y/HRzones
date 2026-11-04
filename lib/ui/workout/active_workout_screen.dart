@@ -55,7 +55,9 @@ class ActiveWorkoutScreen extends StatelessWidget {
         final w = session.active;
         if (w == null) return const Scaffold(body: Center(child: Text('No workout in progress')));
         return Scaffold(
-          appBar: session.editMode
+          appBar: session.templateMode
+              ? _templateAppBar(context, session, w)
+              : session.editMode
               ? _editAppBar(context, session, w)
               : AppBar(
                   leading: IconButton(
@@ -144,6 +146,98 @@ class ActiveWorkoutScreen extends StatelessWidget {
         );
       },
     );
+  }
+
+  /// Header when building a template: name + folder (tap to change), Save.
+  PreferredSizeWidget _templateAppBar(BuildContext context, WorkoutSession session, ActiveWorkout w) {
+    return AppBar(
+      leading: IconButton(
+        tooltip: 'Cancel',
+        icon: const Icon(Icons.close),
+        onPressed: () async {
+          if (session.hasUnsavedEdits && w.exercises.isNotEmpty) {
+            final leave = await showDialog<bool>(
+              context: context,
+              builder: (c) => AlertDialog(
+                title: const Text('Discard changes?'),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Keep editing')),
+                  TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Discard')),
+                ],
+              ),
+            );
+            if (leave != true) return;
+          }
+          if (context.mounted) Navigator.of(context).pop();
+        },
+      ),
+      titleSpacing: 0,
+      title: InkWell(
+        key: const Key('templateHeader'),
+        onTap: () => _rename(context, session, w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('${w.name}  ✎', overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              session.templateFolder == null ? 'Template' : 'Template · ${session.templateFolder}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        IconButton(
+          tooltip: 'Folder',
+          icon: const Icon(Icons.folder_outlined),
+          onPressed: () => _pickFolder(context, session),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: FilledButton(
+            onPressed: () async {
+              if (w.exercises.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Add at least one exercise.')));
+                return;
+              }
+              await session.saveTemplate(Services.of(context).templates);
+              if (context.mounted) Navigator.of(context).pop();
+            },
+            child: const Text('Save'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  static Future<void> _pickFolder(BuildContext context, WorkoutSession session) async {
+    final folders = await Services.of(context).templates.folders();
+    if (!context.mounted) return;
+    final c = TextEditingController(text: session.templateFolder ?? '');
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Folder'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: c,
+              autofocus: true,
+              decoration: const InputDecoration(hintText: 'e.g. Push/Pull/Legs (empty = none)'),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              children: [for (final f in folders) ActionChip(label: Text(f), onPressed: () => Navigator.pop(ctx, f))],
+            ),
+          ],
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx, c.text), child: const Text('OK'))],
+      ),
+    );
+    if (result != null) session.setTemplateFolder(result);
   }
 
   /// Header when editing a past workout: date + duration (tap to change),
@@ -265,7 +359,29 @@ class ActiveWorkoutScreen extends StatelessWidget {
       );
       if (ok != true) return;
     }
-    final summary = await session.finish();
+    // Left open for hours (e.g. forgot to finish)? Offer the last set's time.
+    DateTime? endAt;
+    final last = session.lastSetAt;
+    final open = DateTime.now().difference(w.startedAt);
+    if (last != null && open > const Duration(hours: 4) && context.mounted) {
+      final useLast = await showDialog<bool>(
+        context: context,
+        builder: (c) => AlertDialog(
+          title: const Text('Workout was open a long time'),
+          content: Text(
+            'It has been running for ${formatDuration(open)}. '
+            'End it at your last set (${TimeOfDay.fromDateTime(last).format(c)})?',
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Keep full time')),
+            FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('End at last set')),
+          ],
+        ),
+      );
+      if (useLast == null) return;
+      if (useLast) endAt = last.add(const Duration(minutes: 1));
+    }
+    final summary = await session.finish(endedAt: endAt);
     if (summary == null || !context.mounted) return;
     await Navigator.of(context)
         .pushReplacement(MaterialPageRoute(builder: (_) => WorkoutSummaryScreen(summary: summary, justFinished: true)));
@@ -545,7 +661,10 @@ class _HeaderRow extends StatelessWidget {
             Expanded(child: cell('REPS')),
           ],
           if (showRpe) SizedBox(width: _rpeW, child: cell('RPE')),
-          const SizedBox(width: _doneW, child: Icon(Icons.check, size: 16)),
+          SizedBox(
+            width: _doneW,
+            child: SessionScope.of(context).templateMode ? null : const Icon(Icons.check, size: 16),
+          ),
         ],
       ),
     );
@@ -663,6 +782,7 @@ class _SetRowState extends State<SetRow> {
 
   /// ✓ for weight/reps sets. Timed sets get ▶ (start countdown) / ■ (stop).
   Widget _doneButton(WorkoutSession session, LoggedSet s, TrackingType tracking) {
+    if (session.templateMode) return const SizedBox.shrink(); // planning, not doing
     if (s.done) {
       return IconButton(
         tooltip: 'Undo',

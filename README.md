@@ -34,7 +34,9 @@ Strength log:
 - [ ] ⋮ on a weight exercise → Plate & 1RM calculator; ⋮ → Swap exercise.
 - [ ] History → open a workout → ✎ → change a weight, add a set → Save.
 - [ ] History → "Log past workout" → pick date/time and minutes → add exercises and values → Save.
-- [ ] Template: set a folder (e.g. "PPL") → Workouts tab groups it; ⋮ → Duplicate.
+- [ ] Strength → Templates → New: build it like a workout (exercises, sets with target kg/reps), folder icon, Save. Start it → values are prefilled.
+- [ ] Home: streak, Start tiles, goals, this week. Zones tab: heart-rate monitor and settings.
+- [ ] Profile: weekly goal (+/−), Add goal (lift or measurement), Log measurements → tap one for its chart.
 - [ ] Exercises → body icon → tap a muscle on the figure → list filters to that muscle.
 - [ ] Tap any number next to a slider (age, target range, alert gap) and type a value.
 

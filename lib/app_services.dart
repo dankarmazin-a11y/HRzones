@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
+import 'data/body_repository.dart';
 import 'data/database.dart';
+import 'data/goal_repository.dart';
 import 'data/exercise_repository.dart';
 import 'data/template_repository.dart';
 import 'data/workout_repository.dart';
@@ -14,15 +16,30 @@ import 'workout/workout_session.dart';
 /// Everything the screens need: database repositories, HR monitor and the
 /// current workout session.
 class AppServices {
-  AppServices._(this.db, this.hr) : exercises = ExerciseRepository(db), templates = TemplateRepository(db) {
+  AppServices._(this.db, this.hr)
+    : exercises = ExerciseRepository(db),
+      templates = TemplateRepository(db),
+      body = BodyRepository(db) {
     workouts = WorkoutRepository(db, exercises);
     session = WorkoutSession(workouts: workouts, exercises: exercises, hr: hr);
+    goals = GoalRepository(db, workouts, exercises, body);
   }
 
   final AppDatabase db;
   final HrMonitor hr;
   final ExerciseRepository exercises;
   final TemplateRepository templates;
+  final BodyRepository body;
+  late final GoalRepository goals;
+
+  /// Workouts per week for the streak (setting `weeklyTarget`, default 3).
+  final weeklyTarget = ValueNotifier<int>(3);
+
+  Future<void> setWeeklyTarget(int n) async {
+    weeklyTarget.value = n;
+    await db.setSetting('weeklyTarget', '$n');
+  }
+
   late final WorkoutRepository workouts;
   late final WorkoutSession session;
   Timer? _settingsTimer;
@@ -41,6 +58,7 @@ class AppServices {
 
   Future<void> _loadSettings() async {
     Future<int?> getInt(String k) async => int.tryParse(await db.getSetting(k) ?? '');
+    weeklyTarget.value = await getInt('weeklyTarget') ?? 3;
     final age = await getInt('age');
     final min = await getInt('rangeMin'), max = await getInt('rangeMax');
     final cooldown = await getInt('cooldownS');

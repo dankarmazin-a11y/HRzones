@@ -1,8 +1,45 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 
 import 'database.dart';
 
 /// One exercise slot in a template (editable, in memory).
+/// A planned set in a template (values are optional targets).
+class TemplateSet {
+  const TemplateSet({this.type = SetType.normal, this.weightKg, this.reps, this.durationS});
+
+  final SetType type;
+  final double? weightKg;
+  final int? reps;
+  final int? durationS;
+
+  Map<String, Object?> toJson() => {
+    't': type.index,
+    if (weightKg != null) 'w': weightKg,
+    if (reps != null) 'r': reps,
+    if (durationS != null) 's': durationS,
+  };
+
+  factory TemplateSet.fromJson(Map<String, dynamic> j) => TemplateSet(
+    type: SetType.values[(j['t'] as int? ?? 1).clamp(0, SetType.values.length - 1)],
+    weightKg: (j['w'] as num?)?.toDouble(),
+    reps: j['r'] as int?,
+    durationS: j['s'] as int?,
+  );
+
+  static String? encode(List<TemplateSet> sets) => sets.isEmpty ? null : jsonEncode([for (final s in sets) s.toJson()]);
+
+  static List<TemplateSet> decode(String? json) {
+    if (json == null || json.isEmpty) return [];
+    try {
+      return [for (final j in (jsonDecode(json) as List).cast<Map<String, dynamic>>()) TemplateSet.fromJson(j)];
+    } catch (_) {
+      return [];
+    }
+  }
+}
+
 class TemplateSlot {
   TemplateSlot({
     required this.exerciseId,
@@ -10,7 +47,13 @@ class TemplateSlot {
     this.restSeconds = 90,
     this.supersetGroup,
     List<String>? subExerciseIds,
-  }) : subExerciseIds = subExerciseIds ?? [];
+    List<TemplateSet>? sets,
+  }) : subExerciseIds = subExerciseIds ?? [],
+       sets = sets ?? [];
+
+  /// Planned sets with target values (empty for old templates: use
+  /// [targetSets] empty sets).
+  final List<TemplateSet> sets;
 
   String exerciseId;
   int targetSets;
@@ -49,6 +92,7 @@ class TemplateRepository {
                   restSeconds: s.restSeconds,
                   supersetGroup: s.supersetGroup,
                   subExerciseIds: (s.subExerciseIds ?? '').split(',').where((x) => x.isNotEmpty).toList(),
+                  sets: TemplateSet.decode(s.setsJson),
                 ),
             ],
           ),
@@ -84,6 +128,7 @@ class TemplateRepository {
               restSeconds: Value(s.restSeconds),
               supersetGroup: Value(s.supersetGroup),
               subExerciseIds: Value(s.subExerciseIds.isEmpty ? null : s.subExerciseIds.join(',')),
+              setsJson: Value(TemplateSet.encode(s.sets)),
             ),
         ]);
       });
@@ -112,6 +157,7 @@ class TemplateRepository {
           restSeconds: s.restSeconds,
           supersetGroup: s.supersetGroup,
           subExerciseIds: [...s.subExerciseIds],
+          sets: [...s.sets],
         ),
     ],
   );
