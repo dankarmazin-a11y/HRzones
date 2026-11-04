@@ -8,7 +8,16 @@ import '../data/database.dart';
 import '../workout/stats.dart';
 import 'workout/workout_summary_screen.dart' show formatDate;
 
-/// Latest body measurements with the change since the previous one.
+/// The 5 most common measurements, shown as boxes (others: "More" / Log).
+const popularMeasurements = [
+  ('weight', 'Weight'),
+  ('bodyFat', 'Body fat'),
+  ('waist', 'Waist'),
+  ('chest', 'Chest'),
+  ('bicepR', 'Arm'),
+];
+
+/// Body measurements as small boxes: latest value + change since last time.
 class MeasurementsSection extends StatelessWidget {
   const MeasurementsSection({super.key});
 
@@ -20,9 +29,9 @@ class MeasurementsSection extends StatelessWidget {
       stream: s.body.watchAll(),
       builder: (context, snap) {
         final grouped = byKind(snap.data ?? const []);
-        final kinds = [
+        final others = [
           for (final k in measurementKinds)
-            if (grouped.containsKey(k.key)) k,
+            if (grouped.containsKey(k.key) && !popularMeasurements.any((p) => p.$1 == k.key)) k,
         ];
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -38,53 +47,148 @@ class MeasurementsSection extends StatelessWidget {
                 ),
               ],
             ),
-            if (kinds.isEmpty)
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.straighten),
-                  title: const Text('No measurements yet'),
-                  subtitle: const Text('Weight, body fat, waist, arms, legs… tap to log'),
-                  onTap: () => logMeasurements(context),
-                ),
-              ),
-            for (final k in kinds) _MeasurementTile(kind: k, entries: grouped[k.key]!),
+            LayoutBuilder(
+              builder: (context, c) {
+                final w = (c.maxWidth - 16) / 3;
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final (key, label) in popularMeasurements)
+                      SizedBox(
+                        width: w,
+                        child: _MeasureBox(kind: kindOf(key), label: label, entries: grouped[key] ?? const []),
+                      ),
+                    SizedBox(
+                      width: w,
+                      child: _Box(
+                        key: const Key('moreMeasurements'),
+                        label: 'More',
+                        value: others.isEmpty ? '+' : '${others.length}',
+                        sub: others.isEmpty ? 'neck, hips, legs…' : 'more logged',
+                        onTap: () => _showAll(context, grouped),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
           ],
         );
       },
     );
   }
+
+  static void _showAll(BuildContext context, Map<String, List<BodyMeasurement>> grouped) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (c) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(c).height * 0.75),
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              ListTile(
+                title: const Text('All measurements'),
+                trailing: TextButton(
+                  onPressed: () {
+                    Navigator.pop(c);
+                    logMeasurements(context);
+                  },
+                  child: const Text('Log'),
+                ),
+              ),
+              for (final k in measurementKinds)
+                ListTile(
+                  title: Text(k.label),
+                  trailing: Text(grouped[k.key] == null ? '—' : '${formatKg(grouped[k.key]!.first.value)} ${k.unit}'),
+                  onTap: () {
+                    Navigator.pop(c);
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => MeasurementHistoryScreen(kind: k)));
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-class _MeasurementTile extends StatelessWidget {
-  const _MeasurementTile({required this.kind, required this.entries});
+class _MeasureBox extends StatelessWidget {
+  const _MeasureBox({required this.kind, required this.label, required this.entries});
 
   final MeasurementKind kind;
+  final String label;
   final List<BodyMeasurement> entries; // newest first
 
   @override
   Widget build(BuildContext context) {
-    final latest = entries.first;
+    final latest = entries.firstOrNull;
     final prev = entries.length > 1 ? entries[1] : null;
-    final diff = prev == null ? null : latest.value - prev.value;
+    final diff = latest == null || prev == null ? null : latest.value - prev.value;
     final good = diff == null || diff == 0 ? null : (diff < 0) == kind.lowerIsBetter;
-    return Card(
-      child: ListTile(
-        title: Text(kind.label),
-        subtitle: Text(formatDate(latest.date).split(',').first),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (diff != null && diff != 0)
-              Text(
-                '${diff > 0 ? '▲' : '▼'} ${formatKg(diff.abs())}',
-                style: TextStyle(color: good == true ? Colors.greenAccent : Colors.orangeAccent, fontSize: 12),
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final goodColor = dark ? Colors.greenAccent : Colors.green.shade700;
+    final badColor = dark ? Colors.orangeAccent : Colors.deepOrange.shade700;
+    return _Box(
+      label: label,
+      value: latest == null ? '—' : '${formatKg(latest.value)}${kind.unit == '%' ? '%' : ''}',
+      unit: kind.unit == '%' ? null : kind.unit,
+      sub: diff == null || diff == 0
+          ? (latest == null ? 'tap to add' : 'no change')
+          : '${diff > 0 ? '▲' : '▼'} ${formatKg(diff.abs())}',
+      subColor: good == null ? null : (good ? goodColor : badColor),
+      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => MeasurementHistoryScreen(kind: kind))),
+    );
+  }
+}
+
+class _Box extends StatelessWidget {
+  const _Box({super.key, required this.label, required this.value, this.unit, this.sub, this.subColor, this.onTap});
+
+  final String label;
+  final String value;
+  final String? unit;
+  final String? sub;
+  final Color? subColor;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: text.labelMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 2),
+              Text.rich(
+                TextSpan(
+                  text: value,
+                  style: text.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  children: [if (unit != null && value != '—') TextSpan(text: ' $unit', style: text.labelSmall)],
+                ),
+                maxLines: 1,
               ),
-            const SizedBox(width: 8),
-            Text('${formatKg(latest.value)} ${kind.unit}', style: Theme.of(context).textTheme.titleMedium),
-          ],
+              Text(
+                sub ?? '',
+                style: text.labelSmall?.copyWith(color: subColor ?? scheme.onSurfaceVariant),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
-        onTap: () =>
-            Navigator.of(context).push(MaterialPageRoute(builder: (_) => MeasurementHistoryScreen(kind: kind))),
       ),
     );
   }

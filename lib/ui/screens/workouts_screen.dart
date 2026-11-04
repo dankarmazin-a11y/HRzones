@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../app_services.dart';
+import '../../data/database.dart';
+import '../hr_presets.dart';
 import '../../data/template_repository.dart';
 import '../exercises/exercise_library_screen.dart';
 import '../history/history_screen.dart';
@@ -179,7 +181,10 @@ Future<bool> _confirmReplace(BuildContext context) async {
 
 Future<void> startEmptyWorkout(BuildContext context) async {
   if (!await _confirmReplace(context) || !context.mounted) return;
-  await Services.of(context).session.startEmpty();
+  // Heart-rate zone preset for this workout (only asked if presets exist).
+  final choice = await pickPreset(context, PresetUse.strength);
+  if (choice == null || !context.mounted) return;
+  await Services.of(context).session.startEmpty(preset: choice.preset);
   if (context.mounted) await openActiveWorkout(context);
 }
 

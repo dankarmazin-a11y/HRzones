@@ -42,6 +42,7 @@ class WorkoutRepository {
               endedAt: Value(endedAt),
               templateId: Value(w.templateId),
               notes: Value(w.notes),
+              hrPresetId: Value(w.hrPresetId),
               avgHr: Value(avgHr),
               maxHr: Value(maxHr),
               updatedAt: Value(DateTime.now()),
@@ -110,7 +111,8 @@ class WorkoutRepository {
               ..orderBy([(s) => OrderingTerm.asc(s.setIndex)]))
             .get();
     final w = ActiveWorkout(id: row.id, name: row.name, startedAt: row.startedAt, templateId: row.templateId)
-      ..notes = row.notes;
+      ..notes = row.notes
+      ..hrPresetId = row.hrPresetId;
     for (final we in wes) {
       final ex = await exercises.byId(we.exerciseId);
       if (ex == null) continue;

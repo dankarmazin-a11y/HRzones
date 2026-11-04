@@ -8,10 +8,12 @@ import '../../data/database.dart';
 import '../../hr/hr_monitor.dart';
 import '../../workout/active_workout.dart';
 import '../../workout/stats.dart';
+import '../../workout/training_level.dart';
 import '../../workout/workout_session.dart';
 import '../exercises/exercise_avatar.dart';
 import '../exercises/exercise_detail_screen.dart';
 import '../exercises/exercise_library_screen.dart';
+import '../hr_presets.dart';
 import '../number_input.dart';
 import '../zone_colors.dart';
 import 'calculators_sheet.dart';
@@ -19,7 +21,11 @@ import 'reorder_sheet.dart';
 import 'timer_widgets.dart';
 import 'workout_summary_screen.dart';
 
-const _supersetColors = [Colors.purpleAccent, Colors.tealAccent, Colors.amberAccent, Colors.pinkAccent];
+const _supersetColors = [Colors.purple, Colors.teal, Colors.amber, Colors.pink];
+
+/// Teal used for timed sets, readable on light and dark backgrounds.
+Color timedColor(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark ? Colors.tealAccent : Colors.teal.shade700;
 
 /// Gives the workout widgets their session: the running workout, or a
 /// separate one when editing a past workout.
@@ -93,6 +99,8 @@ class ActiveWorkoutScreen extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 120),
             children: [
               LinearProgressIndicator(value: session.progress, minHeight: 3),
+              if (!session.editMode || session.templateMode)
+                PresetRow(presetId: w.hrPresetId, onChanged: session.applyPreset),
               for (final (i, e) in w.exercises.indexed) _ExerciseCard(key: ValueKey(e.id), index: i, entry: e),
               if (w.exercises.length > 1)
                 Padding(
@@ -609,7 +617,10 @@ class _ExerciseCard extends StatelessWidget {
             if (isSession)
               const _StretchHeaderRow()
             else
-              _HeaderRow(tracking: tracking, showRpe: !e.exercise.isStretch),
+              _HeaderRow(
+                tracking: tracking,
+                showRpe: !e.exercise.isStretch && Services.of(context).level.value.showsAdvancedSetOptions,
+              ),
             for (final (i, s) in e.sets.indexed)
               Dismissible(
                 key: ValueKey(s.id),
@@ -752,8 +763,8 @@ class _SetRowState extends State<SetRow> {
 
   Color? _labelColor(BuildContext context) => switch (widget.set.type) {
     SetType.warmup => Colors.amber,
-    SetType.drop => Colors.purpleAccent,
-    SetType.failure => Colors.redAccent,
+    SetType.drop => Colors.purple,
+    SetType.failure => Colors.red,
     SetType.normal => null,
   };
 
@@ -794,7 +805,7 @@ class _SetRowState extends State<SetRow> {
       final running = session.timer?.kind == TimerKind.setTimer && session.timer?.set == s;
       return IconButton(
         tooltip: running ? 'Stop' : 'Start timer',
-        icon: Icon(running ? Icons.stop_circle : Icons.play_circle, color: Colors.tealAccent),
+        icon: Icon(running ? Icons.stop_circle : Icons.play_circle, color: timedColor(context)),
         onPressed: () {
           FocusScope.of(context).unfocus();
           running ? session.stopTimer() : session.startSetTimer(widget.entry, s);
@@ -864,7 +875,7 @@ class _SetRowState extends State<SetRow> {
         ? Center(
             child: Text(
               '${session.timer!.remaining} s',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.tealAccent),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: timedColor(context)),
             ),
           )
         : field(
@@ -908,7 +919,8 @@ class _SetRowState extends State<SetRow> {
             SizedBox(
               width: _setW,
               child: InkWell(
-                onTap: () => session.cycleSetType(s),
+                // Set types (warm-up/drop/failure) are hidden for beginners.
+                onTap: Services.of(context).level.value.showsAdvancedSetOptions ? () => session.cycleSetType(s) : null,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(
@@ -940,7 +952,7 @@ class _SetRowState extends State<SetRow> {
               Expanded(child: weightField(hintOf(prev?.weightKg))),
               Expanded(child: field(_reps, hintOf(prev?.reps), (v) => session.setReps(s, int.tryParse(v)))),
             ],
-            if (!widget.entry.exercise.isStretch)
+            if (!widget.entry.exercise.isStretch && Services.of(context).level.value.showsAdvancedSetOptions)
               SizedBox(
                 width: _rpeW,
                 child: InkWell(

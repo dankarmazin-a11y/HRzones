@@ -4,7 +4,10 @@ import '../../app_services.dart';
 import '../goals_section.dart';
 import '../measurements_section.dart';
 import '../number_input.dart';
+import '../../workout/training_level.dart';
+import '../export_action.dart';
 import '../streak_card.dart';
+import 'zones_screen.dart';
 
 /// You: streak, goals, body measurements and settings.
 class ProfileScreen extends StatelessWidget {
@@ -12,13 +15,25 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final session = Services.of(context).session;
+    final s = Services.of(context);
+    final session = s.session;
     final text = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(title: const Text('Profile')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          Card(
+            child: ListTile(
+              key: const Key('openZones'),
+              leading: const Icon(Icons.monitor_heart_outlined),
+              title: const Text('Heart-rate zones'),
+              subtitle: const Text('Zone presets, live monitor, alerts and your strap'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ZonesScreen())),
+            ),
+          ),
+          const SizedBox(height: 8),
           const StreakCard(editable: true),
           const SizedBox(height: 16),
           const GoalsSection(),
@@ -40,11 +55,57 @@ class ProfileScreen extends StatelessWidget {
               },
             ),
           ),
-          const ListTile(
+          ValueListenableBuilder<TrainingLevel>(
+            valueListenable: s.level,
+            builder: (context, level, _) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 8),
+                const Text('Training level'),
+                const SizedBox(height: 6),
+                SegmentedButton<TrainingLevel>(
+                  key: const Key('levelPicker'),
+                  showSelectedIcon: false,
+                  segments: [for (final l in TrainingLevel.values) ButtonSegment(value: l, label: Text(l.label))],
+                  selected: {level},
+                  onSelectionChanged: (v) => s.setLevel(v.first),
+                ),
+                const SizedBox(height: 4),
+                Text(level.description, style: text.bodySmall),
+              ],
+            ),
+          ),
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: s.themeMode,
+            builder: (context, mode, _) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 16),
+                const Text('Theme'),
+                const SizedBox(height: 6),
+                SegmentedButton<ThemeMode>(
+                  key: const Key('themePicker'),
+                  showSelectedIcon: false,
+                  segments: const [
+                    ButtonSegment(value: ThemeMode.light, label: Text('Light'), icon: Icon(Icons.light_mode)),
+                    ButtonSegment(value: ThemeMode.dark, label: Text('Dark'), icon: Icon(Icons.dark_mode)),
+                    ButtonSegment(value: ThemeMode.system, label: Text('Auto')),
+                  ],
+                  selected: {mode},
+                  onSelectionChanged: (v) => s.setThemeMode(v.first),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 32),
+          Text('Your data', style: text.titleMedium),
+          ListTile(
+            key: const Key('export'),
             contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.favorite_outline),
-            title: Text('Heart-rate zones, alerts and strap'),
-            subtitle: Text('On the Zones tab'),
+            leading: const Icon(Icons.table_view_outlined),
+            title: const Text('Export to spreadsheet'),
+            subtitle: const Text('All workouts, sets and measurements as an Excel file (.xlsx)'),
+            onTap: () => exportAndShare(context),
           ),
         ],
       ),

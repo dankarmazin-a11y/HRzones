@@ -143,6 +143,15 @@ class $ExercisesTable extends Exercises with TableInfo<$ExercisesTable, Exercise
     defaultConstraints: GeneratedColumn.constraintIsAlways('CHECK ("hidden" IN (0, 1))'),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _levelMeta = const VerificationMeta('level');
+  @override
+  late final GeneratedColumn<String> level = GeneratedColumn<String>(
+    'level',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -159,6 +168,7 @@ class $ExercisesTable extends Exercises with TableInfo<$ExercisesTable, Exercise
     defaultRestSeconds,
     popularity,
     hidden,
+    level,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -221,6 +231,9 @@ class $ExercisesTable extends Exercises with TableInfo<$ExercisesTable, Exercise
     if (data.containsKey('hidden')) {
       context.handle(_hiddenMeta, hidden.isAcceptableOrUnknown(data['hidden']!, _hiddenMeta));
     }
+    if (data.containsKey('level')) {
+      context.handle(_levelMeta, level.isAcceptableOrUnknown(data['level']!, _levelMeta));
+    }
     return context;
   }
 
@@ -252,6 +265,7 @@ class $ExercisesTable extends Exercises with TableInfo<$ExercisesTable, Exercise
       )!,
       popularity: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}popularity']),
       hidden: attachedDatabase.typeMapping.read(DriftSqlType.bool, data['${effectivePrefix}hidden'])!,
+      level: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}level']),
     );
   }
 
@@ -291,6 +305,9 @@ class Exercise extends DataClass implements Insertable<Exercise> {
 
   /// Duplicates hidden from the list (kept so old workouts still show them).
   final bool hidden;
+
+  /// "beginner" / "intermediate" / "expert" (from free-exercise-db).
+  final String? level;
   const Exercise({
     required this.id,
     required this.updatedAt,
@@ -306,6 +323,7 @@ class Exercise extends DataClass implements Insertable<Exercise> {
     required this.defaultRestSeconds,
     this.popularity,
     required this.hidden,
+    this.level,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -332,6 +350,9 @@ class Exercise extends DataClass implements Insertable<Exercise> {
       map['popularity'] = Variable<int>(popularity);
     }
     map['hidden'] = Variable<bool>(hidden);
+    if (!nullToAbsent || level != null) {
+      map['level'] = Variable<String>(level);
+    }
     return map;
   }
 
@@ -351,6 +372,7 @@ class Exercise extends DataClass implements Insertable<Exercise> {
       defaultRestSeconds: Value(defaultRestSeconds),
       popularity: popularity == null && nullToAbsent ? const Value.absent() : Value(popularity),
       hidden: Value(hidden),
+      level: level == null && nullToAbsent ? const Value.absent() : Value(level),
     );
   }
 
@@ -371,6 +393,7 @@ class Exercise extends DataClass implements Insertable<Exercise> {
       defaultRestSeconds: serializer.fromJson<int>(json['defaultRestSeconds']),
       popularity: serializer.fromJson<int?>(json['popularity']),
       hidden: serializer.fromJson<bool>(json['hidden']),
+      level: serializer.fromJson<String?>(json['level']),
     );
   }
   @override
@@ -391,6 +414,7 @@ class Exercise extends DataClass implements Insertable<Exercise> {
       'defaultRestSeconds': serializer.toJson<int>(defaultRestSeconds),
       'popularity': serializer.toJson<int?>(popularity),
       'hidden': serializer.toJson<bool>(hidden),
+      'level': serializer.toJson<String?>(level),
     };
   }
 
@@ -409,6 +433,7 @@ class Exercise extends DataClass implements Insertable<Exercise> {
     int? defaultRestSeconds,
     Value<int?> popularity = const Value.absent(),
     bool? hidden,
+    Value<String?> level = const Value.absent(),
   }) => Exercise(
     id: id ?? this.id,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -424,6 +449,7 @@ class Exercise extends DataClass implements Insertable<Exercise> {
     defaultRestSeconds: defaultRestSeconds ?? this.defaultRestSeconds,
     popularity: popularity.present ? popularity.value : this.popularity,
     hidden: hidden ?? this.hidden,
+    level: level.present ? level.value : this.level,
   );
   Exercise copyWithCompanion(ExercisesCompanion data) {
     return Exercise(
@@ -441,6 +467,7 @@ class Exercise extends DataClass implements Insertable<Exercise> {
       defaultRestSeconds: data.defaultRestSeconds.present ? data.defaultRestSeconds.value : this.defaultRestSeconds,
       popularity: data.popularity.present ? data.popularity.value : this.popularity,
       hidden: data.hidden.present ? data.hidden.value : this.hidden,
+      level: data.level.present ? data.level.value : this.level,
     );
   }
 
@@ -460,7 +487,8 @@ class Exercise extends DataClass implements Insertable<Exercise> {
           ..write('isCustom: $isCustom, ')
           ..write('defaultRestSeconds: $defaultRestSeconds, ')
           ..write('popularity: $popularity, ')
-          ..write('hidden: $hidden')
+          ..write('hidden: $hidden, ')
+          ..write('level: $level')
           ..write(')'))
         .toString();
   }
@@ -481,6 +509,7 @@ class Exercise extends DataClass implements Insertable<Exercise> {
     defaultRestSeconds,
     popularity,
     hidden,
+    level,
   );
   @override
   bool operator ==(Object other) =>
@@ -499,7 +528,8 @@ class Exercise extends DataClass implements Insertable<Exercise> {
           other.isCustom == this.isCustom &&
           other.defaultRestSeconds == this.defaultRestSeconds &&
           other.popularity == this.popularity &&
-          other.hidden == this.hidden);
+          other.hidden == this.hidden &&
+          other.level == this.level);
 }
 
 class ExercisesCompanion extends UpdateCompanion<Exercise> {
@@ -517,6 +547,7 @@ class ExercisesCompanion extends UpdateCompanion<Exercise> {
   final Value<int> defaultRestSeconds;
   final Value<int?> popularity;
   final Value<bool> hidden;
+  final Value<String?> level;
   final Value<int> rowid;
   const ExercisesCompanion({
     this.id = const Value.absent(),
@@ -533,6 +564,7 @@ class ExercisesCompanion extends UpdateCompanion<Exercise> {
     this.defaultRestSeconds = const Value.absent(),
     this.popularity = const Value.absent(),
     this.hidden = const Value.absent(),
+    this.level = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ExercisesCompanion.insert({
@@ -550,6 +582,7 @@ class ExercisesCompanion extends UpdateCompanion<Exercise> {
     this.defaultRestSeconds = const Value.absent(),
     this.popularity = const Value.absent(),
     this.hidden = const Value.absent(),
+    this.level = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : name = Value(name),
        primaryMuscle = Value(primaryMuscle),
@@ -569,6 +602,7 @@ class ExercisesCompanion extends UpdateCompanion<Exercise> {
     Expression<int>? defaultRestSeconds,
     Expression<int>? popularity,
     Expression<bool>? hidden,
+    Expression<String>? level,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -586,6 +620,7 @@ class ExercisesCompanion extends UpdateCompanion<Exercise> {
       if (defaultRestSeconds != null) 'default_rest_seconds': defaultRestSeconds,
       if (popularity != null) 'popularity': popularity,
       if (hidden != null) 'hidden': hidden,
+      if (level != null) 'level': level,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -605,6 +640,7 @@ class ExercisesCompanion extends UpdateCompanion<Exercise> {
     Value<int>? defaultRestSeconds,
     Value<int?>? popularity,
     Value<bool>? hidden,
+    Value<String?>? level,
     Value<int>? rowid,
   }) {
     return ExercisesCompanion(
@@ -622,6 +658,7 @@ class ExercisesCompanion extends UpdateCompanion<Exercise> {
       defaultRestSeconds: defaultRestSeconds ?? this.defaultRestSeconds,
       popularity: popularity ?? this.popularity,
       hidden: hidden ?? this.hidden,
+      level: level ?? this.level,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -671,6 +708,9 @@ class ExercisesCompanion extends UpdateCompanion<Exercise> {
     if (hidden.present) {
       map['hidden'] = Variable<bool>(hidden.value);
     }
+    if (level.present) {
+      map['level'] = Variable<String>(level.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -694,6 +734,7 @@ class ExercisesCompanion extends UpdateCompanion<Exercise> {
           ..write('defaultRestSeconds: $defaultRestSeconds, ')
           ..write('popularity: $popularity, ')
           ..write('hidden: $hidden, ')
+          ..write('level: $level, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -743,6 +784,15 @@ class $TemplatesTable extends Templates with TableInfo<$TemplatesTable, Template
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _hrPresetIdMeta = const VerificationMeta('hrPresetId');
+  @override
+  late final GeneratedColumn<String> hrPresetId = GeneratedColumn<String>(
+    'hr_preset_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _notesMeta = const VerificationMeta('notes');
   @override
   late final GeneratedColumn<String> notes = GeneratedColumn<String>(
@@ -764,7 +814,7 @@ class $TemplatesTable extends Templates with TableInfo<$TemplatesTable, Template
     defaultValue: const Constant(0),
   );
   @override
-  List<GeneratedColumn> get $columns => [id, updatedAt, name, folder, notes, position];
+  List<GeneratedColumn> get $columns => [id, updatedAt, name, folder, hrPresetId, notes, position];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -788,6 +838,9 @@ class $TemplatesTable extends Templates with TableInfo<$TemplatesTable, Template
     if (data.containsKey('folder')) {
       context.handle(_folderMeta, folder.isAcceptableOrUnknown(data['folder']!, _folderMeta));
     }
+    if (data.containsKey('hr_preset_id')) {
+      context.handle(_hrPresetIdMeta, hrPresetId.isAcceptableOrUnknown(data['hr_preset_id']!, _hrPresetIdMeta));
+    }
     if (data.containsKey('notes')) {
       context.handle(_notesMeta, notes.isAcceptableOrUnknown(data['notes']!, _notesMeta));
     }
@@ -807,6 +860,7 @@ class $TemplatesTable extends Templates with TableInfo<$TemplatesTable, Template
       updatedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
       name: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}name'])!,
       folder: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}folder']),
+      hrPresetId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}hr_preset_id']),
       notes: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}notes'])!,
       position: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}position'])!,
     );
@@ -823,6 +877,9 @@ class Template extends DataClass implements Insertable<Template> {
   final DateTime updatedAt;
   final String name;
   final String? folder;
+
+  /// Heart-rate zone preset applied when the template is started.
+  final String? hrPresetId;
   final String notes;
   final int position;
   const Template({
@@ -830,6 +887,7 @@ class Template extends DataClass implements Insertable<Template> {
     required this.updatedAt,
     required this.name,
     this.folder,
+    this.hrPresetId,
     required this.notes,
     required this.position,
   });
@@ -842,6 +900,9 @@ class Template extends DataClass implements Insertable<Template> {
     if (!nullToAbsent || folder != null) {
       map['folder'] = Variable<String>(folder);
     }
+    if (!nullToAbsent || hrPresetId != null) {
+      map['hr_preset_id'] = Variable<String>(hrPresetId);
+    }
     map['notes'] = Variable<String>(notes);
     map['position'] = Variable<int>(position);
     return map;
@@ -853,6 +914,7 @@ class Template extends DataClass implements Insertable<Template> {
       updatedAt: Value(updatedAt),
       name: Value(name),
       folder: folder == null && nullToAbsent ? const Value.absent() : Value(folder),
+      hrPresetId: hrPresetId == null && nullToAbsent ? const Value.absent() : Value(hrPresetId),
       notes: Value(notes),
       position: Value(position),
     );
@@ -865,6 +927,7 @@ class Template extends DataClass implements Insertable<Template> {
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       name: serializer.fromJson<String>(json['name']),
       folder: serializer.fromJson<String?>(json['folder']),
+      hrPresetId: serializer.fromJson<String?>(json['hrPresetId']),
       notes: serializer.fromJson<String>(json['notes']),
       position: serializer.fromJson<int>(json['position']),
     );
@@ -877,6 +940,7 @@ class Template extends DataClass implements Insertable<Template> {
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'name': serializer.toJson<String>(name),
       'folder': serializer.toJson<String?>(folder),
+      'hrPresetId': serializer.toJson<String?>(hrPresetId),
       'notes': serializer.toJson<String>(notes),
       'position': serializer.toJson<int>(position),
     };
@@ -887,6 +951,7 @@ class Template extends DataClass implements Insertable<Template> {
     DateTime? updatedAt,
     String? name,
     Value<String?> folder = const Value.absent(),
+    Value<String?> hrPresetId = const Value.absent(),
     String? notes,
     int? position,
   }) => Template(
@@ -894,6 +959,7 @@ class Template extends DataClass implements Insertable<Template> {
     updatedAt: updatedAt ?? this.updatedAt,
     name: name ?? this.name,
     folder: folder.present ? folder.value : this.folder,
+    hrPresetId: hrPresetId.present ? hrPresetId.value : this.hrPresetId,
     notes: notes ?? this.notes,
     position: position ?? this.position,
   );
@@ -903,6 +969,7 @@ class Template extends DataClass implements Insertable<Template> {
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       name: data.name.present ? data.name.value : this.name,
       folder: data.folder.present ? data.folder.value : this.folder,
+      hrPresetId: data.hrPresetId.present ? data.hrPresetId.value : this.hrPresetId,
       notes: data.notes.present ? data.notes.value : this.notes,
       position: data.position.present ? data.position.value : this.position,
     );
@@ -915,6 +982,7 @@ class Template extends DataClass implements Insertable<Template> {
           ..write('updatedAt: $updatedAt, ')
           ..write('name: $name, ')
           ..write('folder: $folder, ')
+          ..write('hrPresetId: $hrPresetId, ')
           ..write('notes: $notes, ')
           ..write('position: $position')
           ..write(')'))
@@ -922,7 +990,7 @@ class Template extends DataClass implements Insertable<Template> {
   }
 
   @override
-  int get hashCode => Object.hash(id, updatedAt, name, folder, notes, position);
+  int get hashCode => Object.hash(id, updatedAt, name, folder, hrPresetId, notes, position);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -931,6 +999,7 @@ class Template extends DataClass implements Insertable<Template> {
           other.updatedAt == this.updatedAt &&
           other.name == this.name &&
           other.folder == this.folder &&
+          other.hrPresetId == this.hrPresetId &&
           other.notes == this.notes &&
           other.position == this.position);
 }
@@ -940,6 +1009,7 @@ class TemplatesCompanion extends UpdateCompanion<Template> {
   final Value<DateTime> updatedAt;
   final Value<String> name;
   final Value<String?> folder;
+  final Value<String?> hrPresetId;
   final Value<String> notes;
   final Value<int> position;
   final Value<int> rowid;
@@ -948,6 +1018,7 @@ class TemplatesCompanion extends UpdateCompanion<Template> {
     this.updatedAt = const Value.absent(),
     this.name = const Value.absent(),
     this.folder = const Value.absent(),
+    this.hrPresetId = const Value.absent(),
     this.notes = const Value.absent(),
     this.position = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -957,6 +1028,7 @@ class TemplatesCompanion extends UpdateCompanion<Template> {
     this.updatedAt = const Value.absent(),
     required String name,
     this.folder = const Value.absent(),
+    this.hrPresetId = const Value.absent(),
     this.notes = const Value.absent(),
     this.position = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -966,6 +1038,7 @@ class TemplatesCompanion extends UpdateCompanion<Template> {
     Expression<DateTime>? updatedAt,
     Expression<String>? name,
     Expression<String>? folder,
+    Expression<String>? hrPresetId,
     Expression<String>? notes,
     Expression<int>? position,
     Expression<int>? rowid,
@@ -975,6 +1048,7 @@ class TemplatesCompanion extends UpdateCompanion<Template> {
       if (updatedAt != null) 'updated_at': updatedAt,
       if (name != null) 'name': name,
       if (folder != null) 'folder': folder,
+      if (hrPresetId != null) 'hr_preset_id': hrPresetId,
       if (notes != null) 'notes': notes,
       if (position != null) 'position': position,
       if (rowid != null) 'rowid': rowid,
@@ -986,6 +1060,7 @@ class TemplatesCompanion extends UpdateCompanion<Template> {
     Value<DateTime>? updatedAt,
     Value<String>? name,
     Value<String?>? folder,
+    Value<String?>? hrPresetId,
     Value<String>? notes,
     Value<int>? position,
     Value<int>? rowid,
@@ -995,6 +1070,7 @@ class TemplatesCompanion extends UpdateCompanion<Template> {
       updatedAt: updatedAt ?? this.updatedAt,
       name: name ?? this.name,
       folder: folder ?? this.folder,
+      hrPresetId: hrPresetId ?? this.hrPresetId,
       notes: notes ?? this.notes,
       position: position ?? this.position,
       rowid: rowid ?? this.rowid,
@@ -1016,6 +1092,9 @@ class TemplatesCompanion extends UpdateCompanion<Template> {
     if (folder.present) {
       map['folder'] = Variable<String>(folder.value);
     }
+    if (hrPresetId.present) {
+      map['hr_preset_id'] = Variable<String>(hrPresetId.value);
+    }
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
@@ -1035,6 +1114,7 @@ class TemplatesCompanion extends UpdateCompanion<Template> {
           ..write('updatedAt: $updatedAt, ')
           ..write('name: $name, ')
           ..write('folder: $folder, ')
+          ..write('hrPresetId: $hrPresetId, ')
           ..write('notes: $notes, ')
           ..write('position: $position, ')
           ..write('rowid: $rowid')
@@ -1642,6 +1722,15 @@ class $WorkoutsTable extends Workouts with TableInfo<$WorkoutsTable, Workout> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _hrPresetIdMeta = const VerificationMeta('hrPresetId');
+  @override
+  late final GeneratedColumn<String> hrPresetId = GeneratedColumn<String>(
+    'hr_preset_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _notesMeta = const VerificationMeta('notes');
   @override
   late final GeneratedColumn<String> notes = GeneratedColumn<String>(
@@ -1679,6 +1768,7 @@ class $WorkoutsTable extends Workouts with TableInfo<$WorkoutsTable, Workout> {
     startedAt,
     endedAt,
     templateId,
+    hrPresetId,
     notes,
     avgHr,
     maxHr,
@@ -1714,6 +1804,9 @@ class $WorkoutsTable extends Workouts with TableInfo<$WorkoutsTable, Workout> {
     if (data.containsKey('template_id')) {
       context.handle(_templateIdMeta, templateId.isAcceptableOrUnknown(data['template_id']!, _templateIdMeta));
     }
+    if (data.containsKey('hr_preset_id')) {
+      context.handle(_hrPresetIdMeta, hrPresetId.isAcceptableOrUnknown(data['hr_preset_id']!, _hrPresetIdMeta));
+    }
     if (data.containsKey('notes')) {
       context.handle(_notesMeta, notes.isAcceptableOrUnknown(data['notes']!, _notesMeta));
     }
@@ -1741,6 +1834,7 @@ class $WorkoutsTable extends Workouts with TableInfo<$WorkoutsTable, Workout> {
       startedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}started_at'])!,
       endedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}ended_at']),
       templateId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}template_id']),
+      hrPresetId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}hr_preset_id']),
       notes: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}notes'])!,
       avgHr: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}avg_hr']),
       maxHr: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}max_hr']),
@@ -1767,6 +1861,7 @@ class Workout extends DataClass implements Insertable<Workout> {
   /// Null while the workout is in progress.
   final DateTime? endedAt;
   final String? templateId;
+  final String? hrPresetId;
   final String notes;
   final int? avgHr;
   final int? maxHr;
@@ -1778,6 +1873,7 @@ class Workout extends DataClass implements Insertable<Workout> {
     required this.startedAt,
     this.endedAt,
     this.templateId,
+    this.hrPresetId,
     required this.notes,
     this.avgHr,
     this.maxHr,
@@ -1798,6 +1894,9 @@ class Workout extends DataClass implements Insertable<Workout> {
     if (!nullToAbsent || templateId != null) {
       map['template_id'] = Variable<String>(templateId);
     }
+    if (!nullToAbsent || hrPresetId != null) {
+      map['hr_preset_id'] = Variable<String>(hrPresetId);
+    }
     map['notes'] = Variable<String>(notes);
     if (!nullToAbsent || avgHr != null) {
       map['avg_hr'] = Variable<int>(avgHr);
@@ -1817,6 +1916,7 @@ class Workout extends DataClass implements Insertable<Workout> {
       startedAt: Value(startedAt),
       endedAt: endedAt == null && nullToAbsent ? const Value.absent() : Value(endedAt),
       templateId: templateId == null && nullToAbsent ? const Value.absent() : Value(templateId),
+      hrPresetId: hrPresetId == null && nullToAbsent ? const Value.absent() : Value(hrPresetId),
       notes: Value(notes),
       avgHr: avgHr == null && nullToAbsent ? const Value.absent() : Value(avgHr),
       maxHr: maxHr == null && nullToAbsent ? const Value.absent() : Value(maxHr),
@@ -1833,6 +1933,7 @@ class Workout extends DataClass implements Insertable<Workout> {
       startedAt: serializer.fromJson<DateTime>(json['startedAt']),
       endedAt: serializer.fromJson<DateTime?>(json['endedAt']),
       templateId: serializer.fromJson<String?>(json['templateId']),
+      hrPresetId: serializer.fromJson<String?>(json['hrPresetId']),
       notes: serializer.fromJson<String>(json['notes']),
       avgHr: serializer.fromJson<int?>(json['avgHr']),
       maxHr: serializer.fromJson<int?>(json['maxHr']),
@@ -1849,6 +1950,7 @@ class Workout extends DataClass implements Insertable<Workout> {
       'startedAt': serializer.toJson<DateTime>(startedAt),
       'endedAt': serializer.toJson<DateTime?>(endedAt),
       'templateId': serializer.toJson<String?>(templateId),
+      'hrPresetId': serializer.toJson<String?>(hrPresetId),
       'notes': serializer.toJson<String>(notes),
       'avgHr': serializer.toJson<int?>(avgHr),
       'maxHr': serializer.toJson<int?>(maxHr),
@@ -1863,6 +1965,7 @@ class Workout extends DataClass implements Insertable<Workout> {
     DateTime? startedAt,
     Value<DateTime?> endedAt = const Value.absent(),
     Value<String?> templateId = const Value.absent(),
+    Value<String?> hrPresetId = const Value.absent(),
     String? notes,
     Value<int?> avgHr = const Value.absent(),
     Value<int?> maxHr = const Value.absent(),
@@ -1874,6 +1977,7 @@ class Workout extends DataClass implements Insertable<Workout> {
     startedAt: startedAt ?? this.startedAt,
     endedAt: endedAt.present ? endedAt.value : this.endedAt,
     templateId: templateId.present ? templateId.value : this.templateId,
+    hrPresetId: hrPresetId.present ? hrPresetId.value : this.hrPresetId,
     notes: notes ?? this.notes,
     avgHr: avgHr.present ? avgHr.value : this.avgHr,
     maxHr: maxHr.present ? maxHr.value : this.maxHr,
@@ -1887,6 +1991,7 @@ class Workout extends DataClass implements Insertable<Workout> {
       startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,
       endedAt: data.endedAt.present ? data.endedAt.value : this.endedAt,
       templateId: data.templateId.present ? data.templateId.value : this.templateId,
+      hrPresetId: data.hrPresetId.present ? data.hrPresetId.value : this.hrPresetId,
       notes: data.notes.present ? data.notes.value : this.notes,
       avgHr: data.avgHr.present ? data.avgHr.value : this.avgHr,
       maxHr: data.maxHr.present ? data.maxHr.value : this.maxHr,
@@ -1903,6 +2008,7 @@ class Workout extends DataClass implements Insertable<Workout> {
           ..write('startedAt: $startedAt, ')
           ..write('endedAt: $endedAt, ')
           ..write('templateId: $templateId, ')
+          ..write('hrPresetId: $hrPresetId, ')
           ..write('notes: $notes, ')
           ..write('avgHr: $avgHr, ')
           ..write('maxHr: $maxHr')
@@ -1911,7 +2017,8 @@ class Workout extends DataClass implements Insertable<Workout> {
   }
 
   @override
-  int get hashCode => Object.hash(id, updatedAt, type, name, startedAt, endedAt, templateId, notes, avgHr, maxHr);
+  int get hashCode =>
+      Object.hash(id, updatedAt, type, name, startedAt, endedAt, templateId, hrPresetId, notes, avgHr, maxHr);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1923,6 +2030,7 @@ class Workout extends DataClass implements Insertable<Workout> {
           other.startedAt == this.startedAt &&
           other.endedAt == this.endedAt &&
           other.templateId == this.templateId &&
+          other.hrPresetId == this.hrPresetId &&
           other.notes == this.notes &&
           other.avgHr == this.avgHr &&
           other.maxHr == this.maxHr);
@@ -1936,6 +2044,7 @@ class WorkoutsCompanion extends UpdateCompanion<Workout> {
   final Value<DateTime> startedAt;
   final Value<DateTime?> endedAt;
   final Value<String?> templateId;
+  final Value<String?> hrPresetId;
   final Value<String> notes;
   final Value<int?> avgHr;
   final Value<int?> maxHr;
@@ -1948,6 +2057,7 @@ class WorkoutsCompanion extends UpdateCompanion<Workout> {
     this.startedAt = const Value.absent(),
     this.endedAt = const Value.absent(),
     this.templateId = const Value.absent(),
+    this.hrPresetId = const Value.absent(),
     this.notes = const Value.absent(),
     this.avgHr = const Value.absent(),
     this.maxHr = const Value.absent(),
@@ -1961,6 +2071,7 @@ class WorkoutsCompanion extends UpdateCompanion<Workout> {
     required DateTime startedAt,
     this.endedAt = const Value.absent(),
     this.templateId = const Value.absent(),
+    this.hrPresetId = const Value.absent(),
     this.notes = const Value.absent(),
     this.avgHr = const Value.absent(),
     this.maxHr = const Value.absent(),
@@ -1976,6 +2087,7 @@ class WorkoutsCompanion extends UpdateCompanion<Workout> {
     Expression<DateTime>? startedAt,
     Expression<DateTime>? endedAt,
     Expression<String>? templateId,
+    Expression<String>? hrPresetId,
     Expression<String>? notes,
     Expression<int>? avgHr,
     Expression<int>? maxHr,
@@ -1989,6 +2101,7 @@ class WorkoutsCompanion extends UpdateCompanion<Workout> {
       if (startedAt != null) 'started_at': startedAt,
       if (endedAt != null) 'ended_at': endedAt,
       if (templateId != null) 'template_id': templateId,
+      if (hrPresetId != null) 'hr_preset_id': hrPresetId,
       if (notes != null) 'notes': notes,
       if (avgHr != null) 'avg_hr': avgHr,
       if (maxHr != null) 'max_hr': maxHr,
@@ -2004,6 +2117,7 @@ class WorkoutsCompanion extends UpdateCompanion<Workout> {
     Value<DateTime>? startedAt,
     Value<DateTime?>? endedAt,
     Value<String?>? templateId,
+    Value<String?>? hrPresetId,
     Value<String>? notes,
     Value<int?>? avgHr,
     Value<int?>? maxHr,
@@ -2017,6 +2131,7 @@ class WorkoutsCompanion extends UpdateCompanion<Workout> {
       startedAt: startedAt ?? this.startedAt,
       endedAt: endedAt ?? this.endedAt,
       templateId: templateId ?? this.templateId,
+      hrPresetId: hrPresetId ?? this.hrPresetId,
       notes: notes ?? this.notes,
       avgHr: avgHr ?? this.avgHr,
       maxHr: maxHr ?? this.maxHr,
@@ -2048,6 +2163,9 @@ class WorkoutsCompanion extends UpdateCompanion<Workout> {
     if (templateId.present) {
       map['template_id'] = Variable<String>(templateId.value);
     }
+    if (hrPresetId.present) {
+      map['hr_preset_id'] = Variable<String>(hrPresetId.value);
+    }
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
@@ -2073,6 +2191,7 @@ class WorkoutsCompanion extends UpdateCompanion<Workout> {
           ..write('startedAt: $startedAt, ')
           ..write('endedAt: $endedAt, ')
           ..write('templateId: $templateId, ')
+          ..write('hrPresetId: $hrPresetId, ')
           ..write('notes: $notes, ')
           ..write('avgHr: $avgHr, ')
           ..write('maxHr: $maxHr, ')
@@ -4239,6 +4358,694 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
   }
 }
 
+class $HrPresetsTable extends HrPresets with TableInfo<$HrPresetsTable, HrPreset> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $HrPresetsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    clientDefault: newId,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    clientDefault: DateTime.now,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _minBpmMeta = const VerificationMeta('minBpm');
+  @override
+  late final GeneratedColumn<int> minBpm = GeneratedColumn<int>(
+    'min_bpm',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _maxBpmMeta = const VerificationMeta('maxBpm');
+  @override
+  late final GeneratedColumn<int> maxBpm = GeneratedColumn<int>(
+    'max_bpm',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<PresetUse, int> use = GeneratedColumn<int>(
+    'use',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  ).withConverter<PresetUse>($HrPresetsTable.$converteruse);
+  @override
+  List<GeneratedColumn> get $columns => [id, updatedAt, name, minBpm, maxBpm, use];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'hr_presets';
+  @override
+  VerificationContext validateIntegrity(Insertable<HrPreset> instance, {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta, updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(_nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('min_bpm')) {
+      context.handle(_minBpmMeta, minBpm.isAcceptableOrUnknown(data['min_bpm']!, _minBpmMeta));
+    } else if (isInserting) {
+      context.missing(_minBpmMeta);
+    }
+    if (data.containsKey('max_bpm')) {
+      context.handle(_maxBpmMeta, maxBpm.isAcceptableOrUnknown(data['max_bpm']!, _maxBpmMeta));
+    } else if (isInserting) {
+      context.missing(_maxBpmMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  HrPreset map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return HrPreset(
+      id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      updatedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+      name: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      minBpm: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}min_bpm'])!,
+      maxBpm: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}max_bpm'])!,
+      use: $HrPresetsTable.$converteruse.fromSql(
+        attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}use'])!,
+      ),
+    );
+  }
+
+  @override
+  $HrPresetsTable createAlias(String alias) {
+    return $HrPresetsTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<PresetUse, int, int> $converteruse = const EnumIndexConverter<PresetUse>(PresetUse.values);
+}
+
+class HrPreset extends DataClass implements Insertable<HrPreset> {
+  final String id;
+  final DateTime updatedAt;
+  final String name;
+  final int minBpm;
+  final int maxBpm;
+  final PresetUse use;
+  const HrPreset({
+    required this.id,
+    required this.updatedAt,
+    required this.name,
+    required this.minBpm,
+    required this.maxBpm,
+    required this.use,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['name'] = Variable<String>(name);
+    map['min_bpm'] = Variable<int>(minBpm);
+    map['max_bpm'] = Variable<int>(maxBpm);
+    {
+      map['use'] = Variable<int>($HrPresetsTable.$converteruse.toSql(use));
+    }
+    return map;
+  }
+
+  HrPresetsCompanion toCompanion(bool nullToAbsent) {
+    return HrPresetsCompanion(
+      id: Value(id),
+      updatedAt: Value(updatedAt),
+      name: Value(name),
+      minBpm: Value(minBpm),
+      maxBpm: Value(maxBpm),
+      use: Value(use),
+    );
+  }
+
+  factory HrPreset.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return HrPreset(
+      id: serializer.fromJson<String>(json['id']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      name: serializer.fromJson<String>(json['name']),
+      minBpm: serializer.fromJson<int>(json['minBpm']),
+      maxBpm: serializer.fromJson<int>(json['maxBpm']),
+      use: $HrPresetsTable.$converteruse.fromJson(serializer.fromJson<int>(json['use'])),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'name': serializer.toJson<String>(name),
+      'minBpm': serializer.toJson<int>(minBpm),
+      'maxBpm': serializer.toJson<int>(maxBpm),
+      'use': serializer.toJson<int>($HrPresetsTable.$converteruse.toJson(use)),
+    };
+  }
+
+  HrPreset copyWith({String? id, DateTime? updatedAt, String? name, int? minBpm, int? maxBpm, PresetUse? use}) =>
+      HrPreset(
+        id: id ?? this.id,
+        updatedAt: updatedAt ?? this.updatedAt,
+        name: name ?? this.name,
+        minBpm: minBpm ?? this.minBpm,
+        maxBpm: maxBpm ?? this.maxBpm,
+        use: use ?? this.use,
+      );
+  HrPreset copyWithCompanion(HrPresetsCompanion data) {
+    return HrPreset(
+      id: data.id.present ? data.id.value : this.id,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      name: data.name.present ? data.name.value : this.name,
+      minBpm: data.minBpm.present ? data.minBpm.value : this.minBpm,
+      maxBpm: data.maxBpm.present ? data.maxBpm.value : this.maxBpm,
+      use: data.use.present ? data.use.value : this.use,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('HrPreset(')
+          ..write('id: $id, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('name: $name, ')
+          ..write('minBpm: $minBpm, ')
+          ..write('maxBpm: $maxBpm, ')
+          ..write('use: $use')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, updatedAt, name, minBpm, maxBpm, use);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is HrPreset &&
+          other.id == this.id &&
+          other.updatedAt == this.updatedAt &&
+          other.name == this.name &&
+          other.minBpm == this.minBpm &&
+          other.maxBpm == this.maxBpm &&
+          other.use == this.use);
+}
+
+class HrPresetsCompanion extends UpdateCompanion<HrPreset> {
+  final Value<String> id;
+  final Value<DateTime> updatedAt;
+  final Value<String> name;
+  final Value<int> minBpm;
+  final Value<int> maxBpm;
+  final Value<PresetUse> use;
+  final Value<int> rowid;
+  const HrPresetsCompanion({
+    this.id = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.name = const Value.absent(),
+    this.minBpm = const Value.absent(),
+    this.maxBpm = const Value.absent(),
+    this.use = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  HrPresetsCompanion.insert({
+    this.id = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    required String name,
+    required int minBpm,
+    required int maxBpm,
+    this.use = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : name = Value(name),
+       minBpm = Value(minBpm),
+       maxBpm = Value(maxBpm);
+  static Insertable<HrPreset> custom({
+    Expression<String>? id,
+    Expression<DateTime>? updatedAt,
+    Expression<String>? name,
+    Expression<int>? minBpm,
+    Expression<int>? maxBpm,
+    Expression<int>? use,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (name != null) 'name': name,
+      if (minBpm != null) 'min_bpm': minBpm,
+      if (maxBpm != null) 'max_bpm': maxBpm,
+      if (use != null) 'use': use,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  HrPresetsCompanion copyWith({
+    Value<String>? id,
+    Value<DateTime>? updatedAt,
+    Value<String>? name,
+    Value<int>? minBpm,
+    Value<int>? maxBpm,
+    Value<PresetUse>? use,
+    Value<int>? rowid,
+  }) {
+    return HrPresetsCompanion(
+      id: id ?? this.id,
+      updatedAt: updatedAt ?? this.updatedAt,
+      name: name ?? this.name,
+      minBpm: minBpm ?? this.minBpm,
+      maxBpm: maxBpm ?? this.maxBpm,
+      use: use ?? this.use,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (minBpm.present) {
+      map['min_bpm'] = Variable<int>(minBpm.value);
+    }
+    if (maxBpm.present) {
+      map['max_bpm'] = Variable<int>(maxBpm.value);
+    }
+    if (use.present) {
+      map['use'] = Variable<int>($HrPresetsTable.$converteruse.toSql(use.value));
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('HrPresetsCompanion(')
+          ..write('id: $id, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('name: $name, ')
+          ..write('minBpm: $minBpm, ')
+          ..write('maxBpm: $maxBpm, ')
+          ..write('use: $use, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $IntervalPresetsTable extends IntervalPresets with TableInfo<$IntervalPresetsTable, IntervalPreset> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $IntervalPresetsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    clientDefault: newId,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    clientDefault: DateTime.now,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _segmentsJsonMeta = const VerificationMeta('segmentsJson');
+  @override
+  late final GeneratedColumn<String> segmentsJson = GeneratedColumn<String>(
+    'segments_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _roundsMeta = const VerificationMeta('rounds');
+  @override
+  late final GeneratedColumn<int> rounds = GeneratedColumn<int>(
+    'rounds',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
+  static const VerificationMeta _positionMeta = const VerificationMeta('position');
+  @override
+  late final GeneratedColumn<int> position = GeneratedColumn<int>(
+    'position',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, updatedAt, name, segmentsJson, rounds, position];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'interval_presets';
+  @override
+  VerificationContext validateIntegrity(Insertable<IntervalPreset> instance, {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta, updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(_nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('segments_json')) {
+      context.handle(_segmentsJsonMeta, segmentsJson.isAcceptableOrUnknown(data['segments_json']!, _segmentsJsonMeta));
+    } else if (isInserting) {
+      context.missing(_segmentsJsonMeta);
+    }
+    if (data.containsKey('rounds')) {
+      context.handle(_roundsMeta, rounds.isAcceptableOrUnknown(data['rounds']!, _roundsMeta));
+    }
+    if (data.containsKey('position')) {
+      context.handle(_positionMeta, position.isAcceptableOrUnknown(data['position']!, _positionMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  IntervalPreset map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return IntervalPreset(
+      id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      updatedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+      name: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      segmentsJson: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}segments_json'])!,
+      rounds: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}rounds'])!,
+      position: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}position'])!,
+    );
+  }
+
+  @override
+  $IntervalPresetsTable createAlias(String alias) {
+    return $IntervalPresetsTable(attachedDatabase, alias);
+  }
+}
+
+class IntervalPreset extends DataClass implements Insertable<IntervalPreset> {
+  final String id;
+  final DateTime updatedAt;
+  final String name;
+
+  /// [{"l": label, "s": seconds, "w": isWork}]
+  final String segmentsJson;
+  final int rounds;
+  final int position;
+  const IntervalPreset({
+    required this.id,
+    required this.updatedAt,
+    required this.name,
+    required this.segmentsJson,
+    required this.rounds,
+    required this.position,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['name'] = Variable<String>(name);
+    map['segments_json'] = Variable<String>(segmentsJson);
+    map['rounds'] = Variable<int>(rounds);
+    map['position'] = Variable<int>(position);
+    return map;
+  }
+
+  IntervalPresetsCompanion toCompanion(bool nullToAbsent) {
+    return IntervalPresetsCompanion(
+      id: Value(id),
+      updatedAt: Value(updatedAt),
+      name: Value(name),
+      segmentsJson: Value(segmentsJson),
+      rounds: Value(rounds),
+      position: Value(position),
+    );
+  }
+
+  factory IntervalPreset.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return IntervalPreset(
+      id: serializer.fromJson<String>(json['id']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      name: serializer.fromJson<String>(json['name']),
+      segmentsJson: serializer.fromJson<String>(json['segmentsJson']),
+      rounds: serializer.fromJson<int>(json['rounds']),
+      position: serializer.fromJson<int>(json['position']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'name': serializer.toJson<String>(name),
+      'segmentsJson': serializer.toJson<String>(segmentsJson),
+      'rounds': serializer.toJson<int>(rounds),
+      'position': serializer.toJson<int>(position),
+    };
+  }
+
+  IntervalPreset copyWith({
+    String? id,
+    DateTime? updatedAt,
+    String? name,
+    String? segmentsJson,
+    int? rounds,
+    int? position,
+  }) => IntervalPreset(
+    id: id ?? this.id,
+    updatedAt: updatedAt ?? this.updatedAt,
+    name: name ?? this.name,
+    segmentsJson: segmentsJson ?? this.segmentsJson,
+    rounds: rounds ?? this.rounds,
+    position: position ?? this.position,
+  );
+  IntervalPreset copyWithCompanion(IntervalPresetsCompanion data) {
+    return IntervalPreset(
+      id: data.id.present ? data.id.value : this.id,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      name: data.name.present ? data.name.value : this.name,
+      segmentsJson: data.segmentsJson.present ? data.segmentsJson.value : this.segmentsJson,
+      rounds: data.rounds.present ? data.rounds.value : this.rounds,
+      position: data.position.present ? data.position.value : this.position,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('IntervalPreset(')
+          ..write('id: $id, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('name: $name, ')
+          ..write('segmentsJson: $segmentsJson, ')
+          ..write('rounds: $rounds, ')
+          ..write('position: $position')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, updatedAt, name, segmentsJson, rounds, position);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is IntervalPreset &&
+          other.id == this.id &&
+          other.updatedAt == this.updatedAt &&
+          other.name == this.name &&
+          other.segmentsJson == this.segmentsJson &&
+          other.rounds == this.rounds &&
+          other.position == this.position);
+}
+
+class IntervalPresetsCompanion extends UpdateCompanion<IntervalPreset> {
+  final Value<String> id;
+  final Value<DateTime> updatedAt;
+  final Value<String> name;
+  final Value<String> segmentsJson;
+  final Value<int> rounds;
+  final Value<int> position;
+  final Value<int> rowid;
+  const IntervalPresetsCompanion({
+    this.id = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.name = const Value.absent(),
+    this.segmentsJson = const Value.absent(),
+    this.rounds = const Value.absent(),
+    this.position = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  IntervalPresetsCompanion.insert({
+    this.id = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    required String name,
+    required String segmentsJson,
+    this.rounds = const Value.absent(),
+    this.position = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : name = Value(name),
+       segmentsJson = Value(segmentsJson);
+  static Insertable<IntervalPreset> custom({
+    Expression<String>? id,
+    Expression<DateTime>? updatedAt,
+    Expression<String>? name,
+    Expression<String>? segmentsJson,
+    Expression<int>? rounds,
+    Expression<int>? position,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (name != null) 'name': name,
+      if (segmentsJson != null) 'segments_json': segmentsJson,
+      if (rounds != null) 'rounds': rounds,
+      if (position != null) 'position': position,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  IntervalPresetsCompanion copyWith({
+    Value<String>? id,
+    Value<DateTime>? updatedAt,
+    Value<String>? name,
+    Value<String>? segmentsJson,
+    Value<int>? rounds,
+    Value<int>? position,
+    Value<int>? rowid,
+  }) {
+    return IntervalPresetsCompanion(
+      id: id ?? this.id,
+      updatedAt: updatedAt ?? this.updatedAt,
+      name: name ?? this.name,
+      segmentsJson: segmentsJson ?? this.segmentsJson,
+      rounds: rounds ?? this.rounds,
+      position: position ?? this.position,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (segmentsJson.present) {
+      map['segments_json'] = Variable<String>(segmentsJson.value);
+    }
+    if (rounds.present) {
+      map['rounds'] = Variable<int>(rounds.value);
+    }
+    if (position.present) {
+      map['position'] = Variable<int>(position.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('IntervalPresetsCompanion(')
+          ..write('id: $id, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('name: $name, ')
+          ..write('segmentsJson: $segmentsJson, ')
+          ..write('rounds: $rounds, ')
+          ..write('position: $position, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -4251,6 +5058,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SettingsTable settings = $SettingsTable(this);
   late final $BodyMeasurementsTable bodyMeasurements = $BodyMeasurementsTable(this);
   late final $GoalsTable goals = $GoalsTable(this);
+  late final $HrPresetsTable hrPresets = $HrPresetsTable(this);
+  late final $IntervalPresetsTable intervalPresets = $IntervalPresetsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables => allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
@@ -4264,6 +5073,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     settings,
     bodyMeasurements,
     goals,
+    hrPresets,
+    intervalPresets,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -4303,6 +5114,7 @@ typedef $$ExercisesTableCreateCompanionBuilder = ExercisesCompanion Function({
   Value<int> defaultRestSeconds,
   Value<int?> popularity,
   Value<bool> hidden,
+  Value<String?> level,
   Value<int> rowid,
 });
 typedef $$ExercisesTableUpdateCompanionBuilder = ExercisesCompanion Function({
@@ -4320,6 +5132,7 @@ typedef $$ExercisesTableUpdateCompanionBuilder = ExercisesCompanion Function({
   Value<int> defaultRestSeconds,
   Value<int?> popularity,
   Value<bool> hidden,
+  Value<String?> level,
   Value<int> rowid,
 });
 
@@ -4415,6 +5228,9 @@ class $$ExercisesTableFilterComposer extends Composer<_$AppDatabase, $ExercisesT
 
   ColumnFilters<bool> get hidden =>
       $composableBuilder(column: $table.hidden, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get level =>
+      $composableBuilder(column: $table.level, builder: (column) => ColumnFilters(column));
 
   Expression<bool> templateExercisesRefs(Expression<bool> Function($$TemplateExercisesTableFilterComposer f) f) {
     final $$TemplateExercisesTableFilterComposer composer = $composerBuilder(
@@ -4519,6 +5335,9 @@ class $$ExercisesTableOrderingComposer extends Composer<_$AppDatabase, $Exercise
 
   ColumnOrderings<bool> get hidden =>
       $composableBuilder(column: $table.hidden, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get level =>
+      $composableBuilder(column: $table.level, builder: (column) => ColumnOrderings(column));
 }
 
 class $$ExercisesTableAnnotationComposer extends Composer<_$AppDatabase, $ExercisesTable> {
@@ -4561,6 +5380,8 @@ class $$ExercisesTableAnnotationComposer extends Composer<_$AppDatabase, $Exerci
   GeneratedColumn<int> get popularity => $composableBuilder(column: $table.popularity, builder: (column) => column);
 
   GeneratedColumn<bool> get hidden => $composableBuilder(column: $table.hidden, builder: (column) => column);
+
+  GeneratedColumn<String> get level => $composableBuilder(column: $table.level, builder: (column) => column);
 
   Expression<T> templateExercisesRefs<T extends Object>(
     Expression<T> Function($$TemplateExercisesTableAnnotationComposer a) f,
@@ -4660,6 +5481,7 @@ class $$ExercisesTableTableManager
                 Value<int> defaultRestSeconds = const Value.absent(),
                 Value<int?> popularity = const Value.absent(),
                 Value<bool> hidden = const Value.absent(),
+                Value<String?> level = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ExercisesCompanion(
                 id: id,
@@ -4676,6 +5498,7 @@ class $$ExercisesTableTableManager
                 defaultRestSeconds: defaultRestSeconds,
                 popularity: popularity,
                 hidden: hidden,
+                level: level,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -4694,6 +5517,7 @@ class $$ExercisesTableTableManager
                 Value<int> defaultRestSeconds = const Value.absent(),
                 Value<int?> popularity = const Value.absent(),
                 Value<bool> hidden = const Value.absent(),
+                Value<String?> level = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ExercisesCompanion.insert(
                 id: id,
@@ -4710,6 +5534,7 @@ class $$ExercisesTableTableManager
                 defaultRestSeconds: defaultRestSeconds,
                 popularity: popularity,
                 hidden: hidden,
+                level: level,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -4793,6 +5618,7 @@ typedef $$TemplatesTableCreateCompanionBuilder = TemplatesCompanion Function({
   Value<DateTime> updatedAt,
   required String name,
   Value<String?> folder,
+  Value<String?> hrPresetId,
   Value<String> notes,
   Value<int> position,
   Value<int> rowid,
@@ -4802,6 +5628,7 @@ typedef $$TemplatesTableUpdateCompanionBuilder = TemplatesCompanion Function({
   Value<DateTime> updatedAt,
   Value<String> name,
   Value<String?> folder,
+  Value<String?> hrPresetId,
   Value<String> notes,
   Value<int> position,
   Value<int> rowid,
@@ -4842,6 +5669,9 @@ class $$TemplatesTableFilterComposer extends Composer<_$AppDatabase, $TemplatesT
 
   ColumnFilters<String> get folder =>
       $composableBuilder(column: $table.folder, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get hrPresetId =>
+      $composableBuilder(column: $table.hrPresetId, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => ColumnFilters(column));
@@ -4887,6 +5717,9 @@ class $$TemplatesTableOrderingComposer extends Composer<_$AppDatabase, $Template
   ColumnOrderings<String> get folder =>
       $composableBuilder(column: $table.folder, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get hrPresetId =>
+      $composableBuilder(column: $table.hrPresetId, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => ColumnOrderings(column));
 
@@ -4909,6 +5742,8 @@ class $$TemplatesTableAnnotationComposer extends Composer<_$AppDatabase, $Templa
   GeneratedColumn<String> get name => $composableBuilder(column: $table.name, builder: (column) => column);
 
   GeneratedColumn<String> get folder => $composableBuilder(column: $table.folder, builder: (column) => column);
+
+  GeneratedColumn<String> get hrPresetId => $composableBuilder(column: $table.hrPresetId, builder: (column) => column);
 
   GeneratedColumn<String> get notes => $composableBuilder(column: $table.notes, builder: (column) => column);
 
@@ -4964,6 +5799,7 @@ class $$TemplatesTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String?> folder = const Value.absent(),
+                Value<String?> hrPresetId = const Value.absent(),
                 Value<String> notes = const Value.absent(),
                 Value<int> position = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -4972,6 +5808,7 @@ class $$TemplatesTableTableManager
                 updatedAt: updatedAt,
                 name: name,
                 folder: folder,
+                hrPresetId: hrPresetId,
                 notes: notes,
                 position: position,
                 rowid: rowid,
@@ -4982,6 +5819,7 @@ class $$TemplatesTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
                 required String name,
                 Value<String?> folder = const Value.absent(),
+                Value<String?> hrPresetId = const Value.absent(),
                 Value<String> notes = const Value.absent(),
                 Value<int> position = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -4990,6 +5828,7 @@ class $$TemplatesTableTableManager
                 updatedAt: updatedAt,
                 name: name,
                 folder: folder,
+                hrPresetId: hrPresetId,
                 notes: notes,
                 position: position,
                 rowid: rowid,
@@ -5448,6 +6287,7 @@ typedef $$WorkoutsTableCreateCompanionBuilder = WorkoutsCompanion Function({
   required DateTime startedAt,
   Value<DateTime?> endedAt,
   Value<String?> templateId,
+  Value<String?> hrPresetId,
   Value<String> notes,
   Value<int?> avgHr,
   Value<int?> maxHr,
@@ -5461,6 +6301,7 @@ typedef $$WorkoutsTableUpdateCompanionBuilder = WorkoutsCompanion Function({
   Value<DateTime> startedAt,
   Value<DateTime?> endedAt,
   Value<String?> templateId,
+  Value<String?> hrPresetId,
   Value<String> notes,
   Value<int?> avgHr,
   Value<int?> maxHr,
@@ -5524,6 +6365,9 @@ class $$WorkoutsTableFilterComposer extends Composer<_$AppDatabase, $WorkoutsTab
 
   ColumnFilters<String> get templateId =>
       $composableBuilder(column: $table.templateId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get hrPresetId =>
+      $composableBuilder(column: $table.hrPresetId, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => ColumnFilters(column));
@@ -5597,6 +6441,9 @@ class $$WorkoutsTableOrderingComposer extends Composer<_$AppDatabase, $WorkoutsT
   ColumnOrderings<String> get templateId =>
       $composableBuilder(column: $table.templateId, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get hrPresetId =>
+      $composableBuilder(column: $table.hrPresetId, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => ColumnOrderings(column));
 
@@ -5629,6 +6476,8 @@ class $$WorkoutsTableAnnotationComposer extends Composer<_$AppDatabase, $Workout
   GeneratedColumn<DateTime> get endedAt => $composableBuilder(column: $table.endedAt, builder: (column) => column);
 
   GeneratedColumn<String> get templateId => $composableBuilder(column: $table.templateId, builder: (column) => column);
+
+  GeneratedColumn<String> get hrPresetId => $composableBuilder(column: $table.hrPresetId, builder: (column) => column);
 
   GeneratedColumn<String> get notes => $composableBuilder(column: $table.notes, builder: (column) => column);
 
@@ -5707,6 +6556,7 @@ class $$WorkoutsTableTableManager
                 Value<DateTime> startedAt = const Value.absent(),
                 Value<DateTime?> endedAt = const Value.absent(),
                 Value<String?> templateId = const Value.absent(),
+                Value<String?> hrPresetId = const Value.absent(),
                 Value<String> notes = const Value.absent(),
                 Value<int?> avgHr = const Value.absent(),
                 Value<int?> maxHr = const Value.absent(),
@@ -5719,6 +6569,7 @@ class $$WorkoutsTableTableManager
                 startedAt: startedAt,
                 endedAt: endedAt,
                 templateId: templateId,
+                hrPresetId: hrPresetId,
                 notes: notes,
                 avgHr: avgHr,
                 maxHr: maxHr,
@@ -5733,6 +6584,7 @@ class $$WorkoutsTableTableManager
                 required DateTime startedAt,
                 Value<DateTime?> endedAt = const Value.absent(),
                 Value<String?> templateId = const Value.absent(),
+                Value<String?> hrPresetId = const Value.absent(),
                 Value<String> notes = const Value.absent(),
                 Value<int?> avgHr = const Value.absent(),
                 Value<int?> maxHr = const Value.absent(),
@@ -5745,6 +6597,7 @@ class $$WorkoutsTableTableManager
                 startedAt: startedAt,
                 endedAt: endedAt,
                 templateId: templateId,
+                hrPresetId: hrPresetId,
                 notes: notes,
                 avgHr: avgHr,
                 maxHr: maxHr,
@@ -7292,6 +8145,361 @@ typedef $$GoalsTableProcessedTableManager =
       Goal,
       PrefetchHooks Function()
     >;
+typedef $$HrPresetsTableCreateCompanionBuilder = HrPresetsCompanion Function({
+  Value<String> id,
+  Value<DateTime> updatedAt,
+  required String name,
+  required int minBpm,
+  required int maxBpm,
+  Value<PresetUse> use,
+  Value<int> rowid,
+});
+typedef $$HrPresetsTableUpdateCompanionBuilder = HrPresetsCompanion Function({
+  Value<String> id,
+  Value<DateTime> updatedAt,
+  Value<String> name,
+  Value<int> minBpm,
+  Value<int> maxBpm,
+  Value<PresetUse> use,
+  Value<int> rowid,
+});
+
+class $$HrPresetsTableFilterComposer extends Composer<_$AppDatabase, $HrPresetsTable> {
+  $$HrPresetsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get minBpm =>
+      $composableBuilder(column: $table.minBpm, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get maxBpm =>
+      $composableBuilder(column: $table.maxBpm, builder: (column) => ColumnFilters(column));
+
+  ColumnWithTypeConverterFilters<PresetUse, PresetUse, int> get use =>
+      $composableBuilder(column: $table.use, builder: (column) => ColumnWithTypeConverterFilters(column));
+}
+
+class $$HrPresetsTableOrderingComposer extends Composer<_$AppDatabase, $HrPresetsTable> {
+  $$HrPresetsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get minBpm =>
+      $composableBuilder(column: $table.minBpm, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get maxBpm =>
+      $composableBuilder(column: $table.maxBpm, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get use => $composableBuilder(column: $table.use, builder: (column) => ColumnOrderings(column));
+}
+
+class $$HrPresetsTableAnnotationComposer extends Composer<_$AppDatabase, $HrPresetsTable> {
+  $$HrPresetsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id => $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt => $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get name => $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<int> get minBpm => $composableBuilder(column: $table.minBpm, builder: (column) => column);
+
+  GeneratedColumn<int> get maxBpm => $composableBuilder(column: $table.maxBpm, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<PresetUse, int> get use =>
+      $composableBuilder(column: $table.use, builder: (column) => column);
+}
+
+class $$HrPresetsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $HrPresetsTable,
+          HrPreset,
+          $$HrPresetsTableFilterComposer,
+          $$HrPresetsTableOrderingComposer,
+          $$HrPresetsTableAnnotationComposer,
+          $$HrPresetsTableCreateCompanionBuilder,
+          $$HrPresetsTableUpdateCompanionBuilder,
+          (HrPreset, BaseReferences<_$AppDatabase, $HrPresetsTable, HrPreset>),
+          HrPreset,
+          PrefetchHooks Function()
+        > {
+  $$HrPresetsTableTableManager(_$AppDatabase db, $HrPresetsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () => $$HrPresetsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () => $$HrPresetsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () => $$HrPresetsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<int> minBpm = const Value.absent(),
+                Value<int> maxBpm = const Value.absent(),
+                Value<PresetUse> use = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => HrPresetsCompanion(
+                id: id,
+                updatedAt: updatedAt,
+                name: name,
+                minBpm: minBpm,
+                maxBpm: maxBpm,
+                use: use,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                required String name,
+                required int minBpm,
+                required int maxBpm,
+                Value<PresetUse> use = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => HrPresetsCompanion.insert(
+                id: id,
+                updatedAt: updatedAt,
+                name: name,
+                minBpm: minBpm,
+                maxBpm: maxBpm,
+                use: use,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$HrPresetsTable, HrPreset>(table),
+                  BaseReferences<_$AppDatabase, $HrPresetsTable, HrPreset>(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$HrPresetsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $HrPresetsTable,
+      HrPreset,
+      $$HrPresetsTableFilterComposer,
+      $$HrPresetsTableOrderingComposer,
+      $$HrPresetsTableAnnotationComposer,
+      $$HrPresetsTableCreateCompanionBuilder,
+      $$HrPresetsTableUpdateCompanionBuilder,
+      (HrPreset, BaseReferences<_$AppDatabase, $HrPresetsTable, HrPreset>),
+      HrPreset,
+      PrefetchHooks Function()
+    >;
+typedef $$IntervalPresetsTableCreateCompanionBuilder = IntervalPresetsCompanion Function({
+  Value<String> id,
+  Value<DateTime> updatedAt,
+  required String name,
+  required String segmentsJson,
+  Value<int> rounds,
+  Value<int> position,
+  Value<int> rowid,
+});
+typedef $$IntervalPresetsTableUpdateCompanionBuilder = IntervalPresetsCompanion Function({
+  Value<String> id,
+  Value<DateTime> updatedAt,
+  Value<String> name,
+  Value<String> segmentsJson,
+  Value<int> rounds,
+  Value<int> position,
+  Value<int> rowid,
+});
+
+class $$IntervalPresetsTableFilterComposer extends Composer<_$AppDatabase, $IntervalPresetsTable> {
+  $$IntervalPresetsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get segmentsJson =>
+      $composableBuilder(column: $table.segmentsJson, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get rounds =>
+      $composableBuilder(column: $table.rounds, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => ColumnFilters(column));
+}
+
+class $$IntervalPresetsTableOrderingComposer extends Composer<_$AppDatabase, $IntervalPresetsTable> {
+  $$IntervalPresetsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get segmentsJson =>
+      $composableBuilder(column: $table.segmentsJson, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get rounds =>
+      $composableBuilder(column: $table.rounds, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => ColumnOrderings(column));
+}
+
+class $$IntervalPresetsTableAnnotationComposer extends Composer<_$AppDatabase, $IntervalPresetsTable> {
+  $$IntervalPresetsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id => $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt => $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get name => $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get segmentsJson =>
+      $composableBuilder(column: $table.segmentsJson, builder: (column) => column);
+
+  GeneratedColumn<int> get rounds => $composableBuilder(column: $table.rounds, builder: (column) => column);
+
+  GeneratedColumn<int> get position => $composableBuilder(column: $table.position, builder: (column) => column);
+}
+
+class $$IntervalPresetsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $IntervalPresetsTable,
+          IntervalPreset,
+          $$IntervalPresetsTableFilterComposer,
+          $$IntervalPresetsTableOrderingComposer,
+          $$IntervalPresetsTableAnnotationComposer,
+          $$IntervalPresetsTableCreateCompanionBuilder,
+          $$IntervalPresetsTableUpdateCompanionBuilder,
+          (IntervalPreset, BaseReferences<_$AppDatabase, $IntervalPresetsTable, IntervalPreset>),
+          IntervalPreset,
+          PrefetchHooks Function()
+        > {
+  $$IntervalPresetsTableTableManager(_$AppDatabase db, $IntervalPresetsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () => $$IntervalPresetsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () => $$IntervalPresetsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () => $$IntervalPresetsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> segmentsJson = const Value.absent(),
+                Value<int> rounds = const Value.absent(),
+                Value<int> position = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => IntervalPresetsCompanion(
+                id: id,
+                updatedAt: updatedAt,
+                name: name,
+                segmentsJson: segmentsJson,
+                rounds: rounds,
+                position: position,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                required String name,
+                required String segmentsJson,
+                Value<int> rounds = const Value.absent(),
+                Value<int> position = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => IntervalPresetsCompanion.insert(
+                id: id,
+                updatedAt: updatedAt,
+                name: name,
+                segmentsJson: segmentsJson,
+                rounds: rounds,
+                position: position,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$IntervalPresetsTable, IntervalPreset>(table),
+                  BaseReferences<_$AppDatabase, $IntervalPresetsTable, IntervalPreset>(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$IntervalPresetsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $IntervalPresetsTable,
+      IntervalPreset,
+      $$IntervalPresetsTableFilterComposer,
+      $$IntervalPresetsTableOrderingComposer,
+      $$IntervalPresetsTableAnnotationComposer,
+      $$IntervalPresetsTableCreateCompanionBuilder,
+      $$IntervalPresetsTableUpdateCompanionBuilder,
+      (IntervalPreset, BaseReferences<_$AppDatabase, $IntervalPresetsTable, IntervalPreset>),
+      IntervalPreset,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -7308,4 +8516,7 @@ class $AppDatabaseManager {
   $$BodyMeasurementsTableTableManager get bodyMeasurements =>
       $$BodyMeasurementsTableTableManager(_db, _db.bodyMeasurements);
   $$GoalsTableTableManager get goals => $$GoalsTableTableManager(_db, _db.goals);
+  $$HrPresetsTableTableManager get hrPresets => $$HrPresetsTableTableManager(_db, _db.hrPresets);
+  $$IntervalPresetsTableTableManager get intervalPresets =>
+      $$IntervalPresetsTableTableManager(_db, _db.intervalPresets);
 }

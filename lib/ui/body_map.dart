@@ -54,9 +54,12 @@ String? muscleAt(Offset p, {required bool back}) {
 /// Tappable front + back body. [selected] is highlighted; [heat] (0–1 per
 /// muscle) can colour muscles by training load (used later for the heat map).
 class BodyMap extends StatelessWidget {
-  const BodyMap({super.key, this.selected, this.onTap, this.heat = const {}});
+  const BodyMap({super.key, this.selected = const {}, this.onTap, this.heat = const {}});
 
-  final String? selected;
+  /// Muscles shown as selected (a simple group selects several).
+  final Set<String> selected;
+
+  /// Called with the tapped muscle (the parent decides select/unselect).
   final ValueChanged<String?>? onTap;
   final Map<String, double> heat;
 
@@ -77,7 +80,7 @@ class BodyMap extends StatelessWidget {
                       : (d) {
                           final p = Offset(d.localPosition.dx / c.maxWidth, d.localPosition.dy / c.maxHeight);
                           final m = muscleAt(p, back: back);
-                          if (m != null) onTap!(m == selected ? null : m);
+                          if (m != null) onTap!(m);
                         },
                   child: CustomPaint(
                     size: Size(c.maxWidth, c.maxHeight),
@@ -95,7 +98,7 @@ class BodyMap extends StatelessWidget {
             ),
           ),
           Text(
-            back ? 'Back' : (selected == null ? 'Front · tap a muscle' : 'Front'),
+            back ? 'Back' : (selected.isEmpty ? 'Front · tap a muscle' : 'Front'),
             style: Theme.of(context).textTheme.labelSmall,
           ),
         ],
@@ -116,7 +119,7 @@ class _BodyPainter extends CustomPainter {
   });
 
   final List<MuscleRegion> regions;
-  final String? selected;
+  final Set<String> selected;
   final Map<String, double> heat;
   final Color base;
   final Color muscle;
@@ -141,7 +144,7 @@ class _BodyPainter extends CustomPainter {
 
     for (final r in regions) {
       final h = heat[r.muscle];
-      final color = r.muscle == selected
+      final color = selected.contains(r.muscle)
           ? highlight
           : (h != null && h > 0 ? Color.lerp(muscle, highlight, h.clamp(0, 1) * 0.8)! : muscle);
       canvas.drawRRect(rr(r.rect, 0.03), Paint()..color = color);

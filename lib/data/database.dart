@@ -66,6 +66,9 @@ class Exercises extends Table with SyncColumns {
   /// Duplicates hidden from the list (kept so old workouts still show them).
   BoolColumn get hidden => boolean().withDefault(const Constant(false))();
 
+  /// "beginner" / "intermediate" / "expert" (from free-exercise-db).
+  TextColumn get level => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -73,6 +76,9 @@ class Exercises extends Table with SyncColumns {
 class Templates extends Table with SyncColumns {
   TextColumn get name => text()();
   TextColumn get folder => text().nullable()();
+
+  /// Heart-rate zone preset applied when the template is started.
+  TextColumn get hrPresetId => text().nullable()();
   TextColumn get notes => text().withDefault(const Constant(''))();
   IntColumn get position => integer().withDefault(const Constant(0))();
 
@@ -106,6 +112,7 @@ class Workouts extends Table with SyncColumns {
   /// Null while the workout is in progress.
   DateTimeColumn get endedAt => dateTime().nullable()();
   TextColumn get templateId => text().nullable()();
+  TextColumn get hrPresetId => text().nullable()();
   TextColumn get notes => text().withDefault(const Constant(''))();
   IntColumn get avgHr => integer().nullable()();
   IntColumn get maxHr => integer().nullable()();
@@ -180,6 +187,33 @@ class Goals extends Table with SyncColumns {
   Set<Column> get primaryKey => {id};
 }
 
+/// Which kind of workout a heart-rate preset is meant for.
+enum PresetUse { any, strength, run }
+
+/// A named heart-rate range ("Easy run 130–145").
+class HrPresets extends Table with SyncColumns {
+  TextColumn get name => text()();
+  IntColumn get minBpm => integer()();
+  IntColumn get maxBpm => integer()();
+  IntColumn get use => intEnum<PresetUse>().withDefault(const Constant(0))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Interval timer preset: segments as JSON + rounds.
+class IntervalPresets extends Table with SyncColumns {
+  TextColumn get name => text()();
+
+  /// [{"l": label, "s": seconds, "w": isWork}]
+  TextColumn get segmentsJson => text()();
+  IntColumn get rounds => integer().withDefault(const Constant(1))();
+  IntColumn get position => integer().withDefault(const Constant(0))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 class Settings extends Table {
   TextColumn get key => text()();
   TextColumn get value => text()();
@@ -199,13 +233,15 @@ class Settings extends Table {
     Settings,
     BodyMeasurements,
     Goals,
+    HrPresets,
+    IntervalPresets,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -220,6 +256,13 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(templateExercises, templateExercises.setsJson);
         await m.createTable(bodyMeasurements);
         await m.createTable(goals);
+      }
+      if (from < 5) {
+        await m.addColumn(exercises, exercises.level);
+        await m.addColumn(templates, templates.hrPresetId);
+        await m.addColumn(workouts, workouts.hrPresetId);
+        await m.createTable(hrPresets);
+        await m.createTable(intervalPresets);
       }
     },
     beforeOpen: (details) async {

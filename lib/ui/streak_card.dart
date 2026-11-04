@@ -35,7 +35,7 @@ class StreakCard extends StatelessWidget {
                     children: [
                       Icon(
                         Icons.local_fire_department,
-                        color: info.weeks > 0 ? Colors.orangeAccent : scheme.onSurfaceVariant,
+                        color: info.weeks > 0 ? Colors.orange : scheme.onSurfaceVariant,
                         size: 32,
                       ),
                       const SizedBox(width: 8),

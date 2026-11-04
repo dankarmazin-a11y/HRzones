@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app_services.dart';
 import '../../data/database.dart';
 import '../../data/exercise_repository.dart';
+import '../../workout/training_level.dart';
 import '../body_map.dart';
 import 'custom_exercise_screen.dart';
 import 'exercise_avatar.dart';
@@ -36,6 +37,9 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
   String? _equipment;
   late ExerciseGroup? _group = widget.initialGroup;
   bool _showMap = false;
+
+  /// Ignore the training level and list every exercise.
+  bool _allLevels = false;
   ExerciseSearchResult _results = const ExerciseSearchResult(popular: [], others: []);
   final _selected = <Exercise>[];
 
@@ -51,8 +55,15 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
     // Only the latest search may update the list (an earlier, slower one
     // must not overwrite newer filter results).
     final id = ++_searchId;
-    final r = await Services.of(context).exercises
-        .search(query: _query, muscle: _muscle, equipment: _equipment, group: _group);
+    final s = Services.of(context);
+    final level = s.level.value;
+    final r = await s.exercises.search(
+      query: _query,
+      muscle: _muscle,
+      equipment: _equipment,
+      group: _group,
+      levels: _allLevels ? null : level.exerciseLevels,
+    );
     if (mounted && id == _searchId) setState(() => _results = r);
   }
 
@@ -127,9 +138,12 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
               child: SizedBox(
                 height: 220,
                 child: BodyMap(
-                  selected: _muscle,
+                  selected: _muscle == null ? const {} : musclesOf(_muscle!).toSet(),
                   onTap: (m) {
-                    setState(() => _muscle = m);
+                    // Beginners filter by simple groups (Back, Arms…).
+                    final detailed = Services.of(context).level.value.detailedMuscles;
+                    final pick = m == null || detailed ? m : simpleGroupOf(m);
+                    setState(() => _muscle = pick == _muscle ? null : pick);
                     _search();
                   },
                 ),
@@ -146,13 +160,38 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
           ),
           _FilterRow(
             label: 'Muscle',
-            options: muscleGroups,
+            options: Services.of(context).level.value.detailedMuscles ? muscleGroups : simpleMuscleGroups.keys.toList(),
             selected: _muscle,
             onChanged: (v) {
               _muscle = v;
               _search();
             },
           ),
+          if (Services.of(context).level.value != TrainingLevel.advanced)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _allLevels
+                          ? 'Showing every level'
+                          : 'Showing ${Services.of(context).level.value.label.toLowerCase()} exercises + the popular ones',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                  FilterChip(
+                    key: const Key('allLevels'),
+                    label: const Text('All levels'),
+                    selected: _allLevels,
+                    onSelected: (v) {
+                      setState(() => _allLevels = v);
+                      _search();
+                    },
+                  ),
+                ],
+              ),
+            ),
           _FilterRow(
             label: 'Equipment',
             options: equipmentTypes,
