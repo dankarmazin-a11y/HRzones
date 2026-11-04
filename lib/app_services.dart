@@ -19,7 +19,7 @@ import 'workout/workout_session.dart';
 /// Everything the screens need: database repositories, HR monitor and the
 /// current workout session.
 class AppServices {
-  AppServices._(this.db, this.hr)
+  AppServices._(this.db, this.hr, this._loadExercises)
     : exercises = ExerciseRepository(db),
       templates = TemplateRepository(db),
       body = BodyRepository(db),
@@ -82,6 +82,26 @@ class AppServices {
   }
 
   late final GoalRepository goals;
+  final Future<String> Function() _loadExercises;
+
+  /// When the last backup was saved (setting `lastBackupAt`; not part of
+  /// backups).
+  final lastBackupAt = ValueNotifier<DateTime?>(null);
+
+  Future<void> setLastBackupAt(DateTime at) async {
+    lastBackupAt.value = at;
+    await db.setSetting('lastBackupAt', at.toIso8601String());
+  }
+
+  /// Re-reads everything after a backup was restored.
+  Future<void> reloadAfterRestore() async {
+    exercises.clearCache();
+    await exercises.seedIfNeeded(_loadExercises); // older backup → newer exercise list
+    await intervals.seedDefaults();
+    await _loadSettings();
+    session.zonesEnabled = zonesEnabled.value;
+    await session.restore();
+  }
 
   /// Workouts per week for the streak (setting `weeklyTarget`, default 3).
   final weeklyTarget = ValueNotifier<int>(3);
@@ -100,7 +120,7 @@ class AppServices {
     AppDatabase? db,
     HrMonitor? hr,
   }) async {
-    final s = AppServices._(db ?? AppDatabase(), hr ?? HrMonitor());
+    final s = AppServices._(db ?? AppDatabase(), hr ?? HrMonitor(), loadExercises);
     await s.exercises.seedIfNeeded(loadExercises);
     await s.intervals.seedDefaults();
     await s._loadSettings();
@@ -117,6 +137,7 @@ class AppServices {
     final placeName = await db.getSetting('place');
     place.value = TrainingPlace.values.where((p) => p.name == placeName).firstOrNull ?? TrainingPlace.gym;
     zonesEnabled.value = await db.getSetting('zones') != '0';
+    lastBackupAt.value = DateTime.tryParse(await db.getSetting('lastBackupAt') ?? '');
     final lvl = await db.getSetting('level');
     level.value = TrainingLevel.values.where((l) => l.name == lvl).firstOrNull ?? TrainingLevel.intermediate;
     final age = await getInt('age');

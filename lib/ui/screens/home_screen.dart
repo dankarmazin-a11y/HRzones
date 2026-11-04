@@ -5,6 +5,7 @@ import '../../app_shell.dart';
 import '../../data/workout_repository.dart';
 import '../../workout/stats.dart';
 import '../../workout/streak.dart';
+import '../backup_section.dart';
 import '../goals_section.dart';
 import '../history/history_screen.dart';
 import '../streak_card.dart';
@@ -28,6 +29,7 @@ class HomeScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const BackupReminder(),
           const StreakCard(),
           const SizedBox(height: 8),
           Text('Start', style: text.titleMedium),

@@ -6,6 +6,7 @@ import '../measurements_section.dart';
 import '../number_input.dart';
 import '../../workout/training_level.dart';
 import '../../workout/training_place.dart';
+import '../backup_section.dart';
 import '../export_action.dart';
 import '../streak_card.dart';
 
@@ -123,6 +124,7 @@ class ProfileScreen extends StatelessWidget {
             subtitle: const Text('All workouts, sets and measurements as an Excel file (.xlsx)'),
             onTap: () => exportAndShare(context),
           ),
+          const BackupTiles(),
           const SizedBox(height: 16),
           Center(
             child: Text('HR Zones · version $appBuild', key: const Key('appVersion'), style: text.bodySmall),
