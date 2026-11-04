@@ -63,6 +63,7 @@ class BleHrSource implements HeartRateSource {
   StreamSubscription<List<int>>? _values;
   Timer? _retry;
   bool _started = false;
+  bool _disposed = false;
 
   @override
   HrSourceKind get kind => HrSourceKind.bluetooth;
@@ -137,7 +138,12 @@ class BleHrSource implements HeartRateSource {
   void _scheduleRetry() {
     _values?.cancel();
     if (!_started) return;
-    status.value = 'Reconnecting…';
+    // Say why when it's not the strap: Bluetooth off or not allowed.
+    status.value = switch (_bleInstance.status) {
+      BleStatus.poweredOff => 'Bluetooth is off – retrying…',
+      BleStatus.unauthorized => 'Bluetooth not allowed – Settings › HR Zones',
+      _ => 'Reconnecting…',
+    };
     _retry?.cancel();
     _retry = Timer(const Duration(seconds: 3), _connect);
   }
@@ -150,11 +156,12 @@ class BleHrSource implements HeartRateSource {
     await _connection?.cancel(); // cancelling the connection stream disconnects
     _values = null;
     _connection = null;
-    status.value = 'Not connected';
+    if (!_disposed) status.value = 'Not connected';
   }
 
   @override
   void dispose() {
+    _disposed = true;
     stop();
     _controller.close();
     status.dispose();
