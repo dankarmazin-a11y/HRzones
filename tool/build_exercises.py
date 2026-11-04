@@ -284,6 +284,17 @@ RENAMES = {
     'Chest_And_Front_Of_Shoulder_Stretch': 'Chest and Shoulder Stretch',
 }
 
+# Duplicates: hidden from the list (kept in the database so old workouts that
+# used them still show). id -> the exercise to use instead.
+HIDDEN = {
+    'Squats_-_With_Bands': 'Squat_with_Bands',
+    'Calf_Raise_On_A_Dumbbell': 'Standing_Dumbbell_Calf_Raise',
+    'Decline_Smith_Press': 'Smith_Machine_Decline_Press',
+    'Dumbbell_One-Arm_Triceps_Extension': 'Standing_One-Arm_Dumbbell_Triceps_Extension',
+    'Jogging_Treadmill': 'Running_Treadmill',
+    'Barbell_Full_Squat': 'Barbell_Squat',
+}
+
 # Exercises held for time.
 DURATION_IDS = {'Plank', 'hz_side_plank', 'hz_wall_sit', 'hz_dead_hang'}
 
@@ -401,15 +412,20 @@ def main():
 
     for id in DURATION_IDS:
         by_id[id]['tracking'] = 'duration'
+    for id, instead in HIDDEN.items():
+        assert instead in by_id and instead not in HIDDEN, id
+        by_id[id]['hidden'] = True
 
-    # Names must be unique (case-insensitive).
+    # Names must be unique (case-insensitive) among visible exercises.
     for e in data:
+        if e.get('hidden'):
+            continue
         key = e['name'].lower()
         assert key not in out_names, f"duplicate name {e['name']}: {e['id']} / {out_names[key]}"
         out_names[key] = e['id']
 
     keep = ['id', 'name', 'category', 'equipment', 'primaryMuscles', 'secondaryMuscles', 'instructions', 'images',
-            'mechanic', 'popularity', 'tracking']
+            'mechanic', 'popularity', 'tracking', 'hidden']
     out = [{k: e[k] for k in keep if e.get(k) is not None} for e in sorted(data, key=lambda e: e['name'])]
     with open('assets/exercises.json', 'w') as f:
         json.dump(out, f, separators=(',', ':'), ensure_ascii=False)

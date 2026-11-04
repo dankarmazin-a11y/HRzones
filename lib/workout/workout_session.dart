@@ -120,11 +120,68 @@ class RunningTimer {
 
 /// The workout currently being logged + the timers.
 class WorkoutSession extends ChangeNotifier {
-  WorkoutSession({required this.workouts, required this.exercises, required this.hr, this.editMode = false});
+  WorkoutSession({
+    required this.workouts,
+    required this.exercises,
+    required this.hr,
+    bool editMode = false,
+    this.templateMode = false,
+  }) : editMode = editMode || templateMode;
 
-  /// Editing a finished workout (or logging a past one): no timers, no
-  /// auto-save – changes are written by [saveEdits].
+  /// Editing a finished workout (or logging a past one), or a template: no
+  /// timers, no auto-save – changes are written by [saveEdits] /
+  /// [saveTemplate].
   final bool editMode;
+
+  /// Building/editing a template in the workout view (no ✓ column).
+  final bool templateMode;
+  String? templateFolder;
+
+  /// Loads a template (or a blank one) into the workout view for editing.
+  Future<void> loadTemplate(TemplateWithSlots? t) async {
+    _active = await _buildFromTemplate(t, name: t?.template.name ?? 'New template');
+    templateFolder = t?.template.folder;
+    _dirty = t == null;
+    notifyListeners();
+  }
+
+  void setTemplateFolder(String? folder) {
+    templateFolder = (folder == null || folder.trim().isEmpty) ? null : folder.trim();
+    _changed();
+  }
+
+  /// Saves the template being edited. Returns its id.
+  Future<String?> saveTemplate(TemplateRepository repo) async {
+    final w = _active;
+    if (w == null) return null;
+    final id = await repo.save(
+      id: w.templateId,
+      name: w.name,
+      folder: templateFolder,
+      slots: [
+        for (final e in w.exercises)
+          TemplateSlot(
+            exerciseId: e.exercise.id,
+            targetSets: e.sets.length,
+            restSeconds: e.restSeconds,
+            supersetGroup: e.supersetGroup,
+            subExerciseIds: [
+              for (final s in e.sets)
+                if (s.subExercise != null) s.subExercise!.id,
+            ],
+            sets: e.exercise.isStretchSession
+                ? const []
+                : [
+                    for (final s in e.sets)
+                      TemplateSet(type: s.type, weightKg: s.weightKg, reps: s.reps, durationS: s.durationS),
+                  ],
+          ),
+      ],
+    );
+    _dirty = false;
+    return id;
+  }
+
   DateTime? _editEndedAt;
   int? _editAvgHr, _editMaxHr;
   bool _dirty = false;
@@ -233,8 +290,17 @@ class WorkoutSession extends ChangeNotifier {
   }
 
   Future<void> startFromTemplate(TemplateWithSlots t) async {
-    final w = ActiveWorkout(name: t.template.name, templateId: t.template.id);
-    for (final slot in t.slots) {
+    _active = await _buildFromTemplate(t, name: t.template.name);
+    hr.resetSession();
+    await _saveNow();
+    notifyListeners();
+  }
+
+  /// Workout (or template draft) from a template: planned sets keep their
+  /// target values; old templates without them get empty sets.
+  Future<ActiveWorkout> _buildFromTemplate(TemplateWithSlots? t, {required String name}) async {
+    final w = ActiveWorkout(name: name, templateId: t?.template.id);
+    for (final slot in t?.slots ?? const <TemplateSlot>[]) {
       final ex = await exercises.byId(slot.exerciseId);
       if (ex == null) continue;
       final le = LoggedExercise(exercise: ex, restSeconds: slot.restSeconds, supersetGroup: slot.supersetGroup);
@@ -247,16 +313,19 @@ class WorkoutSession extends ChangeNotifier {
         continue;
       }
       le.previous = await workouts.previousSets(ex.id);
-      for (var i = 0; i < slot.targetSets; i++) {
-        final prev = le.previousFor(i);
-        le.sets.add(LoggedSet(type: prev?.setType ?? SetType.normal));
+      if (slot.sets.isNotEmpty) {
+        for (final ts in slot.sets) {
+          le.sets.add(LoggedSet(type: ts.type, weightKg: ts.weightKg, reps: ts.reps, durationS: ts.durationS));
+        }
+      } else {
+        for (var i = 0; i < slot.targetSets; i++) {
+          final prev = le.previousFor(i);
+          le.sets.add(LoggedSet(type: prev?.setType ?? SetType.normal));
+        }
       }
       w.exercises.add(le);
     }
-    _active = w;
-    hr.resetSession();
-    await _saveNow();
-    notifyListeners();
+    return w;
   }
 
   static String _defaultName() {
@@ -581,7 +650,18 @@ class WorkoutSession extends ChangeNotifier {
   }
 
   /// Finishes the workout. Uncompleted sets are dropped.
-  Future<WorkoutSummary?> finish() async {
+  /// When the last set was ticked (for workouts left open far too long).
+  DateTime? get lastSetAt {
+    DateTime? last;
+    for (final s in _active?.completedSets ?? const <LoggedSet>[]) {
+      if (last == null || s.completedAt!.isAfter(last)) last = s.completedAt;
+    }
+    return last;
+  }
+
+  /// Finishes the workout. Uncompleted sets are dropped. [endedAt] overrides
+  /// "now" (e.g. the last set's time when the workout was left open).
+  Future<WorkoutSummary?> finish({DateTime? endedAt}) async {
     final w = _active;
     if (w == null) return null;
     _timer = null;
@@ -590,7 +670,7 @@ class WorkoutSession extends ChangeNotifier {
       e.sets.removeWhere((s) => !s.done);
     }
     w.exercises.removeWhere((e) => e.sets.isEmpty);
-    final end = DateTime.now();
+    final end = endedAt ?? DateTime.now();
     final avg = hr.sessionAvg, max = hr.sessionMax;
     _saveTimer?.cancel();
     await workouts.save(w, endedAt: end, avgHr: avg, maxHr: max);

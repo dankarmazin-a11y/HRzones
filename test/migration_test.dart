@@ -25,7 +25,7 @@ Future<File> oldDatabase(int userVersion, List<String> drop) async {
       file,
       setup: (raw) {
         for (final d in drop) {
-          raw.execute('ALTER TABLE $d');
+          raw.execute(d.startsWith('DROP TABLE') ? d : 'ALTER TABLE $d');
         }
         raw.execute('PRAGMA user_version = $userVersion');
       },
@@ -48,12 +48,19 @@ class _NoMigrations implements QueryExecutorUser {
 
 const _v2Columns = ['exercises DROP COLUMN popularity'];
 const _v3Columns = ['workout_sets DROP COLUMN sub_exercise_id', 'template_exercises DROP COLUMN sub_exercise_ids'];
+const _v4Changes = [
+  'exercises DROP COLUMN hidden',
+  'template_exercises DROP COLUMN sets_json',
+  'DROP TABLE body_measurements',
+  'DROP TABLE goals',
+];
 
 void main() {
   final cases = [
-    ('v1 database is upgraded', 1, [..._v2Columns, ..._v3Columns]),
-    ('v2 database is upgraded', 2, _v3Columns),
-    ('missing column is repaired', 3, _v2Columns),
+    ('v1 database is upgraded', 1, [..._v2Columns, ..._v3Columns, ..._v4Changes]),
+    ('v2 database is upgraded', 2, [..._v3Columns, ..._v4Changes]),
+    ('v3 database is upgraded', 3, _v4Changes),
+    ('missing column/table is repaired', 4, [..._v2Columns, 'DROP TABLE goals']),
   ];
   for (final (label, version, drop) in cases) {
     test(label, () async {
@@ -68,6 +75,10 @@ void main() {
       expect(await cols('exercises'), contains('popularity'));
       expect(await cols('workout_sets'), contains('sub_exercise_id'));
       expect(await cols('template_exercises'), contains('sub_exercise_ids'));
+      expect(await cols('template_exercises'), contains('sets_json'));
+      expect(await cols('exercises'), contains('hidden'));
+      expect(await cols('body_measurements'), contains('kind'));
+      expect(await cols('goals'), contains('target'));
       expect((await s.exercises.all()).length, greaterThan(0));
       await s.close();
     });

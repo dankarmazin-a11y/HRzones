@@ -9,7 +9,7 @@ void main() {
     final s = (await tester.runAsync(testServices))!;
     await tester.pumpWidget(HrZonesApp(services: s));
     await settle(tester);
-    await tester.tap(find.text('Workouts').last);
+    await tester.tap(find.text('Strength').last);
     await settle(tester);
     await tester.tap(find.text('Exercises'));
     await settle(tester);

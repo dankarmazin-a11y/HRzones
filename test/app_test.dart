@@ -24,16 +24,22 @@ Future<void> tearDownApp(WidgetTester tester, AppServices s) async {
 }
 
 void main() {
-  testWidgets('shows 4 tabs and switches between them', (tester) async {
+  testWidgets('shows 5 tabs and switches between them', (tester) async {
     final s = (await tester.runAsync(testServices))!;
     await tester.pumpWidget(HrZonesApp(services: s));
     await settle(tester);
 
-    expect(find.text('HR Zones'), findsOneWidget);
-    for (final tab in ['Workouts', 'Progress', 'Profile']) {
+    expect(find.textContaining('streak'), findsOneWidget);
+    for (final (tab, title) in [
+      ('Strength', 'Strength'),
+      ('Run', 'Run'),
+      ('Zones', 'HR Zones'),
+      ('Profile', 'Profile'),
+      ('Home', 'Good'),
+    ]) {
       await tester.tap(find.text(tab).last);
       await settle(tester);
-      expect(find.widgetWithText(AppBar, tab), findsOneWidget);
+      expect(find.descendant(of: find.byType(AppBar), matching: find.textContaining(title)), findsWidgets);
     }
     await tearDownApp(tester, s);
   });
@@ -43,7 +49,7 @@ void main() {
     await tester.pumpWidget(HrZonesApp(services: s));
     await settle(tester);
 
-    await tester.tap(find.text('Start strength workout'));
+    await tester.tap(find.byKey(const Key('startStrength')));
     await settle(tester);
     expect(find.text('Finish'), findsOneWidget);
 
@@ -175,6 +181,8 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 50));
     });
     await tester.pump();
+    await tester.tap(find.text('Zones').last);
+    await settle(tester);
     await tester.scrollUntilVisible(find.byKey(const Key('bpm')), 200);
     expect(tester.widget<Text>(find.byKey(const Key('bpm'))).data, '200');
     expect(find.text('Above range · Zone 5'), findsOneWidget);
