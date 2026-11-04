@@ -274,24 +274,23 @@ class WorkoutSession extends ChangeNotifier {
     _active = await workouts.loadActive();
     final w = _active;
     if (w != null) {
-      // The app was closed mid-workout: keep the audio alive again and turn
-      // the workout's heart-rate alerts back on.
-      await _holdAudio();
+      // The app was closed mid-workout: turn the workout's heart-rate alerts
+      // back on.
       final preset = zonesEnabled ? await presets?.byId(w.hrPresetId) : null;
       if (preset != null && !hr.running) await applyPreset(preset);
     }
     notifyListeners();
   }
 
-  /// A live workout keeps the audio session running, so rest/set timers can
-  /// still beep (and the app keeps counting) with the screen locked.
+  /// While a workout timer runs, the audio session stays on, so the timer
+  /// keeps counting and can beep with the screen locked. Only then: a silent
+  /// running audio engine costs battery (the phone got warm in the first
+  /// real workout).
   Future<void> _holdAudio() => hr.beeper.start('workout');
 
   void _releaseAudio() {
-    // Give a final beep time to play before the audio may stop.
-    Future<void>.delayed(const Duration(seconds: 2), () {
-      if (_active == null) hr.beeper.stop('workout');
-    });
+    // Give a final beep/ding time to play before the audio stops.
+    if (_timer == null) hr.beeper.stop('workout', const Duration(seconds: 3));
   }
 
   int restFor(Exercise e) => e.isStretch ? stretchRestSeconds : defaultRestSeconds;
@@ -327,7 +326,6 @@ class WorkoutSession extends ChangeNotifier {
   Future<void> startEmpty({HrPreset? preset}) async {
     _active = ActiveWorkout(name: _defaultName());
     hr.resetSession();
-    await _holdAudio();
     await applyPreset(preset);
     await _saveNow();
     notifyListeners();
@@ -336,7 +334,6 @@ class WorkoutSession extends ChangeNotifier {
   Future<void> startFromTemplate(TemplateWithSlots t) async {
     _active = await _buildFromTemplate(t, name: t.template.name);
     hr.resetSession();
-    await _holdAudio();
     // The template's heart-rate preset applies automatically.
     final preset = zonesEnabled ? await presets?.byId(t.template.hrPresetId) : null;
     if (preset != null) await applyPreset(preset);
@@ -390,6 +387,54 @@ class WorkoutSession extends ChangeNotifier {
     }
     return w;
   }
+
+  /// Starts a new workout now with the exercises and values of an old one
+  /// (as targets, not ticked).
+  Future<bool> startFromWorkout(String workoutId) async {
+    final old = await workouts.loadById(workoutId);
+    if (old == null) return false;
+    final w = ActiveWorkout(name: old.name)..hrPresetId = zonesEnabled ? old.hrPresetId : null;
+    for (final e in old.exercises) {
+      final le = LoggedExercise(exercise: e.exercise, restSeconds: e.restSeconds, supersetGroup: e.supersetGroup)
+        ..notes = e.notes;
+      le.previous = e.exercise.isStretchSession ? const [] : await workouts.previousSets(e.exercise.id);
+      for (final s in e.sets) {
+        le.sets.add(
+          LoggedSet(type: s.type, weightKg: s.weightKg, reps: s.reps, durationS: s.durationS)
+            ..subExercise = s.subExercise,
+        );
+      }
+      w.exercises.add(le);
+    }
+    _active = w;
+    hr.resetSession();
+    final preset = await presets?.byId(w.hrPresetId);
+    if (preset != null) await applyPreset(preset);
+    await _saveNow();
+    notifyListeners();
+    return true;
+  }
+
+  /// Template slots for an old workout (Save as template).
+  static List<TemplateSlot> slotsFrom(ActiveWorkout w) => [
+    for (final e in w.exercises)
+      TemplateSlot(
+        exerciseId: e.exercise.id,
+        targetSets: e.sets.length,
+        restSeconds: e.restSeconds,
+        supersetGroup: e.supersetGroup,
+        subExerciseIds: [
+          for (final s in e.sets)
+            if (s.subExercise != null) s.subExercise!.id,
+        ],
+        sets: e.exercise.isStretchSession
+            ? const []
+            : [
+                for (final s in e.sets)
+                  TemplateSet(type: s.type, weightKg: s.weightKg, reps: s.reps, durationS: s.durationS),
+              ],
+      ),
+  ];
 
   static String _defaultName() {
     final h = DateTime.now().hour;
@@ -542,9 +587,44 @@ class WorkoutSession extends ChangeNotifier {
     _changed();
   }
 
+  /// Tap order of the set types: number → F → W → D → number. (The stored
+  /// enum order is different and must not change.)
+  static const setTypeCycle = [SetType.normal, SetType.failure, SetType.warmup, SetType.drop];
+
   void cycleSetType(LoggedSet s) {
-    s.type = SetType.values[(s.type.index + 1) % SetType.values.length];
+    s.type = setTypeCycle[(setTypeCycle.indexOf(s.type) + 1) % setTypeCycle.length];
     _changed();
+  }
+
+  void setSetType(LoggedSet s, SetType type) {
+    s.type = type;
+    _changed();
+  }
+
+  /// True when the done set [s] beats everything logged for its exercise
+  /// before (heavier, more reps or a longer hold). Never on an exercise's
+  /// first workout – same rule as the summary's records.
+  Future<bool> isRecord(LoggedExercise e, LoggedSet s) async {
+    final w = _active;
+    if (w == null || !s.done || s.type == SetType.warmup) return false;
+    final id = (s.subExercise ?? e.exercise).id;
+    final history = await workouts.history([id], excludeWorkoutId: w.id);
+    if (history.isEmpty) return false;
+    final working = history.where((h) => h.type != SetType.warmup);
+    double best(double? Function(SetStat) f) => working.map(f).whereType<double>().fold(0.0, (a, b) => a > b ? a : b);
+    switch (e.exercise.trackingType) {
+      case TrackingType.duration:
+        return (s.durationS ?? 0) > best((h) => h.durationS?.toDouble());
+      case TrackingType.bodyweightReps || TrackingType.distance:
+        return (s.reps ?? 0) > best((h) => h.reps?.toDouble());
+      case TrackingType.weightReps:
+        final kg = s.weightKg ?? 0;
+        final heavier = kg > 0 && kg > best((h) => h.weightKg);
+        final e1rm = (s.reps ?? 0) > 0 ? estimated1RM(kg, s.reps!) : 0.0;
+        final stronger =
+            e1rm > 0 && e1rm > best((h) => (h.reps ?? 0) > 0 ? estimated1RM(h.weightKg ?? 0, h.reps!) : null);
+        return heavier || stronger;
+    }
   }
 
   /// Ticks a set done (fills empty values from the previous workout) and
@@ -622,6 +702,7 @@ class WorkoutSession extends ChangeNotifier {
     final t = _timer;
     _timer = null;
     _ticker?.cancel();
+    _releaseAudio();
     _restChainFrom = null;
     if (t != null && t.kind == TimerKind.setTimer && t.exercise != null && t.set != null) {
       final held = t.elapsed;
@@ -648,6 +729,7 @@ class WorkoutSession extends ChangeNotifier {
 
   void _start(RunningTimer t) {
     if (editMode) return; // no timers while editing a past workout
+    _holdAudio();
     _timer = t;
     _ticker?.cancel();
     _ticker = Timer.periodic(const Duration(milliseconds: 250), (_) => _tick());
@@ -674,6 +756,7 @@ class WorkoutSession extends ChangeNotifier {
     {
       _ticker?.cancel();
       _timer = null;
+      _releaseAudio(); // kept if the next timer starts right away
       switch (t.kind) {
         case TimerKind.setTimer:
           hr.beeper.beep(frequency: 880, count: 2);

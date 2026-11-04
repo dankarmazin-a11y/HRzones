@@ -25,15 +25,17 @@ abstract class Beeper {
   }
 
   /// Releases [owner]'s hold; stops the audio when nobody needs it any more.
-  Future<void> stop([String owner = 'default']) async {
+  /// [linger] keeps it on a little longer so a last beep/ding can finish
+  /// (the native side cancels that stop if a sound starts again).
+  Future<void> stop([String owner = 'default', Duration linger = Duration.zero]) async {
     if (!_holds.remove(owner)) return;
-    if (_holds.isEmpty) await stopAudio();
+    if (_holds.isEmpty) await stopAudio(linger);
   }
 
   @protected
   Future<void> startAudio();
   @protected
-  Future<void> stopAudio();
+  Future<void> stopAudio(Duration linger);
   Future<void> beep({required double frequency, required int count});
   Future<void> setVolume(double volume);
 
@@ -66,7 +68,7 @@ class NativeBeeper extends Beeper {
   Future<void> startAudio() => _call('start');
 
   @override
-  Future<void> stopAudio() => _call('stop');
+  Future<void> stopAudio(Duration linger) => _call('stop', {'afterMs': linger.inMilliseconds});
 
   @override
   Future<void> beep({required double frequency, required int count}) =>
@@ -87,7 +89,7 @@ class SilentBeeper extends Beeper {
   Future<void> startAudio() async => calls.add('start');
 
   @override
-  Future<void> stopAudio() async => calls.add('stop');
+  Future<void> stopAudio(Duration linger) async => calls.add('stop');
 
   @override
   Future<void> beep({required double frequency, required int count}) async =>

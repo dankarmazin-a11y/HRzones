@@ -8,7 +8,8 @@ import 'active_workout_screen.dart';
 
 WorkoutSession _editSession(BuildContext context) {
   final s = Services.of(context);
-  return WorkoutSession(workouts: s.workouts, exercises: s.exercises, hr: s.hr, editMode: true);
+  return WorkoutSession(workouts: s.workouts, exercises: s.exercises, hr: s.hr, editMode: true)
+    ..defaultRestSeconds = s.session.defaultRestSeconds; // the saved default, not 90 s
 }
 
 /// Opens a finished workout for editing (replaces the current screen).
@@ -21,10 +22,19 @@ Future<void> openWorkoutEditor(BuildContext context, String workoutId) async {
   session.dispose();
 }
 
+/// A session for building a template, with the user's saved settings
+/// (default rest – it used to always be 1:30 – zone presets).
+WorkoutSession templateSession(AppServices s) {
+  final session = WorkoutSession(workouts: s.workouts, exercises: s.exercises, hr: s.hr, templateMode: true);
+  session.defaultRestSeconds = s.session.defaultRestSeconds;
+  session.presets = s.presets;
+  session.zonesEnabled = s.zonesEnabled.value;
+  return session;
+}
+
 /// Builds or edits a template in the same view as a live workout.
 Future<void> openTemplateEditor(BuildContext context, TemplateWithSlots? template) async {
-  final s = Services.of(context);
-  final session = WorkoutSession(workouts: s.workouts, exercises: s.exercises, hr: s.hr, templateMode: true);
+  final session = templateSession(Services.of(context));
   await session.loadTemplate(template);
   if (!context.mounted) return;
   await Navigator.of(context)

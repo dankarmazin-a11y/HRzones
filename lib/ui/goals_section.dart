@@ -92,43 +92,127 @@ class _GoalTile extends StatelessWidget {
     final pct = (g.progress * 100).round();
     final start = g.goal.startValue;
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
-        child: Row(
-          children: [
-            Icon(g.achieved ? Icons.emoji_events : Icons.flag_outlined, color: g.achieved ? Colors.amber : null),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(g.title, style: text.titleSmall),
-                  const SizedBox(height: 6),
-                  LinearProgressIndicator(value: g.progress, minHeight: 6, borderRadius: BorderRadius.circular(3)),
-                  const SizedBox(height: 4),
-                  Text(
-                    g.achieved
-                        ? 'Achieved! 🎉'
-                        : [
-                            '$pct%',
-                            if (g.current != null) 'now ${formatKg(g.current)} ${g.unit}',
-                            if (!compact && start != null) 'start ${formatKg(start)} ${g.unit}',
-                          ].join(' · '),
-                    style: text.bodySmall,
-                  ),
-                ],
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        key: Key('goal-${g.goal.id}'),
+        onTap: () => editGoal(context, g),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
+          child: Row(
+            children: [
+              Icon(g.achieved ? Icons.emoji_events : Icons.flag_outlined, color: g.achieved ? Colors.amber : null),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(g.title, style: text.titleSmall),
+                    const SizedBox(height: 6),
+                    LinearProgressIndicator(value: g.progress, minHeight: 6, borderRadius: BorderRadius.circular(3)),
+                    const SizedBox(height: 4),
+                    Text(
+                      g.achieved
+                          ? 'Achieved! 🎉'
+                          : [
+                              '$pct%',
+                              if (g.current != null) 'now ${formatKg(g.current)} ${g.unit}',
+                              if (!compact && start != null) 'start ${formatKg(start)} ${g.unit}',
+                            ].join(' · '),
+                      style: text.bodySmall,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            if (!compact)
-              PopupMenuButton<String>(
-                onSelected: (_) => Services.of(context).goals.delete(g.goal.id),
-                itemBuilder: (_) => const [PopupMenuItem(value: 'delete', child: Text('Delete goal'))],
-              ),
-          ],
+              if (!compact)
+                PopupMenuButton<String>(
+                  onSelected: (v) => v == 'edit' ? editGoal(context, g) : Services.of(context).goals.delete(g.goal.id),
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'edit', child: Text('Edit goal')),
+                    PopupMenuItem(value: 'delete', child: Text('Delete goal')),
+                  ],
+                ),
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+/// Edit a goal: change the target or the deadline, or delete it.
+Future<void> editGoal(BuildContext context, GoalProgress g) async {
+  final s = Services.of(context);
+  var target = g.goal.target;
+  DateTime? deadline = g.goal.deadline;
+  final result = await showDialog<String>(
+    context: context,
+    builder: (c) => StatefulBuilder(
+      builder: (c, setState) => AlertDialog(
+        title: Text(g.title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text('Target: '),
+                EditableNumber(
+                  value: target,
+                  title: 'Target (${g.unit})',
+                  decimal: true,
+                  min: 0,
+                  max: 1000,
+                  suffix: g.unit,
+                  display: '${formatKg(target)} ${g.unit}',
+                  onChanged: (v) => setState(() => target = v.toDouble()),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Text('Deadline: '),
+                TextButton(
+                  onPressed: () async {
+                    final now = DateTime.now();
+                    final d = await showDatePicker(
+                      context: c,
+                      initialDate: deadline ?? now.add(const Duration(days: 56)),
+                      firstDate: now.subtract(const Duration(days: 365)),
+                      lastDate: DateTime(now.year + 5),
+                    );
+                    if (d != null) setState(() => deadline = d);
+                  },
+                  child: Text(deadline == null ? 'none' : '${deadline!.day}.${deadline!.month}.${deadline!.year}'),
+                ),
+                if (deadline != null)
+                  IconButton(
+                    tooltip: 'No deadline',
+                    icon: const Icon(Icons.close, size: 18),
+                    onPressed: () => setState(() => deadline = null),
+                  ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Theme.of(c).colorScheme.error),
+            onPressed: () => Navigator.pop(c, 'delete'),
+            child: const Text('Delete'),
+          ),
+          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Cancel')),
+          FilledButton(
+            key: const Key('saveGoal'),
+            onPressed: () => Navigator.pop(c, 'save'),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    ),
+  );
+  if (result == 'save') await s.goals.updateGoal(g.goal.id, target: target, deadline: deadline);
+  if (result == 'delete') await s.goals.delete(g.goal.id);
 }
 
 /// Asks what kind of goal, then the details.

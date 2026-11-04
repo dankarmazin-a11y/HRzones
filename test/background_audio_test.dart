@@ -20,26 +20,26 @@ void main() {
     expect(b.holds, isEmpty);
   });
 
-  test('a live workout keeps the audio alive even when HR alerts are turned off', () async {
+  test('a workout timer keeps the audio alive while it runs (not the whole workout)', () async {
     final beeper = SilentBeeper();
     final s = await testServices(beeper: beeper);
     await s.session.startEmpty();
-    expect(beeper.holds, contains('workout'));
+    expect(beeper.holds, isEmpty); // no silent engine while just logging (battery)
+
+    s.session.startRest(1);
+    expect(beeper.holds, {'workout'});
+    // Turning HR alerts on and off doesn't stop the running timer's audio.
     await s.hr.start();
     await s.hr.stop();
     expect(beeper.holds, {'workout'});
     expect(beeper.calls, isNot(contains('stop')));
 
-    final bench = (await s.exercises.byId('Barbell_Bench_Press'))!;
-    await s.session.addExercises([bench]);
-    final e = s.session.active!.exercises.single;
-    s.session.setWeight(e.sets.single, 60);
-    s.session.setReps(e.sets.single, 5);
-    s.session.toggleDone(e, e.sets.single);
-    await s.session.finish();
-    await Future<void>.delayed(const Duration(milliseconds: 2100));
+    await Future<void>.delayed(const Duration(milliseconds: 1400)); // rest over
+    expect(s.session.timer, isNull);
     expect(beeper.holds, isEmpty);
-    expect(beeper.calls.last, 'stop');
+    expect(beeper.calls, contains('ding'));
+    expect(beeper.calls, contains('stop')); // stops 3 s later on the phone, after the ding
+    await s.session.discard();
     await s.close();
   });
 
@@ -58,7 +58,7 @@ void main() {
     expect(hr.running, isTrue);
     expect(hr.range.min, 120);
     expect(hr.range.max, 140);
-    expect(beeper.holds, containsAll(['workout', 'hr']));
+    expect(beeper.holds, contains('hr'));
     await hr.stop();
     again.dispose();
     hr.dispose();

@@ -14,9 +14,18 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
   private var volume: Float = 0.7
   /// True between "start" and "stop": the app wants the audio kept alive.
   private var wanted = false
+  /// Bumped by every start, so a delayed stop knows it is outdated. (A
+  /// single sound doesn't bump it: the delay is long enough for any sound,
+  /// and the engine must not stay on forever.)
+  private var generation = 0
 
   override init() {
     super.init()
+    // Before anything touches audio: "play along with other apps". With the
+    // default category, the first sound session stopped the user's music
+    // (Spotify) on the first launch. The session is only *activated* when a
+    // sound actually needs to play (start()).
+    try? AVAudioSession.sharedInstance().setCategory(.playback, options: [.mixWithOthers])
     engine.attach(player)
     engine.connect(player, to: engine.mainMixerNode, format: format)
     // iOS stops the engine on a phone call / Siri, or when the output changes
@@ -63,7 +72,17 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
         try start()
         result(nil)
       case "stop":
-        stop()
+        let afterMs = (args?["afterMs"] as? NSNumber)?.intValue ?? 0
+        if afterMs > 0 {
+          // Let the last sound finish; cancelled if anything starts again.
+          let g = generation
+          DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(afterMs)) { [weak self] in
+            guard let self, self.generation == g else { return }
+            self.stop()
+          }
+        } else {
+          stop()
+        }
         result(nil)
       case "beep":
         let frequency = (args?["frequency"] as? NSNumber)?.doubleValue ?? 1000
@@ -85,6 +104,7 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
   }
 
   private func start() throws {
+    generation += 1
     wanted = true
     let session = AVAudioSession.sharedInstance()
     try session.setCategory(.playback, options: [.mixWithOthers])

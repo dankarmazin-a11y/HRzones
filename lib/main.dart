@@ -18,7 +18,14 @@ void main() {
         // Write the running workout right away when the app goes to the
         // background (iOS may close it later without warning). Lives as long
         // as the app.
-        AppLifecycleListener(onHide: services.session.flush, onPause: services.session.flush);
+        AppLifecycleListener(
+          onHide: () {
+            // Switching apps closes the keyboard (it used to stay open, stuck).
+            FocusManager.instance.primaryFocus?.unfocus();
+            services.session.flush();
+          },
+          onPause: services.session.flush,
+        );
         return services;
       },
     ),

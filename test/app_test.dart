@@ -73,6 +73,9 @@ void main() {
     await tester.tap(find.text('Skip'));
     await tester.tap(find.text('Finish'));
     await settle(tester);
+    expect(find.text('All sets done – nice work.'), findsOneWidget); // always asked
+    await tester.tap(find.byKey(const Key('confirmFinish')));
+    await settle(tester);
     await settle(tester);
     expect(find.text('Workout complete'), findsOneWidget);
     expect(find.text('480 kg'), findsOneWidget);

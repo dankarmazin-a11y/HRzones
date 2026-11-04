@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../workout/stats.dart';
 import '../../workout/workout_session.dart';
+import '../timer_style.dart';
 import '../number_input.dart';
 
 String _buttonLabel(TimerKind kind) => switch (kind) {
@@ -141,10 +142,12 @@ class _FullScreenTimerState extends State<FullScreenTimer> {
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    keepScreenOn(true);
   }
 
   @override
   void dispose() {
+    keepScreenOn(false);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
@@ -152,18 +155,23 @@ class _FullScreenTimerState extends State<FullScreenTimer> {
   @override
   Widget build(BuildContext context) {
     final portrait = MediaQuery.orientationOf(context) == Orientation.portrait;
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: SafeArea(
-        child: RotatedBox(
-          // The app is portrait-only, so turn the content sideways instead.
-          quarterTurns: portrait ? 1 : 0,
-          child: ListenableBuilder(
-            listenable: Listenable.merge([widget.session, widget.session.ticks]),
-            builder: (context, _) => _content(context),
+    return ListenableBuilder(
+      listenable: widget.session,
+      builder: (context, _) {
+        final kind = widget.session.timer?.kind;
+        return Scaffold(
+          backgroundColor: kind == TimerKind.setTimer
+              ? TimerStyle.workBackground
+              : (kind == TimerKind.rest ? TimerStyle.restBackground : TimerStyle.neutralBackground),
+          body: SafeArea(
+            child: RotatedBox(
+              // The app is portrait-only, so turn the content sideways instead.
+              quarterTurns: portrait ? 1 : 0,
+              child: ListenableBuilder(listenable: widget.session.ticks, builder: (context, _) => _content(context)),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -172,7 +180,7 @@ class _FullScreenTimerState extends State<FullScreenTimer> {
     final t = session.timer;
     final text = Theme.of(context).textTheme;
     final isSet = t?.kind == TimerKind.setTimer;
-    final accent = isSet ? Colors.tealAccent : Theme.of(context).colorScheme.primary;
+    final accent = isSet ? TimerStyle.workAccent : TimerStyle.restAccent;
     final shown = t == null ? 0 : (t.countsDown ? t.remaining : t.elapsed);
     final next = session.nextUpLabel;
 
@@ -200,15 +208,7 @@ class _FullScreenTimerState extends State<FullScreenTimer> {
           ),
           Expanded(
             child: FittedBox(
-              child: Text(
-                t == null ? '✓' : formatDuration(Duration(seconds: shown)),
-                style: TextStyle(
-                  color: accent,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 200,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
+              child: Text(t == null ? '✓' : formatDuration(Duration(seconds: shown)), style: TimerStyle.digits),
             ),
           ),
           if (t != null && t.countsDown)

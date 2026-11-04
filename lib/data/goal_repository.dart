@@ -74,6 +74,12 @@ class GoalRepository {
         );
   }
 
+  /// Changes a goal's target and deadline.
+  Future<void> updateGoal(String id, {required double target, DateTime? deadline}) =>
+      (db.update(db.goals)..where((g) => g.id.equals(id))).write(
+        GoalsCompanion(target: Value(target), deadline: Value(deadline), updatedAt: Value(DateTime.now())),
+      );
+
   Future<void> delete(String id) => (db.delete(db.goals)..where((g) => g.id.equals(id))).go();
 
   /// Heaviest working-set weight ever lifted for an exercise.

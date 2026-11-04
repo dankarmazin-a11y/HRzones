@@ -95,60 +95,71 @@ class ActiveWorkoutScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-          body: ListView(
-            padding: const EdgeInsets.only(bottom: 120),
-            children: [
-              LinearProgressIndicator(value: session.progress, minHeight: 3),
-              if ((!session.editMode || session.templateMode) && Services.of(context).zonesEnabled.value)
-                PresetRow(presetId: w.hrPresetId, onChanged: session.applyPreset),
-              for (final (i, e) in w.exercises.indexed) _ExerciseCard(key: ValueKey(e.id), index: i, entry: e),
-              if (w.exercises.length > 1)
+          body: _withKeyboardBar(
+            context,
+            ListView(
+              padding: const EdgeInsets.only(bottom: 120),
+              children: [
                 Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    'Tip: hold an exercise name to reorder',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodySmall,
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                  child: LinearProgressIndicator(
+                    key: const Key('workoutProgress'),
+                    value: session.progress,
+                    minHeight: 8,
+                    borderRadius: BorderRadius.circular(4),
                   ),
                 ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: FilledButton.tonalIcon(
-                        icon: const Icon(Icons.add),
-                        label: const Text('Exercises'),
-                        onPressed: () async {
-                          final picked = await ExerciseLibraryScreen.pick(context);
-                          if (picked != null) await session.addExercises(picked);
-                        },
-                      ),
+                if ((!session.editMode || session.templateMode) && Services.of(context).zonesEnabled.value)
+                  PresetRow(presetId: w.hrPresetId, onChanged: session.applyPreset),
+                for (final (i, e) in w.exercises.indexed) _ExerciseCard(key: ValueKey(e.id), index: i, entry: e),
+                if (w.exercises.length > 1)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Tip: hold an exercise name to reorder',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: FilledButton.tonalIcon(
-                        icon: const Icon(Icons.self_improvement),
-                        label: const Text('Stretching'),
-                        onPressed: () async {
-                          final picked = await ExerciseLibraryScreen.pick(context, group: ExerciseGroup.stretching);
-                          if (picked != null) await session.addExercises(picked);
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (!session.editMode)
+                  ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: TextButton(
-                    style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
-                    onPressed: () => _discard(context, session),
-                    child: const Text('Discard workout'),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: FilledButton.tonalIcon(
+                          icon: const Icon(Icons.add),
+                          label: const Text('Exercises'),
+                          onPressed: () async {
+                            final picked = await ExerciseLibraryScreen.pick(context);
+                            if (picked != null) await session.addExercises(picked);
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: FilledButton.tonalIcon(
+                          icon: const Icon(Icons.self_improvement),
+                          label: const Text('Stretching'),
+                          onPressed: () async {
+                            final picked = await ExerciseLibraryScreen.pick(context, group: ExerciseGroup.stretching);
+                            if (picked != null) await session.addExercises(picked);
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-            ],
+                if (!session.editMode)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: TextButton(
+                      style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+                      onPressed: () => _discard(context, session),
+                      child: const Text('Discard workout'),
+                    ),
+                  ),
+              ],
+            ),
           ),
           bottomNavigationBar: session.timer == null || session.editMode ? null : TimerBar(session: session),
         );
@@ -344,6 +355,17 @@ class ActiveWorkoutScreen extends StatelessWidget {
     if (name != null && name.isNotEmpty) session.rename(name);
   }
 
+  /// The list, plus Next/Done right above the keyboard while it is open.
+  static Widget _withKeyboardBar(BuildContext context, Widget list) {
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    return Column(
+      children: [
+        Expanded(child: list),
+        if (keyboardOpen) const KeyboardBar(),
+      ],
+    );
+  }
+
   static Future<void> _finish(BuildContext context, WorkoutSession session) async {
     final w = session.active!;
     final done = w.completedSets.length;
@@ -353,20 +375,26 @@ class ActiveWorkoutScreen extends StatelessWidget {
           .showSnackBar(const SnackBar(content: Text('Tick at least one set as done (✓), or discard the workout.')));
       return;
     }
-    if (done < total) {
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (c) => AlertDialog(
-          title: const Text('Finish workout?'),
-          content: Text('${total - done} unfinished set(s) will be removed.'),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Keep going')),
-            TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Finish')),
-          ],
+    // Always ask – one question that also says what will be dropped.
+    final left = total - done;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Finish workout?'),
+        content: Text(
+          left == 0 ? 'All sets done – nice work.' : '$left set${left == 1 ? '' : 's'} not done will be removed.',
         ),
-      );
-      if (ok != true) return;
-    }
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Keep going')),
+          FilledButton(
+            key: const Key('confirmFinish'),
+            onPressed: () => Navigator.pop(c, true),
+            child: const Text('Finish'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
     // Left open for hours (e.g. forgot to finish)? Offer the last set's time.
     DateTime? endAt;
     final last = session.lastSetAt;
@@ -814,11 +842,45 @@ class _SetRowState extends State<SetRow> {
     }
     return IconButton(
       icon: const Icon(Icons.check_box_outline_blank),
-      onPressed: () {
+      onPressed: () async {
         FocusScope.of(context).unfocus();
         session.toggleDone(widget.entry, s);
+        // A tap you can feel; a stronger one for a new record.
+        final record = await session.isRecord(widget.entry, s);
+        record ? HapticFeedback.heavyImpact() : HapticFeedback.lightImpact();
       },
     );
+  }
+
+  /// Long-press on the set number: pick the type from a list (tapping still
+  /// cycles number → F → W → D).
+  Future<void> _pickSetType(WorkoutSession session) async {
+    const names = {
+      SetType.normal: ('Normal set', 'Counts for your records'),
+      SetType.failure: ('F · Failure', 'Went until you couldn\'t do another rep'),
+      SetType.warmup: ('W · Warm-up', 'Not counted in volume or records'),
+      SetType.drop: ('D · Drop set', 'Lighter weight right after the previous set'),
+    };
+    final t = await showModalBottomSheet<SetType>(
+      context: context,
+      builder: (c) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ListTile(title: Text('Set type')),
+            for (final type in WorkoutSession.setTypeCycle)
+              ListTile(
+                key: Key('setType-${type.name}'),
+                title: Text(names[type]!.$1),
+                subtitle: Text(names[type]!.$2),
+                trailing: widget.set.type == type ? const Icon(Icons.check) : null,
+                onTap: () => Navigator.pop(c, type),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (t != null) session.setSetType(widget.set, t);
   }
 
   Future<void> _pickRpe() async {
@@ -852,20 +914,7 @@ class _SetRowState extends State<SetRow> {
     Widget field(TextEditingController c, String hint, ValueChanged<String> onChanged, {bool decimal = false}) =>
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 3),
-          child: TextField(
-            controller: c,
-            textAlign: TextAlign.center,
-            keyboardType: TextInputType.numberWithOptions(decimal: decimal),
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(decimal ? r'[0-9.,]' : r'[0-9]'))],
-            decoration: InputDecoration(
-              isDense: true,
-              hintText: hint,
-              filled: true,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-              contentPadding: const EdgeInsets.symmetric(vertical: 10),
-            ),
-            onChanged: onChanged,
-          ),
+          child: SetNumberField(controller: c, hint: hint, onChanged: onChanged, decimal: decimal),
         );
 
     String hintOf(num? v) => v == null ? '' : (v is double ? formatKg(v) : '$v');
@@ -924,6 +973,9 @@ class _SetRowState extends State<SetRow> {
               child: InkWell(
                 // Set types (warm-up/drop/failure) are hidden for beginners.
                 onTap: Services.of(context).level.value.showsAdvancedSetOptions ? () => session.cycleSetType(s) : null,
+                onLongPress: Services.of(context).level.value.showsAdvancedSetOptions
+                    ? () => _pickSetType(session)
+                    : null,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(
@@ -994,4 +1046,110 @@ Future<DateTime?> pickWorkoutStart(BuildContext context, DateTime initial) async
   final time = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(initial));
   if (time == null) return null;
   return DateTime(date.year, date.month, date.day, time.hour, time.minute);
+}
+
+/// A number cell in a set row: tapping it (or reaching it with Next) selects
+/// the whole value, so typing replaces it. Tapping outside closes the
+/// keyboard.
+class SetNumberField extends StatefulWidget {
+  const SetNumberField({
+    super.key,
+    required this.controller,
+    required this.hint,
+    required this.onChanged,
+    this.decimal = false,
+  });
+
+  final TextEditingController controller;
+  final String hint;
+  final ValueChanged<String> onChanged;
+  final bool decimal;
+
+  @override
+  State<SetNumberField> createState() => _SetNumberFieldState();
+}
+
+class _SetNumberFieldState extends State<SetNumberField> {
+  final _focus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(() {
+      if (_focus.hasFocus) _selectAll();
+    });
+  }
+
+  void _selectAll() {
+    // After the tap has placed the cursor.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final c = widget.controller;
+      if (_focus.hasFocus) c.selection = TextSelection(baseOffset: 0, extentOffset: c.text.length);
+    });
+  }
+
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: widget.controller,
+      focusNode: _focus,
+      textAlign: TextAlign.center,
+      keyboardType: TextInputType.numberWithOptions(decimal: widget.decimal),
+      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(widget.decimal ? r'[0-9.,]' : r'[0-9]'))],
+      decoration: InputDecoration(
+        isDense: true,
+        hintText: widget.hint,
+        filled: true,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+        contentPadding: const EdgeInsets.symmetric(vertical: 10),
+      ),
+      onTap: _selectAll,
+      onTapOutside: (_) => _focus.unfocus(),
+      onChanged: widget.onChanged,
+    );
+  }
+}
+
+/// Above the keyboard while typing in a workout: Next (kg → reps → next
+/// set) and Done. The iPhone number pad has no return key, so without this
+/// the keyboard could not be closed.
+class KeyboardBar extends StatelessWidget {
+  const KeyboardBar({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    // Part of the text fields' tap region: tapping here doesn't count as
+    // "tap outside".
+    return TextFieldTapRegion(
+      child: Material(
+        color: scheme.surfaceContainerHighest,
+        child: SizedBox(
+          height: 44,
+          child: Row(
+            children: [
+              const Spacer(),
+              TextButton(
+                key: const Key('keyboardNext'),
+                onPressed: () => FocusScope.of(context).nextFocus(),
+                child: const Text('Next'),
+              ),
+              TextButton(
+                key: const Key('keyboardDone'),
+                onPressed: () => FocusManager.instance.primaryFocus?.unfocus(),
+                child: const Text('Done', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(width: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

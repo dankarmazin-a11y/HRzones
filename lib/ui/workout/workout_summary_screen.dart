@@ -5,6 +5,7 @@ import '../../data/database.dart';
 import '../../data/exercise_repository.dart';
 import '../../workout/stats.dart';
 import '../../workout/workout_session.dart';
+import 'active_workout_screen.dart';
 import 'workout_editor.dart';
 
 String formatDate(DateTime d) {
@@ -36,6 +37,26 @@ class WorkoutSummaryScreen extends StatelessWidget {
     if (context.mounted) Navigator.of(context).pop();
   }
 
+  /// Starts a new workout now with this one's exercises and values.
+  Future<void> _repeat(BuildContext context) async {
+    final s = Services.of(context);
+    if (s.session.active != null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Finish or discard the running workout first.')));
+      return;
+    }
+    if (!await s.session.startFromWorkout(summary.workout.id) || !context.mounted) return;
+    await Navigator.of(context)
+        .pushReplacement(MaterialPageRoute(builder: (_) => const ActiveWorkoutScreen(), fullscreenDialog: true));
+  }
+
+  Future<void> _saveAsTemplate(BuildContext context) async {
+    final s = Services.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    await s.templates.save(name: summary.workout.name, slots: WorkoutSession.slotsFrom(summary.workout));
+    messenger.showSnackBar(SnackBar(content: Text('Saved "${summary.workout.name}" as a template')));
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = summary;
@@ -52,6 +73,20 @@ class WorkoutSummaryScreen extends StatelessWidget {
             ),
             IconButton(icon: const Icon(Icons.delete_outline), onPressed: () => _delete(context)),
           ],
+          PopupMenuButton<String>(
+            key: const Key('summaryMenu'),
+            onSelected: (v) => v == 'repeat' ? _repeat(context) : _saveAsTemplate(context),
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'repeat',
+                child: ListTile(leading: Icon(Icons.replay), title: Text('Repeat workout now')),
+              ),
+              PopupMenuItem(
+                value: 'template',
+                child: ListTile(leading: Icon(Icons.playlist_add), title: Text('Save as template')),
+              ),
+            ],
+          ),
         ],
       ),
       body: ListView(
