@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app_services.dart';
 import '../../data/database.dart';
 import '../../data/exercise_repository.dart';
+import '../body_map.dart';
 import 'custom_exercise_screen.dart';
 import 'exercise_avatar.dart';
 import 'exercise_detail_screen.dart';
@@ -34,6 +35,7 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
   String? _muscle;
   String? _equipment;
   late ExerciseGroup? _group = widget.initialGroup;
+  bool _showMap = false;
   ExerciseSearchResult _results = const ExerciseSearchResult(popular: [], others: []);
   final _selected = <Exercise>[];
 
@@ -91,7 +93,16 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
               ? 'Exercises'
               : (widget.initialGroup == ExerciseGroup.stretching ? 'Add stretches' : 'Add exercises'),
         ),
-        actions: [IconButton(tooltip: 'Custom exercise', icon: const Icon(Icons.add), onPressed: _createCustom)],
+        actions: [
+          IconButton(
+            key: const Key('toggleBodyMap'),
+            tooltip: 'Body map',
+            isSelected: _showMap,
+            icon: const Icon(Icons.accessibility_new),
+            onPressed: () => setState(() => _showMap = !_showMap),
+          ),
+          IconButton(tooltip: 'Custom exercise', icon: const Icon(Icons.add), onPressed: _createCustom),
+        ],
       ),
       body: Column(
         children: [
@@ -110,6 +121,20 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
               },
             ),
           ),
+          if (_showMap)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: SizedBox(
+                height: 220,
+                child: BodyMap(
+                  selected: _muscle,
+                  onTap: (m) {
+                    setState(() => _muscle = m);
+                    _search();
+                  },
+                ),
+              ),
+            ),
           _FilterRow(
             label: 'Type',
             options: const ['strength', 'stretching', 'cardio'],

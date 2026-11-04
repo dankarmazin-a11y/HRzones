@@ -120,7 +120,66 @@ class RunningTimer {
 
 /// The workout currently being logged + the timers.
 class WorkoutSession extends ChangeNotifier {
-  WorkoutSession({required this.workouts, required this.exercises, required this.hr});
+  WorkoutSession({required this.workouts, required this.exercises, required this.hr, this.editMode = false});
+
+  /// Editing a finished workout (or logging a past one): no timers, no
+  /// auto-save – changes are written by [saveEdits].
+  final bool editMode;
+  DateTime? _editEndedAt;
+  int? _editAvgHr, _editMaxHr;
+  bool _dirty = false;
+
+  /// True when an edit has unsaved changes.
+  bool get hasUnsavedEdits => _dirty;
+  DateTime? get editEndedAt => _editEndedAt;
+
+  /// Loads a finished workout for editing.
+  Future<bool> loadForEdit(String workoutId) async {
+    final row = await workouts.workoutRow(workoutId);
+    final w = await workouts.loadById(workoutId);
+    if (row == null || w == null) return false;
+    _active = w;
+    _editEndedAt = row.endedAt ?? row.startedAt;
+    _editAvgHr = row.avgHr;
+    _editMaxHr = row.maxHr;
+    _dirty = false;
+    notifyListeners();
+    return true;
+  }
+
+  /// Starts logging a workout that happened in the past.
+  void startManual(DateTime start, Duration duration) {
+    _active = ActiveWorkout(name: 'Workout', startedAt: start);
+    _editEndedAt = start.add(duration);
+    _dirty = true;
+    notifyListeners();
+  }
+
+  /// Changes when an edited workout happened.
+  void setTimes(DateTime start, Duration duration) {
+    _active?.startedAt = start;
+    _editEndedAt = start.add(duration);
+    _changed();
+  }
+
+  /// Writes the edited workout. Sets with values count as done; empty ones are
+  /// dropped. Returns the summary, or null if nothing was logged.
+  Future<WorkoutSummary?> saveEdits() async {
+    final w = _active;
+    final end = _editEndedAt;
+    if (w == null || end == null) return null;
+    for (final e in w.exercises) {
+      e.sets.removeWhere((s) => !s.done && s.weightKg == null && s.reps == null && s.durationS == null);
+      for (final s in e.sets) {
+        s.completedAt ??= end;
+      }
+    }
+    w.exercises.removeWhere((e) => e.sets.isEmpty);
+    if (w.exercises.isEmpty) return null;
+    await workouts.save(w, endedAt: end, avgHr: _editAvgHr, maxHr: _editMaxHr);
+    _dirty = false;
+    return WorkoutSummary.build(workouts, w, end, avgHr: _editAvgHr, maxHr: _editMaxHr);
+  }
 
   final WorkoutRepository workouts;
   final ExerciseRepository exercises;
@@ -356,6 +415,10 @@ class WorkoutSession extends ChangeNotifier {
   }
 
   void _complete(LoggedExercise e, LoggedSet s, {bool chain = false}) {
+    if (editMode) {
+      s.completedAt = _editEndedAt ?? DateTime.now();
+      return;
+    }
     s.completedAt = DateTime.now();
     s.maxHr = hr.takeIntervalMax();
     // In a superset, rest only after the last exercise of the group.
@@ -434,6 +497,7 @@ class WorkoutSession extends ChangeNotifier {
   void adjustRest(int delta) => adjustTimer(delta);
 
   void _start(RunningTimer t) {
+    if (editMode) return; // no timers while editing a past workout
     _timer = t;
     _ticker?.cancel();
     _ticker = Timer.periodic(const Duration(milliseconds: 250), (_) => _tick());
@@ -539,6 +603,13 @@ class WorkoutSession extends ChangeNotifier {
   Future<void> discard() async {
     final w = _active;
     if (w == null) return;
+    if (editMode) {
+      // Nothing was written yet: just forget the changes.
+      _active = null;
+      _dirty = false;
+      notifyListeners();
+      return;
+    }
     _timer = null;
     _ticker?.cancel();
     _saveTimer?.cancel();
@@ -548,6 +619,11 @@ class WorkoutSession extends ChangeNotifier {
   }
 
   void _changed({bool notify = true}) {
+    if (editMode) {
+      _dirty = true;
+      if (notify) notifyListeners();
+      return;
+    }
     _saveTimer?.cancel();
     _saveTimer = Timer(const Duration(milliseconds: 400), _saveNow);
     if (notify) notifyListeners();

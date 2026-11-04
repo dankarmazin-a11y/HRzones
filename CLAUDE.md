@@ -27,7 +27,7 @@ The owner is not a developer. Explain steps plainly, keep instructions short, an
 
 ## Roadmap
 - **Phase 0 – feasibility (done):** native Swift proof of concept in `Sources/` + `project.yml` (XcodeGen). Keep its HealthKit/beep code as the reference for the Flutter iOS module; remove it once ported.
-- **Phase 1 – Flutter skeleton + strength log (in progress):** 4 tabs (Home, Workouts, Progress, Profile); local DB; HR source interface with simulated + BLE sources; beep engine (native iOS module); exercise DB with muscle filters; templates; live workout logging (sets, weight, reps, RPE, set types, previous values, rest timer, supersets); post-workout summary and PRs; web preview + IPA in CI.
+- **Phase 1 – Flutter skeleton + strength log (feature-complete, owner testing):** 4 tabs (Home, Workouts, Progress, Profile); local DB; HR source interface with simulated + BLE sources; beep engine (native iOS module); exercise DB with muscle filters; templates; live workout logging (sets, weight, reps, RPE, set types, previous values, rest timer, supersets); post-workout summary and PRs; web preview + IPA in CI.
 - **Phase 2 – running:** GPS route + map, pace, km splits, voice announcements, HR zones on route, PRs (1k/5k/10k/HM).
 - **Phase 3 – body & progress:** weight, body fat, circumferences, charts, muscle heat map, weekly stats, export (JSON/CSV).
 - **Gate:** owner uses it for a full month instead of Hevy/NRC → buy Developer account.
@@ -58,7 +58,11 @@ The owner is not a developer. Explain steps plainly, keep instructions short, an
   - Exercise page: personal records, progress chart (fl_chart; est. 1RM / max reps / longest hold per workout) and history.
   - Plate calculator + 1RM table (⋮ on a weight exercise); swap exercise (⋮).
   - `formatKg` shows up to 2 decimals (1.25 kg plates).
-- Next: edit past workouts, template folders, body-map muscle filter, then Phase 1 wrap-up (owner uses it for real; fix feedback).
+- Done (Phase 1 features complete, 2026-11-04):
+  - Edit past workouts and log a past workout: an edit-mode `WorkoutSession(editMode: true)` (no timers, no auto-save; `saveEdits()` writes, sets with values count as done; Cancel never deletes). `ActiveWorkoutScreen(session: …)` + `SessionScope` give the workout widgets the right session. Entry: ✎ on a past workout's summary; History → "Log past workout" (date, time, minutes).
+  - Template folders (optional folder field with existing-folder chips; Workouts tab groups by folder) and duplicate/delete from the template ⋮ menu.
+  - Body map (`lib/ui/body_map.dart`, CustomPainter front/back, tappable regions → muscle filter in the exercise list). Takes a `heat` map for the Phase 3 muscle heat map.
+- **Phase 1 is feature-complete.** Next: owner uses it for real workouts (incl. a real BLE strap and locked-screen beeps) → fix feedback → Phase 2 (running).
 - Owner preferences: clean, short exercise names; popular items first; everything adjustable both by tapping presets and by typing a value.
 - **DB changes checklist** (a forgotten migration broke the live preview on 2026-11-02): add the column as nullable/defaulted, bump `schemaVersion`, add an `onUpgrade` step, and extend `test/migration_test.dart` (it builds an old-version DB file and opens it with the current code). `_addMissingColumns()` in `beforeOpen` is only a safety net.
 - State management: plain `ChangeNotifier` + `InheritedWidget` (`Services`, `HrScope`) – no package yet.

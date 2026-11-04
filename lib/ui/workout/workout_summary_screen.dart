@@ -5,6 +5,7 @@ import '../../data/database.dart';
 import '../../data/exercise_repository.dart';
 import '../../workout/stats.dart';
 import '../../workout/workout_session.dart';
+import 'workout_editor.dart';
 
 String formatDate(DateTime d) {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -43,7 +44,14 @@ class WorkoutSummaryScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(justFinished ? 'Workout complete' : s.workout.name),
         actions: [
-          if (!justFinished) IconButton(icon: const Icon(Icons.delete_outline), onPressed: () => _delete(context)),
+          if (!justFinished) ...[
+            IconButton(
+              tooltip: 'Edit workout',
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: () => openWorkoutEditor(context, summary.workout.id),
+            ),
+            IconButton(icon: const Icon(Icons.delete_outline), onPressed: () => _delete(context)),
+          ],
         ],
       ),
       body: ListView(

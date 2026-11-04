@@ -91,5 +91,30 @@ class TemplateRepository {
     });
   }
 
+  /// Folder names in use, A–Z.
+  Future<List<String>> folders() async {
+    final rows = await db.select(db.templates).get();
+    return {
+      for (final t in rows)
+        if ((t.folder ?? '').isNotEmpty) t.folder!,
+    }.toList()..sort();
+  }
+
+  /// Saves a copy named "Name (copy)" in the same folder.
+  Future<String> duplicate(TemplateWithSlots t) => save(
+    name: '${t.template.name} (copy)',
+    folder: t.template.folder,
+    slots: [
+      for (final s in t.slots)
+        TemplateSlot(
+          exerciseId: s.exerciseId,
+          targetSets: s.targetSets,
+          restSeconds: s.restSeconds,
+          supersetGroup: s.supersetGroup,
+          subExerciseIds: [...s.subExerciseIds],
+        ),
+    ],
+  );
+
   Future<void> delete(String id) => (db.delete(db.templates)..where((t) => t.id.equals(id))).go();
 }
