@@ -8,6 +8,7 @@ import 'ui/screens/profile_screen.dart';
 import 'ui/screens/run_screen.dart';
 import 'ui/screens/tools_screen.dart';
 import 'ui/screens/workouts_screen.dart';
+import 'ui/tools_icon.dart';
 import 'ui/workout/running_workout_bar.dart';
 
 class HrZonesApp extends StatelessWidget {
@@ -78,11 +79,7 @@ class _HomeShellState extends State<HomeShell> {
                   selectedIcon: Icon(Icons.directions_run),
                   label: 'Run',
                 ),
-                NavigationDestination(
-                  icon: Icon(Icons.handyman_outlined),
-                  selectedIcon: Icon(Icons.handyman),
-                  label: 'Tools',
-                ),
+                NavigationDestination(icon: ToolsIcon(), selectedIcon: ToolsIcon(selected: true), label: 'Tools'),
                 NavigationDestination(
                   icon: Icon(Icons.person_outline),
                   selectedIcon: Icon(Icons.person),

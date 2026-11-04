@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../app_services.dart';
 import '../timers/timers_screen.dart';
 import 'zones_screen.dart';
 
@@ -16,13 +17,16 @@ class ToolsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _ToolBox(
-            key: const Key('toolZones'),
-            icon: Icons.monitor_heart_outlined,
-            color: Colors.red,
-            title: 'Heart-rate zones',
-            subtitle: 'Program your zone presets, alerts, beeps and your strap',
-            onTap: () => open(const ZonesScreen()),
+          ValueListenableBuilder<bool>(
+            valueListenable: Services.of(context).zonesEnabled,
+            builder: (context, on, _) => _ToolBox(
+              key: const Key('toolZones'),
+              icon: Icons.monitor_heart_outlined,
+              color: Colors.red,
+              title: 'Heart-rate zones',
+              subtitle: on ? 'Program your zone presets, alerts, beeps and your strap' : 'Off – tap to turn them on',
+              onTap: () => open(const ZonesScreen()),
+            ),
           ),
           const SizedBox(height: 12),
           _ToolBox(

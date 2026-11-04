@@ -171,6 +171,7 @@ class ExerciseRepository {
     String? equipment,
     ExerciseGroup? group,
     Set<String>? levels,
+    Set<String>? allowedEquipment,
   }) async {
     final words = query.toLowerCase().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
     final muscles = muscle == null ? null : musclesOf(muscle);
@@ -179,6 +180,8 @@ class ExerciseRepository {
       for (final e in await all())
         if ((muscles == null || primaryMatch(e) || e.secondaryMuscles.split(',').any(muscles.contains)) &&
             (equipment == null || e.equipment == equipment) &&
+            // Where you train: custom exercises and ones without equipment always count.
+            (allowedEquipment == null || e.isCustom || e.equipment == null || allowedEquipment.contains(e.equipment)) &&
             (group == null || e.group == group) &&
             (levels == null || e.isCustom || e.popularity != null || levels.contains(e.level ?? 'beginner')) &&
             !e.isStretchSession &&

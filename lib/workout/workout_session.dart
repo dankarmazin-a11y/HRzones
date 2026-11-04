@@ -11,6 +11,7 @@ import '../data/preset_repository.dart';
 import '../hr/zones.dart';
 
 import 'active_workout.dart';
+import 'training_place.dart';
 import 'stats.dart';
 
 class WorkoutSummary {
@@ -268,13 +269,15 @@ class WorkoutSession extends ChangeNotifier {
 
   Future<void> restore() async {
     defaultRestSeconds = int.tryParse(await workouts.db.getSetting('defaultRestS') ?? '') ?? defaultRestSeconds;
+    final placeName = await workouts.db.getSetting('workoutPlace');
+    workoutPlace = TrainingPlace.values.where((p) => p.name == placeName).firstOrNull;
     _active = await workouts.loadActive();
     final w = _active;
     if (w != null) {
       // The app was closed mid-workout: keep the audio alive again and turn
       // the workout's heart-rate alerts back on.
       await _holdAudio();
-      final preset = await presets?.byId(w.hrPresetId);
+      final preset = zonesEnabled ? await presets?.byId(w.hrPresetId) : null;
       if (preset != null && !hr.running) await applyPreset(preset);
     }
     notifyListeners();
@@ -308,6 +311,19 @@ class WorkoutSession extends ChangeNotifier {
   /// Heart-rate presets (set by AppServices; null in some tests).
   HrPresetRepository? presets;
 
+  /// Heart-rate zones switched on (Tools › Heart-rate zones). Off: presets
+  /// are never applied, so monitoring/beeps don't start by themselves.
+  bool zonesEnabled = true;
+
+  /// Hybrid trainers pick the place when a workout starts: gym, home or
+  /// outdoors. Filters the exercise list during that workout.
+  TrainingPlace? workoutPlace;
+
+  Future<void> setWorkoutPlace(TrainingPlace? p) async {
+    workoutPlace = p;
+    await workouts.db.setSetting('workoutPlace', p?.name ?? '');
+  }
+
   Future<void> startEmpty({HrPreset? preset}) async {
     _active = ActiveWorkout(name: _defaultName());
     hr.resetSession();
@@ -322,7 +338,7 @@ class WorkoutSession extends ChangeNotifier {
     hr.resetSession();
     await _holdAudio();
     // The template's heart-rate preset applies automatically.
-    final preset = await presets?.byId(t.template.hrPresetId);
+    final preset = zonesEnabled ? await presets?.byId(t.template.hrPresetId) : null;
     if (preset != null) await applyPreset(preset);
     await _saveNow();
     notifyListeners();
