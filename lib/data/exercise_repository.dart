@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 
+import '../workout/training_level.dart';
 import 'database.dart';
 
 /// Muscle groups used by free-exercise-db (and our filters).
@@ -43,7 +44,7 @@ const equipmentTypes = [
 const exerciseImageBase = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
 
 /// Bump when assets/exercises.json changes so existing installs re-seed.
-const exerciseSeedVersion = '4';
+const exerciseSeedVersion = '5';
 
 /// How many popular exercises are listed before the A–Z list.
 const popularCount = 5;
@@ -51,6 +52,10 @@ const popularCount = 5;
 /// Friendlier labels for database terms ("abductors" and "adductors" look
 /// like a duplicate to most people).
 const _labels = {
+  'arms': 'Arms',
+  'legs': 'Legs',
+  'core': 'Core',
+  'back': 'Back',
   'abductors': 'Outer thighs',
   'adductors': 'Inner thighs',
   'body only': 'Bodyweight',
@@ -102,6 +107,7 @@ class ExerciseRepository {
             imagePath: excluded.imagePath,
             popularity: excluded.popularity,
             hidden: excluded.hidden,
+            level: excluded.level,
           ),
         ),
       );
@@ -132,8 +138,12 @@ class ExerciseRepository {
       imagePath: Value(images.firstOrNull),
       popularity: Value(e['popularity'] as int?),
       hidden: Value(e['hidden'] == true),
+      level: Value(e['level'] as String?),
     );
   }
+
+  /// Forget the in-memory list (after direct database changes).
+  void clearCache() => _cache = null;
 
   Future<List<Exercise>> all() async {
     final cached = _cache;
@@ -151,25 +161,33 @@ class ExerciseRepository {
 
   /// Search by name (all words must match), muscle, equipment and type.
   /// The [popularCount] most popular matches come first, then the rest A–Z.
+  /// Search by name (all words must match), muscle (a detailed muscle or a
+  /// simple group like "back"), equipment, type and [levels] (exercise levels
+  /// to include; popular exercises always count). The [popularCount] most
+  /// popular matches come first, then the rest A–Z.
   Future<ExerciseSearchResult> search({
     String query = '',
     String? muscle,
     String? equipment,
     ExerciseGroup? group,
+    Set<String>? levels,
   }) async {
     final words = query.toLowerCase().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    final muscles = muscle == null ? null : musclesOf(muscle);
+    bool primaryMatch(Exercise e) => muscles == null || muscles.contains(e.primaryMuscle);
     final matches = [
       for (final e in await all())
-        if ((muscle == null || e.primaryMuscle == muscle || e.secondaryMuscles.split(',').contains(muscle)) &&
+        if ((muscles == null || primaryMatch(e) || e.secondaryMuscles.split(',').any(muscles.contains)) &&
             (equipment == null || e.equipment == equipment) &&
             (group == null || e.group == group) &&
+            (levels == null || e.isCustom || e.popularity != null || levels.contains(e.level ?? 'beginner')) &&
             !e.isStretchSession &&
             !e.hidden &&
             words.every(e.name.toLowerCase().contains))
           e,
     ];
     // Popular = ranked exercises whose *primary* muscle matches the filter.
-    final ranked = matches.where((e) => e.popularity != null && (muscle == null || e.primaryMuscle == muscle)).toList()
+    final ranked = matches.where((e) => e.popularity != null && primaryMatch(e)).toList()
       ..sort((a, b) => a.popularity!.compareTo(b.popularity!));
     final popular = ranked.take(popularCount).toList();
     final others = matches.where((e) => !popular.contains(e)).toList()..sort((a, b) => a.name.compareTo(b.name));

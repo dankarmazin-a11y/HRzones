@@ -101,7 +101,13 @@ class TemplateRepository {
   }
 
   /// Creates ([id] null) or replaces a template and its exercise list.
-  Future<String> save({String? id, required String name, String? folder, required List<TemplateSlot> slots}) {
+  Future<String> save({
+    String? id,
+    required String name,
+    String? folder,
+    String? hrPresetId,
+    required List<TemplateSlot> slots,
+  }) {
     return db.transaction(() async {
       final templateId = id ?? newId();
       final count = await db.templates.count().getSingle();
@@ -112,6 +118,7 @@ class TemplateRepository {
               id: Value(templateId),
               name: name,
               folder: Value(folder),
+              hrPresetId: Value(hrPresetId),
               updatedAt: Value(DateTime.now()),
               position: id == null ? Value(count) : const Value.absent(),
             ),
@@ -149,6 +156,7 @@ class TemplateRepository {
   Future<String> duplicate(TemplateWithSlots t) => save(
     name: '${t.template.name} (copy)',
     folder: t.template.folder,
+    hrPresetId: t.template.hrPresetId,
     slots: [
       for (final s in t.slots)
         TemplateSlot(

@@ -33,7 +33,7 @@ void main() {
     for (final (tab, title) in [
       ('Strength', 'Strength'),
       ('Run', 'Run'),
-      ('Zones', 'HR Zones'),
+      ('Timers', 'Timers'),
       ('Profile', 'Profile'),
       ('Home', 'Good'),
     ]) {
@@ -181,7 +181,9 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 50));
     });
     await tester.pump();
-    await tester.tap(find.text('Zones').last);
+    await tester.tap(find.text('Profile').last);
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('openZones')));
     await settle(tester);
     await tester.scrollUntilVisible(find.byKey(const Key('bpm')), 200);
     expect(tester.widget<Text>(find.byKey(const Key('bpm'))).data, '200');

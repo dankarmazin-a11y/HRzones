@@ -1,10 +1,12 @@
 import 'dart:async';
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 import 'data/body_repository.dart';
 import 'data/database.dart';
 import 'data/goal_repository.dart';
+import 'data/preset_repository.dart';
+import 'workout/training_level.dart';
 import 'data/exercise_repository.dart';
 import 'data/template_repository.dart';
 import 'data/workout_repository.dart';
@@ -19,9 +21,11 @@ class AppServices {
   AppServices._(this.db, this.hr)
     : exercises = ExerciseRepository(db),
       templates = TemplateRepository(db),
-      body = BodyRepository(db) {
+      body = BodyRepository(db),
+      presets = HrPresetRepository(db),
+      intervals = IntervalPresetRepository(db) {
     workouts = WorkoutRepository(db, exercises);
-    session = WorkoutSession(workouts: workouts, exercises: exercises, hr: hr);
+    session = WorkoutSession(workouts: workouts, exercises: exercises, hr: hr)..presets = presets;
     goals = GoalRepository(db, workouts, exercises, body);
   }
 
@@ -30,6 +34,25 @@ class AppServices {
   final ExerciseRepository exercises;
   final TemplateRepository templates;
   final BodyRepository body;
+  final HrPresetRepository presets;
+  final IntervalPresetRepository intervals;
+
+  /// Light / dark / system (setting `theme`, default light).
+  final themeMode = ValueNotifier<ThemeMode>(ThemeMode.light);
+
+  /// Training level (setting `level`, default intermediate).
+  final level = ValueNotifier<TrainingLevel>(TrainingLevel.intermediate);
+
+  Future<void> setThemeMode(ThemeMode m) async {
+    themeMode.value = m;
+    await db.setSetting('theme', m.name);
+  }
+
+  Future<void> setLevel(TrainingLevel l) async {
+    level.value = l;
+    await db.setSetting('level', l.name);
+  }
+
   late final GoalRepository goals;
 
   /// Workouts per week for the streak (setting `weeklyTarget`, default 3).
@@ -51,6 +74,7 @@ class AppServices {
   }) async {
     final s = AppServices._(db ?? AppDatabase(), hr ?? HrMonitor());
     await s.exercises.seedIfNeeded(loadExercises);
+    await s.intervals.seedDefaults();
     await s._loadSettings();
     await s.session.restore();
     return s;
@@ -59,6 +83,10 @@ class AppServices {
   Future<void> _loadSettings() async {
     Future<int?> getInt(String k) async => int.tryParse(await db.getSetting(k) ?? '');
     weeklyTarget.value = await getInt('weeklyTarget') ?? 3;
+    final theme = await db.getSetting('theme');
+    themeMode.value = ThemeMode.values.where((m) => m.name == theme).firstOrNull ?? ThemeMode.light;
+    final lvl = await db.getSetting('level');
+    level.value = TrainingLevel.values.where((l) => l.name == lvl).firstOrNull ?? TrainingLevel.intermediate;
     final age = await getInt('age');
     final min = await getInt('rangeMin'), max = await getInt('rangeMax');
     final cooldown = await getInt('cooldownS');

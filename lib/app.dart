@@ -6,7 +6,7 @@ import 'hr/hr_monitor.dart';
 import 'ui/screens/home_screen.dart';
 import 'ui/screens/profile_screen.dart';
 import 'ui/screens/run_screen.dart';
-import 'ui/screens/zones_screen.dart';
+import 'ui/timers/timers_screen.dart';
 import 'ui/screens/workouts_screen.dart';
 import 'ui/workout/running_workout_bar.dart';
 
@@ -25,13 +25,16 @@ class HrZonesApp extends StatelessWidget {
       services: services,
       child: HrScope(
         monitor: services.hr,
-        child: MaterialApp(
-          title: 'HR Zones',
-          debugShowCheckedModeBanner: false,
-          theme: theme(Brightness.light),
-          darkTheme: theme(Brightness.dark),
-          themeMode: ThemeMode.dark,
-          home: const HomeShell(),
+        child: ValueListenableBuilder<ThemeMode>(
+          valueListenable: services.themeMode,
+          builder: (context, mode, _) => MaterialApp(
+            title: 'HR Zones',
+            debugShowCheckedModeBanner: false,
+            theme: theme(Brightness.light),
+            darkTheme: theme(Brightness.dark),
+            themeMode: mode,
+            home: const HomeShell(),
+          ),
         ),
       ),
     );
@@ -48,7 +51,7 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   AppTab _tab = AppTab.home;
 
-  static const _screens = [HomeScreen(), WorkoutsScreen(), RunScreen(), ZonesScreen(), ProfileScreen()];
+  static const _screens = [HomeScreen(), WorkoutsScreen(), RunScreen(), TimersScreen(), ProfileScreen()];
 
   @override
   Widget build(BuildContext context) {
@@ -76,9 +79,9 @@ class _HomeShellState extends State<HomeShell> {
                   label: 'Run',
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.monitor_heart_outlined),
-                  selectedIcon: Icon(Icons.monitor_heart),
-                  label: 'Zones',
+                  icon: Icon(Icons.timer_outlined),
+                  selectedIcon: Icon(Icons.timer),
+                  label: 'Timers',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.person_outline),

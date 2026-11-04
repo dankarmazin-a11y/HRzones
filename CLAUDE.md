@@ -7,6 +7,10 @@ One iPhone app for hybrid athletes (strength + running): a Hevy-level strength l
 
 The owner is not a developer. Explain steps plainly, keep instructions short, and do the technical work yourself (commit, push, read CI logs, fix).
 
+**Owner rules:**
+- After every change, always send the **web preview link** (https://dankarmazin-a11y.github.io/HRzones/ – updates ~5 min after the PR is merged) and the IPA link.
+- In conversation, **"workout" means any training** – strength or running.
+
 ## Decisions so far
 - **Framework: Flutter** (Dart), iPhone first, Android later from the same codebase. Platform-specific parts (HealthKit, background audio/beeps, GPS background) live in small native modules (Swift on iOS) behind platform channels.
 - **UI language: English** for now; Hebrew/RTL later.
@@ -69,6 +73,15 @@ The owner is not a developer. Explain steps plainly, keep instructions short, an
   - **Body measurements** (`body_measurements` table, `BodyRepository`, `measurementKinds`), **goals** (`goals` table, `GoalRepository`: lift weight = heaviest working set, measurement = latest value, progress from start value), **weekly streak** (`lib/workout/streak.dart`, setting `weeklyTarget`).
   - Finish guard: a workout open > 4 h offers to end at the last set's time.
   - Schema **v4** (exercises.hidden, template_exercises.sets_json, body_measurements, goals); `_addMissingColumns` now also creates missing tables.
+- Done (owner feedback round 4, 2026-11-04):
+  - **Tabs**: Home, Strength, Run, **Timers**, Profile. HR zones is its own screen (`ZonesScreen`) opened from a card at the top of Profile and the Run tab; no longer a Home start tile.
+  - **HR zone presets** (`hr_presets` table, `HrPresetRepository`, `lib/ui/hr_presets.dart`): name, min/max, use (strength/run/both). Empty workout start asks for a preset (only if presets exist); templates store `hrPresetId` and apply it on start; `PresetRow` in workouts/templates; `WorkoutSession.applyPreset` sets the range and starts monitoring (not in template/edit mode). Saved on workouts (`workouts.hr_preset_id`).
+  - **Training level** (`lib/workout/training_level.dart`, setting `level`, default intermediate): exercise list filtered by free-exercise-db level (popular + custom always shown, "All levels" chip); beginners get simple muscle groups (`simpleMuscleGroups`: chest/back/shoulders/arms/core/legs/glutes) and no RPE/set types in workouts.
+  - **Spreadsheet export** (`lib/export/`): own minimal .xlsx writer on `archive` (sheets Workouts / Sets / Measurements, real dates, frozen header) shared with `share_plus` (download on web). Profile → "Export to spreadsheet".
+  - **Light theme** (default) / dark / auto (setting `theme`); colours that were tuned for dark fixed (`timedColor`).
+  - **Timers tab**: interval presets (`interval_presets` table, `IntervalPresetRepository` with built-ins Tabata/EMOM/run intervals/plank seeded once), editor, `IntervalRunner` (get ready 3 s, beeps: 2 high = work, 1 low = rest, 3-2-1 ticks, 3 high = done; catches up after background), full-screen `IntervalRunScreen`; quick countdowns.
+  - **Measurements** as 5 compact boxes (weight, body fat, waist, chest, arm) + "More".
+  - Schema **v5** (exercises.level, templates/workouts.hr_preset_id, hr_presets, interval_presets).
 - **Phase 1 is feature-complete.** Next: owner uses it for real workouts (incl. a real BLE strap and locked-screen beeps) → fix feedback → Phase 2 (running).
 - Owner preferences: clean, short exercise names; popular items first; everything adjustable both by tapping presets and by typing a value.
 - **DB changes checklist** (a forgotten migration broke the live preview on 2026-11-02): add the column as nullable/defaulted, bump `schemaVersion`, add an `onUpgrade` step, and extend `test/migration_test.dart` (it builds an old-version DB file and opens it with the current code). `_addMissingColumns()` in `beforeOpen` is only a safety net.

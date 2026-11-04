@@ -54,5 +54,8 @@ class ActiveWorkout {
   final List<LoggedExercise> exercises;
   String notes = '';
 
+  /// Heart-rate zone preset used in this workout (or template).
+  String? hrPresetId;
+
   Iterable<LoggedSet> get completedSets => exercises.expand((e) => e.sets).where((s) => s.done);
 }

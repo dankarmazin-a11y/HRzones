@@ -48,6 +48,13 @@ class _NoMigrations implements QueryExecutorUser {
 
 const _v2Columns = ['exercises DROP COLUMN popularity'];
 const _v3Columns = ['workout_sets DROP COLUMN sub_exercise_id', 'template_exercises DROP COLUMN sub_exercise_ids'];
+const _v5Changes = [
+  'exercises DROP COLUMN level',
+  'templates DROP COLUMN hr_preset_id',
+  'workouts DROP COLUMN hr_preset_id',
+  'DROP TABLE hr_presets',
+  'DROP TABLE interval_presets',
+];
 const _v4Changes = [
   'exercises DROP COLUMN hidden',
   'template_exercises DROP COLUMN sets_json',
@@ -57,10 +64,11 @@ const _v4Changes = [
 
 void main() {
   final cases = [
-    ('v1 database is upgraded', 1, [..._v2Columns, ..._v3Columns, ..._v4Changes]),
-    ('v2 database is upgraded', 2, [..._v3Columns, ..._v4Changes]),
-    ('v3 database is upgraded', 3, _v4Changes),
-    ('missing column/table is repaired', 4, [..._v2Columns, 'DROP TABLE goals']),
+    ('v1 database is upgraded', 1, [..._v2Columns, ..._v3Columns, ..._v4Changes, ..._v5Changes]),
+    ('v2 database is upgraded', 2, [..._v3Columns, ..._v4Changes, ..._v5Changes]),
+    ('v3 database is upgraded', 3, [..._v4Changes, ..._v5Changes]),
+    ('v4 database is upgraded', 4, _v5Changes),
+    ('missing column/table is repaired', 5, [..._v2Columns, 'DROP TABLE goals']),
   ];
   for (final (label, version, drop) in cases) {
     test(label, () async {
@@ -79,6 +87,11 @@ void main() {
       expect(await cols('exercises'), contains('hidden'));
       expect(await cols('body_measurements'), contains('kind'));
       expect(await cols('goals'), contains('target'));
+      expect(await cols('exercises'), contains('level'));
+      expect(await cols('workouts'), contains('hr_preset_id'));
+      expect(await cols('templates'), contains('hr_preset_id'));
+      expect(await cols('hr_presets'), contains('min_bpm'));
+      expect(await cols('interval_presets'), contains('segments_json'));
       expect((await s.exercises.all()).length, greaterThan(0));
       await s.close();
     });

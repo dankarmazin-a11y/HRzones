@@ -410,6 +410,10 @@ def main():
         e['name'] = name
         e['popularity'] = 1000 + pos
 
+    # Training level: our additions are common basics; popular exercises are
+    # always shown in the app regardless of level.
+    for e in data:
+        e.setdefault('level', 'beginner')
     for id in DURATION_IDS:
         by_id[id]['tracking'] = 'duration'
     for id, instead in HIDDEN.items():
@@ -425,7 +429,7 @@ def main():
         out_names[key] = e['id']
 
     keep = ['id', 'name', 'category', 'equipment', 'primaryMuscles', 'secondaryMuscles', 'instructions', 'images',
-            'mechanic', 'popularity', 'tracking', 'hidden']
+            'mechanic', 'popularity', 'tracking', 'hidden', 'level']
     out = [{k: e[k] for k in keep if e.get(k) is not None} for e in sorted(data, key=lambda e: e['name'])]
     with open('assets/exercises.json', 'w') as f:
         json.dump(out, f, separators=(',', ':'), ensure_ascii=False)

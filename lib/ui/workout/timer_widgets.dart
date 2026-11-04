@@ -67,7 +67,9 @@ class _TimerBarState extends State<TimerBar> {
     ];
 
     return Material(
-      color: isSet ? Colors.teal.shade800 : scheme.primaryContainer,
+      color: isSet
+          ? (Theme.of(context).brightness == Brightness.dark ? Colors.teal.shade800 : Colors.teal.shade100)
+          : scheme.primaryContainer,
       child: SafeArea(
         top: false,
         child: InkWell(

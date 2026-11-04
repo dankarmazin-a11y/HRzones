@@ -3,13 +3,11 @@ import 'package:flutter/material.dart';
 import '../../app_services.dart';
 import '../../app_shell.dart';
 import '../../data/workout_repository.dart';
-import '../../hr/hr_monitor.dart';
 import '../../workout/stats.dart';
 import '../../workout/streak.dart';
 import '../goals_section.dart';
 import '../history/history_screen.dart';
 import '../streak_card.dart';
-import '../zone_colors.dart';
 import 'workouts_screen.dart';
 
 /// Dashboard: streak, quick start (strength / run / zones), goals, this week.
@@ -44,8 +42,6 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               _StartTile(icon: Icons.directions_run, label: 'Run', badge: 'soon', onTap: () => shell.goTo(AppTab.run)),
-              const SizedBox(width: 8),
-              const _ZonesTile(),
             ],
           ),
           const SizedBox(height: 16),
@@ -59,12 +55,11 @@ class HomeScreen extends StatelessWidget {
 }
 
 class _StartTile extends StatelessWidget {
-  const _StartTile({super.key, required this.icon, required this.label, required this.onTap, this.badge, this.color});
+  const _StartTile({super.key, required this.icon, required this.label, required this.onTap, this.badge});
 
   final IconData icon;
   final String label;
   final String? badge;
-  final Color? color;
   final VoidCallback onTap;
 
   @override
@@ -82,7 +77,7 @@ class _StartTile extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, size: 32, color: color),
+                Icon(icon, size: 32),
                 const SizedBox(height: 6),
                 Text(label, style: Theme.of(context).textTheme.titleSmall),
                 if (badge != null) Text(badge!, style: Theme.of(context).textTheme.labelSmall),
@@ -91,23 +86,6 @@ class _StartTile extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// Zones tile shows the live heart rate when monitoring.
-class _ZonesTile extends StatelessWidget {
-  const _ZonesTile();
-
-  @override
-  Widget build(BuildContext context) {
-    final m = HrScope.of(context);
-    return _StartTile(
-      icon: Icons.monitor_heart_outlined,
-      label: 'HR Zones',
-      badge: m.running ? '${m.bpm ?? '--'} bpm' : null,
-      color: m.running ? zoneColor(m.zone?.number) : null,
-      onTap: () => AppShell.of(context).goTo(AppTab.zones),
     );
   }
 }

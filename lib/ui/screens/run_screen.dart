@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../app_shell.dart';
+import 'zones_screen.dart';
 
 /// Running (Phase 2): GPS tracking comes next; until then, HR zones work.
 class RunScreen extends StatelessWidget {
@@ -32,11 +32,11 @@ class RunScreen extends StatelessWidget {
           FilledButton.tonalIcon(
             icon: const Icon(Icons.monitor_heart_outlined),
             label: const Text('Run with heart-rate beeps now'),
-            onPressed: () => AppShell.of(context).goTo(AppTab.zones),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ZonesScreen())),
           ),
           const SizedBox(height: 4),
           Text(
-            'Start monitoring on the Zones tab, lock the phone and run – you get beeps when you leave your zone.',
+            'Start monitoring on the HR zones screen, lock the phone and run – you get beeps when you leave your zone.',
             textAlign: TextAlign.center,
             style: text.bodySmall,
           ),

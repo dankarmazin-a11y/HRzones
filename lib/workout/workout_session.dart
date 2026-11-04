@@ -7,6 +7,9 @@ import '../data/template_repository.dart';
 import '../data/workout_repository.dart';
 import '../data/exercise_repository.dart';
 import '../hr/hr_monitor.dart';
+import '../data/preset_repository.dart';
+import '../hr/zones.dart';
+
 import 'active_workout.dart';
 import 'stats.dart';
 
@@ -158,6 +161,7 @@ class WorkoutSession extends ChangeNotifier {
       id: w.templateId,
       name: w.name,
       folder: templateFolder,
+      hrPresetId: w.hrPresetId,
       slots: [
         for (final e in w.exercises)
           TemplateSlot(
@@ -282,9 +286,13 @@ class WorkoutSession extends ChangeNotifier {
     await workouts.db.setSetting('defaultRestS', '$seconds');
   }
 
-  Future<void> startEmpty() async {
+  /// Heart-rate presets (set by AppServices; null in some tests).
+  HrPresetRepository? presets;
+
+  Future<void> startEmpty({HrPreset? preset}) async {
     _active = ActiveWorkout(name: _defaultName());
     hr.resetSession();
+    await applyPreset(preset);
     await _saveNow();
     notifyListeners();
   }
@@ -292,14 +300,30 @@ class WorkoutSession extends ChangeNotifier {
   Future<void> startFromTemplate(TemplateWithSlots t) async {
     _active = await _buildFromTemplate(t, name: t.template.name);
     hr.resetSession();
+    // The template's heart-rate preset applies automatically.
+    final preset = await presets?.byId(t.template.hrPresetId);
+    if (preset != null) await applyPreset(preset);
     await _saveNow();
     notifyListeners();
+  }
+
+  /// Uses a heart-rate preset for this workout/template: sets the range and,
+  /// in a live workout, starts monitoring (beeps). Null = no preset.
+  Future<void> applyPreset(HrPreset? p) async {
+    final w = _active;
+    if (w == null) return;
+    w.hrPresetId = p?.id;
+    if (p != null && !templateMode && !editMode) {
+      hr.setRange(HrRange(min: p.minBpm, max: p.maxBpm));
+      if (!hr.running) await hr.start();
+    }
+    _changed();
   }
 
   /// Workout (or template draft) from a template: planned sets keep their
   /// target values; old templates without them get empty sets.
   Future<ActiveWorkout> _buildFromTemplate(TemplateWithSlots? t, {required String name}) async {
-    final w = ActiveWorkout(name: name, templateId: t?.template.id);
+    final w = ActiveWorkout(name: name, templateId: t?.template.id)..hrPresetId = t?.template.hrPresetId;
     for (final slot in t?.slots ?? const <TemplateSlot>[]) {
       final ex = await exercises.byId(slot.exerciseId);
       if (ex == null) continue;

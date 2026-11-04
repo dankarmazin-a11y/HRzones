@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../hr/hr_monitor.dart';
 import '../hr_monitor_card.dart';
+import '../hr_presets.dart';
 import '../hr_source_section.dart';
 import '../number_input.dart';
 import '../zone_colors.dart';
@@ -25,6 +26,8 @@ class ZonesScreen extends StatelessWidget {
             style: text.bodySmall,
           ),
           const SizedBox(height: 8),
+          const HrPresetsSection(),
+          const SizedBox(height: 16),
           const HrMonitorCard(),
           const SizedBox(height: 16),
           const HrSourceSection(),
