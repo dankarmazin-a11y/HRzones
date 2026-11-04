@@ -29,9 +29,11 @@ class AppServices {
       presets = HrPresetRepository(db),
       intervals = IntervalPresetRepository(db) {
     workouts = WorkoutRepository(db, exercises);
+    intervals.onExercisesChanged = exercises.clearCache;
     session = WorkoutSession(workouts: workouts, exercises: exercises, hr: hr)
       ..presets = presets
-      ..restNotifier = restNotifier;
+      ..restNotifier = restNotifier
+      ..intervals = intervals;
     goals = GoalRepository(db, workouts, exercises, body);
   }
 
@@ -166,6 +168,7 @@ class AppServices {
     await s.exercises.seedIfNeeded(loadExercises);
     onStep?.call('Loading timers');
     await s.intervals.seedDefaults();
+    await s.intervals.syncExercises(); // interval timers usable as exercises
     onStep?.call('Loading settings');
     await s._loadSettings();
     s.session.zonesEnabled = s.zonesEnabled.value;

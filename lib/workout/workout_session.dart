@@ -14,6 +14,7 @@ import '../hr/zones.dart';
 import '../notify/rest_notifier.dart';
 
 import 'active_workout.dart';
+import 'interval_runner.dart';
 import 'training_place.dart';
 import 'stats.dart';
 
@@ -84,7 +85,11 @@ class WorkoutSummary {
     return WorkoutSummary(
       workout: w,
       endedAt: endedAt,
-      records: findRecords(current: summary.sets, history: history),
+      // Interval timers aren't lifts: no records for them.
+      records: findRecords(
+        current: summary.sets.where((s) => !s.exerciseId.startsWith(intervalExercisePrefix)).toList(),
+        history: history,
+      ),
       avgHr: avgHr,
       maxHr: maxHr,
     );
@@ -330,6 +335,9 @@ class WorkoutSession extends ChangeNotifier {
   /// Heart-rate presets (set by AppServices; null in some tests).
   HrPresetRepository? presets;
 
+  /// Interval timers (to run interval "exercises" inside a workout).
+  IntervalPresetRepository? intervals;
+
   /// Heart-rate zones switched on (Tools › Heart-rate zones). Off: presets
   /// are never applied, so monitoring/beeps don't start by themselves.
   bool zonesEnabled = true;
@@ -515,6 +523,14 @@ class WorkoutSession extends ChangeNotifier {
     }
     for (final ex in list) {
       final le = LoggedExercise(exercise: ex, restSeconds: restFor(ex));
+      if (ex.isInterval) {
+        // One round of the interval timer; ▶ runs it.
+        final p = await intervals?.byId(ex.intervalPresetId!);
+        final secs = p == null ? null : totalSeconds(decodeSegments(p.segmentsJson), p.rounds);
+        le.sets.add(LoggedSet(durationS: secs));
+        w.exercises.add(le);
+        continue;
+      }
       le.previous = await workouts.previousSets(ex.id, excludeWorkoutId: w.id);
       le.sets.add(LoggedSet(type: le.previousFor(0)?.setType ?? SetType.normal));
       _matchSides(le);
@@ -816,6 +832,14 @@ class WorkoutSession extends ChangeNotifier {
     _changed();
   }
 
+  /// An interval timer in the workout ran to the end: the round counts as
+  /// done and the normal rest starts.
+  void completeInterval(LoggedExercise e, LoggedSet s, {required int seconds}) {
+    s.durationS = seconds;
+    _complete(e, s);
+    _changed();
+  }
+
   // ---- Timers ---------------------------------------------------------------
 
   void startRest(int seconds) {
@@ -937,7 +961,8 @@ class WorkoutSession extends ChangeNotifier {
     if (list == null || !list.contains(e)) return null;
     final candidates = [e, if (list.indexOf(e) + 1 < list.length) list[list.indexOf(e) + 1]];
     for (final x in candidates) {
-      if (!x.exercise.isTimed) continue;
+      // Interval timers are started by hand (▶ opens the full-screen timer).
+      if (!x.exercise.isTimed || x.exercise.isInterval) continue;
       final next = x.sets.where((s) => !s.done && s != skip).firstOrNull;
       if (next != null) return (x, next);
     }

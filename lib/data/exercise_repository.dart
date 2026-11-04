@@ -188,6 +188,8 @@ class ExerciseRepository {
             (levels == null || e.isCustom || e.popularity != null || levels.contains(e.level ?? 'beginner')) &&
             !e.isStretchSession &&
             !e.hidden &&
+            // Interval timers only under "Timers" (or when searching by name).
+            (!e.isInterval || group == ExerciseGroup.timers || words.isNotEmpty) &&
             words.every(e.name.toLowerCase().contains))
           e,
     ];

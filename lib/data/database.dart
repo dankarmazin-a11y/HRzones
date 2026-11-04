@@ -29,14 +29,25 @@ extension ExerciseKind on Exercise {
 }
 
 /// Exercise library "type" filter.
-enum ExerciseGroup { strength, stretching, cardio }
+enum ExerciseGroup { strength, stretching, cardio, timers }
+
+/// Interval timers (Tools › Timers) also exist as exercises with this id
+/// prefix + the preset id, category "interval", so they can be added to
+/// workouts and templates like any exercise.
+const intervalExercisePrefix = 'hz_iv_';
 
 extension ExerciseGroupOf on Exercise {
   ExerciseGroup get group => switch (category) {
     'stretching' => ExerciseGroup.stretching,
     'cardio' || 'plyometrics' => ExerciseGroup.cardio,
+    'interval' => ExerciseGroup.timers,
     _ => ExerciseGroup.strength,
   };
+
+  bool get isInterval => category == 'interval';
+
+  /// The interval preset this exercise runs (null for normal exercises).
+  String? get intervalPresetId => isInterval ? id.substring(intervalExercisePrefix.length) : null;
 }
 
 /// Every table has a UUID primary key and updatedAt (for cloud sync later).

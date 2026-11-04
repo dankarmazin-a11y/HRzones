@@ -55,6 +55,9 @@ class IntervalRunner extends ChangeNotifier {
   final Beeper beeper;
   final int readySeconds;
 
+  /// Ran to the end (not closed early).
+  bool completedAll = false;
+
   /// -1 = get ready; steps.length = finished.
   int _index = -1;
   int _remainingMs = 0;
@@ -117,6 +120,7 @@ class IntervalRunner extends ChangeNotifier {
   void _advance({int carry = 0}) {
     _index++;
     if (finished) {
+      completedAll = true;
       _timer?.cancel();
       beeper.play(SoundEvent.intervalDone);
       // Let the last beeps play before the audio may stop.
