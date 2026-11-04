@@ -9,10 +9,10 @@ on:
   workflow_dispatch:
     inputs:
       ios_runner:
-        description: 'macOS machine for the iOS build (use macos-15 if macos-26 is stuck in the queue)'
+        description: 'macOS machine for the iOS build (try macos-15-intel if the Apple-chip machines are stuck in the queue)'
         type: choice
         default: macos-26
-        options: [macos-26, macos-15]
+        options: [macos-26, macos-15, macos-15-intel]
   pull_request:
   push:
     paths-ignore:
