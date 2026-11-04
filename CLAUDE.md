@@ -112,6 +112,19 @@ The owner is not a developer. Explain steps plainly, keep instructions short, an
   - Done: Tools guide (`ToolsGuide` below the tool boxes, open until closed once – setting `toolsGuideClosed`); newest sound cuts off the one still playing (`BeeperPlugin.play()` stops the player node before scheduling); Home goals header has a "+" once a goal exists (`addGoalHome`); typing a weight copies it to the following not-done sets that are empty or still hold the old value, warm-ups only to warm-ups (`WorkoutSession.setWeight`); rest timer ends with a bell **ding** (`Beeper.ding()`, native `makeDing()`).
   - Open: show the active workout on the **lock screen and in the Dynamic Island** (Live Activity: ActivityKit widget extension). Planned for Phase 4; check whether it works with Sideloadly + free Apple ID (extensions/app groups) or needs the paid account.
   - Open question from the owner's video: interval timer looked like it raced through rounds – probably the ⏭ skip button; ask if unsure.
+- **First-workout review (2026-11-04) – owner decisions so far (not started; owner still answering 13+):**
+  - 1 Music stops on first launch → fix (set .playback + .mixWithOthers before anything; activate only when sounding). No ducking add-on.
+  - 2 Template/edit sessions ignore the saved default rest (always 90 s) – bug found in `workout_editor.dart` (new `WorkoutSession` never reads `defaultRestS`).
+  - 3/“close keyboard”: keyboard toolbar with Done + Next (kg → reps → next set), tap outside / app switch closes it.
+  - 4 Tap a value selects all; typing replaces it.
+  - 5 Haptic on ✓; stronger haptic when the set is a PR.
+  - 6 Completion: thicker line only, **no numbers**.
+  - 7 One finish confirmation, merged with the "N sets not done will be removed" text.
+  - 8 Set-type tap cycle: number → F → W → D (don't reorder the stored enum!) + long-press menu as an **extra**.
+  - 9 Unilateral exercises: **both** B (left/right entry per set) and C (timed holds: left → 5 s switch → right). Needs a migration.
+  - 10 Exercise notes (per workout + permanent with date), shown on exercise page/history too; permanent note = **bold yellow sticky note** on the card, impossible to miss.
+  - 12 After a template workout: ask only if something changed – No / Values only / Everything.
+  - Pending owner answers: 11 repeat/duplicate workout, 13 edit goals, 14 rest notification + vibration, 15 sound picker / Settings page, 16 Live Activity, 17 screen on in timers, 18 drop trailing rest, 19 3-2-1 only ≥30 s, 20 interval timer in workout, 21 plate calculator in Tools; questions on stats timing, bright full-screen timer, efficiency check before Phase 2.
 - Owner preferences: clean, short exercise names; popular items first; everything adjustable both by tapping presets and by typing a value.
 - **DB changes checklist** (a forgotten migration broke the live preview on 2026-11-02): add the column as nullable/defaulted, bump `schemaVersion`, add an `onUpgrade` step, and extend `test/migration_test.dart` (it builds an old-version DB file and opens it with the current code). `_addMissingColumns()` in `beforeOpen` is only a safety net.
 - State management: plain `ChangeNotifier` + `InheritedWidget` (`Services`, `HrScope`) – no package yet.
