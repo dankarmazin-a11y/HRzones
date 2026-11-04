@@ -10,6 +10,10 @@ import '../streak_card.dart';
 import 'zones_screen.dart';
 
 /// You: streak, goals, body measurements and settings.
+/// Set by CI (`--dart-define=APP_BUILD=<commit> <date>`) so you can see which
+/// version is running; "dev" for local builds.
+const appBuild = String.fromEnvironment('APP_BUILD', defaultValue: 'dev');
+
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
@@ -106,6 +110,10 @@ class ProfileScreen extends StatelessWidget {
             title: const Text('Export to spreadsheet'),
             subtitle: const Text('All workouts, sets and measurements as an Excel file (.xlsx)'),
             onTap: () => exportAndShare(context),
+          ),
+          const SizedBox(height: 16),
+          Center(
+            child: Text('HR Zones · version $appBuild', key: const Key('appVersion'), style: text.bodySmall),
           ),
         ],
       ),

@@ -597,13 +597,24 @@ class WorkoutSession extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Seconds shown by the running timer; changes once per second. Listen to
+  /// this (not the session) for clock displays.
+  final ticks = ValueNotifier<int>(0);
+
   void _tick() {
     final t = _timer;
     if (t == null) {
       _ticker?.cancel();
       return;
     }
-    if (t.countsDown && t.remaining <= 0) {
+    if (!t.countsDown || t.remaining > 0) {
+      // Just time passing: only the clock widgets need to repaint (once per
+      // second), not the whole workout screen – that made scrolling jerky.
+      final shown = t.countsDown ? t.remaining : t.elapsed;
+      if (shown != ticks.value) ticks.value = shown;
+      return;
+    }
+    {
       _ticker?.cancel();
       _timer = null;
       switch (t.kind) {
@@ -746,6 +757,7 @@ class WorkoutSession extends ChangeNotifier {
 
   @override
   void dispose() {
+    ticks.dispose();
     _saveTimer?.cancel();
     _ticker?.cancel();
     super.dispose();

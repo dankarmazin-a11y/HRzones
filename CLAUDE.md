@@ -82,6 +82,10 @@ The owner is not a developer. Explain steps plainly, keep instructions short, an
   - **Timers tab**: interval presets (`interval_presets` table, `IntervalPresetRepository` with built-ins Tabata/EMOM/run intervals/plank seeded once), editor, `IntervalRunner` (get ready 3 s, beeps: 2 high = work, 1 low = rest, 3-2-1 ticks, 3 high = done; catches up after background), full-screen `IntervalRunScreen`; quick countdowns.
   - **Measurements** as 5 compact boxes (weight, body fat, waist, chest, arm) + "More".
   - Schema **v5** (exercises.level, templates/workouts.hr_preset_id, hr_presets, interval_presets).
+- Performance/caching fixes (2026-11-04):
+  - Timer ticks no longer call `WorkoutSession.notifyListeners()` (that rebuilt the whole workout screen 4×/s and made scrolling jerky). Clock widgets listen to `session.ticks` (changes once per second); `notifyListeners()` only on real state changes. Test in `timers_test.dart`.
+  - `WorkoutRepository.watchFinished()` is one shared, linear query that only emits when finished workouts change (auto-saving the running workout used to re-run it for every Home widget).
+  - Web preview cache-busting: custom `web/flutter_bootstrap.js` + CI `sed` stamp the commit id on `main.dart.js?v=` and `flutter_bootstrap.js?v=`; `APP_BUILD` dart-define shows "version <commit> <date>" at the bottom of Profile (web + IPA).
 - **Phase 1 is feature-complete.** Next: owner uses it for real workouts (incl. a real BLE strap and locked-screen beeps) → fix feedback → Phase 2 (running).
 - Owner preferences: clean, short exercise names; popular items first; everything adjustable both by tapping presets and by typing a value.
 - **DB changes checklist** (a forgotten migration broke the live preview on 2026-11-02): add the column as nullable/defaulted, bump `schemaVersion`, add an `onUpgrade` step, and extend `test/migration_test.dart` (it builds an old-version DB file and opens it with the current code). `_addMissingColumns()` in `beforeOpen` is only a safety net.

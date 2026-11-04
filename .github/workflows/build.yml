@@ -45,7 +45,16 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
-      - run: flutter build web --release --no-web-resources-cdn --base-href "/${{ github.event.repository.name }}/"
+      - name: Build web preview
+        run: |
+          BUILD_ID="${GITHUB_SHA::7}"
+          flutter build web --release --no-web-resources-cdn --base-href "/${{ github.event.repository.name }}/" \
+            --dart-define=APP_BUILD="$BUILD_ID $(date -u +%Y-%m-%d)"
+          # Cache-busting: new URLs for the app code on every build (see web/flutter_bootstrap.js).
+          sed -i "s/__BUILD_ID__/$BUILD_ID/" build/web/flutter_bootstrap.js
+          sed -i "s/flutter_bootstrap.js\"/flutter_bootstrap.js?v=$BUILD_ID\"/" build/web/index.html
+          grep -q "v=$BUILD_ID" build/web/index.html
+          grep -q "\"$BUILD_ID\"" build/web/flutter_bootstrap.js
       - uses: actions/upload-pages-artifact@v3
         with:
           path: build/web
@@ -80,7 +89,7 @@ jobs:
           cache: true
       - run: flutter pub get
       - name: Build iOS app (unsigned)
-        run: flutter build ios --release --no-codesign
+        run: flutter build ios --release --no-codesign --dart-define=APP_BUILD="${GITHUB_SHA::7} $(date -u +%Y-%m-%d)"
       - name: Package IPA
         run: |
           APP=build/ios/iphoneos/Runner.app
