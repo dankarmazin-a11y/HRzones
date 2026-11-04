@@ -69,11 +69,17 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('Tools').last);
     await settle(tester);
+    await tester.scrollUntilVisible(find.byKey(const Key('toolZones')), 200, scrollable: find.byType(Scrollable).first);
     await tester.tap(find.byKey(const Key('toolZones')));
     await settle(tester);
     expect(find.byKey(const Key('newPreset')), findsOneWidget);
     await tester.pageBack();
     await settle(tester);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('toolTimers')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(find.byKey(const Key('toolTimers')));
     await settle(tester);
     expect(find.byKey(const Key('newTimer')), findsOneWidget);

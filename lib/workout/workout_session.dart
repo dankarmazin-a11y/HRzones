@@ -504,9 +504,27 @@ class WorkoutSession extends ChangeNotifier {
     _changed();
   }
 
+  /// Sets the weight of [s] and copies it to the following sets of the same
+  /// exercise that aren't done yet – if they are empty or still hold the old
+  /// value (so a pyramid typed by hand isn't overwritten). Warm-up sets only
+  /// copy to warm-up sets, working sets to working sets.
   void setWeight(LoggedSet s, double? v) {
+    final old = s.weightKg;
     s.weightKg = v;
-    _changed(notify: false);
+    var copied = false;
+    final e = _active?.exercises.where((x) => x.sets.contains(s)).firstOrNull;
+    if (e != null && !e.exercise.isStretchSession) {
+      final warm = s.type == SetType.warmup;
+      for (final x in e.sets.skip(e.sets.indexOf(s) + 1)) {
+        if (x.done || (x.type == SetType.warmup) != warm) continue;
+        if (x.weightKg == null || x.weightKg == old) {
+          if (x.weightKg != v) copied = true;
+          x.weightKg = v;
+        }
+      }
+    }
+    // Rebuild only when other rows changed (not on every keystroke).
+    _changed(notify: copied);
   }
 
   void setReps(LoggedSet s, int? v) {
@@ -664,7 +682,8 @@ class WorkoutSession extends ChangeNotifier {
             _changed();
           }
         case TimerKind.rest:
-          hr.beeper.beep(frequency: 880, count: 1);
+          hr.beeper.ding(); // rest is over – a bell, not a beep
+
           final from = _restChainFrom;
           _restChainFrom = null;
           if (t.chainNext && from != null) _startNextTimedSet(from);

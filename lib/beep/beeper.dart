@@ -37,6 +37,9 @@ abstract class Beeper {
   Future<void> beep({required double frequency, required int count});
   Future<void> setVolume(double volume);
 
+  /// A bell-like "ding" (end of rest).
+  Future<void> ding();
+
   /// 3 high beeps above range, 2 low beeps below.
   Future<void> alert(ZoneAlert alert) => switch (alert) {
     ZoneAlert.high => beep(frequency: 1200, count: 3),
@@ -71,6 +74,9 @@ class NativeBeeper extends Beeper {
 
   @override
   Future<void> setVolume(double volume) => _call('setVolume', {'volume': volume});
+
+  @override
+  Future<void> ding() => _call('ding');
 }
 
 /// Used on web and in tests: records calls instead of making sound.
@@ -89,4 +95,7 @@ class SilentBeeper extends Beeper {
 
   @override
   Future<void> setVolume(double volume) async => calls.add('volume $volume');
+
+  @override
+  Future<void> ding() async => calls.add('ding');
 }

@@ -70,6 +70,9 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
         let count = (args?["count"] as? NSNumber)?.intValue ?? 1
         try beep(frequency: frequency, count: count)
         result(nil)
+      case "ding":
+        try play(makeDing())
+        result(nil)
       case "setVolume":
         volume = Float((args?["volume"] as? NSNumber)?.doubleValue ?? 0.7)
         result(nil)
@@ -98,14 +101,47 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
   }
 
   private func beep(frequency: Double, count: Int) throws {
+    try play(makePattern(frequency: frequency, count: count))
+  }
+
+  /// Plays [buffer] right away. A sound that is still playing is cut off, so
+  /// only the newest one is heard (pressing "Test beep" five times must not
+  /// queue five patterns).
+  private func play(_ buffer: AVAudioPCMBuffer) throws {
     if !engine.isRunning {
-      // Started only for this beep (e.g. "Test beep"): don't keep it alive.
+      // Started only for this sound (e.g. "Test beep"): don't keep it alive.
       let keep = wanted
       try start()
       wanted = keep
     }
-    player.scheduleBuffer(makePattern(frequency: frequency, count: count), completionHandler: nil)
-    if !player.isPlaying { player.play() }
+    player.stop()  // drops anything still scheduled
+    player.scheduleBuffer(buffer, completionHandler: nil)
+    player.play()
+  }
+
+  /// Bell-like "ding": a few inharmonic partials with a quick attack and a
+  /// long exponential fade (~1.2 s). Clearly different from the alert beeps.
+  private func makeDing() -> AVAudioPCMBuffer {
+    let sr = format.sampleRate
+    let total = Int(1.2 * sr)
+    let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(total))!
+    buffer.frameLength = AVAudioFrameCount(total)
+    let data = buffer.floatChannelData![0]
+    let base = 1318.5  // E6
+    let partials: [(ratio: Double, gain: Double, decay: Double)] = [
+      (1.0, 0.6, 3.5), (2.76, 0.25, 6.0), (5.4, 0.12, 9.0),
+    ]
+    let attack = 0.004 * sr
+    for i in 0..<total {
+      let t = Double(i) / sr
+      var v = 0.0
+      for p in partials {
+        v += sin(2 * .pi * base * p.ratio * t) * p.gain * exp(-p.decay * t)
+      }
+      let env = min(1.0, Double(i) / attack)
+      data[i] = Float(v * env) * volume
+    }
+    return buffer
   }
 
   private func makePattern(frequency: Double, count: Int) -> AVAudioPCMBuffer {
