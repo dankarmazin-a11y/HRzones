@@ -16,10 +16,13 @@ class WorkoutListItem {
 
 /// One workout's sets of a single exercise (for the exercise history).
 class ExerciseSession {
-  ExerciseSession({required this.workout, required this.sets});
+  ExerciseSession({required this.workout, required this.sets, this.notes = ''});
 
   final Workout workout;
   final List<WorkoutSet> sets;
+
+  /// The note written on the exercise in that workout.
+  String notes;
 }
 
 class WorkoutRepository {
@@ -80,6 +83,7 @@ class WorkoutRepository {
                 maxHr: Value(s.maxHr),
                 completedAt: Value(s.completedAt),
                 subExerciseId: Value(s.subExercise?.id),
+                side: Value(s.side),
               ),
             );
           }
@@ -123,7 +127,8 @@ class WorkoutRepository {
           LoggedSet(id: s.id, type: s.setType, weightKg: s.weightKg, reps: s.reps, durationS: s.durationS, rpe: s.rpe)
             ..maxHr = s.maxHr
             ..completedAt = s.completedAt
-            ..subExercise = s.subExerciseId == null ? null : await exercises.byId(s.subExerciseId!),
+            ..subExercise = s.subExerciseId == null ? null : await exercises.byId(s.subExerciseId!)
+            ..side = s.side,
         );
       }
       le.previous = await previousSets(ex.id, excludeWorkoutId: row.id);
@@ -253,9 +258,19 @@ class WorkoutRepository {
           )
           ..orderBy([OrderingTerm.desc(db.workouts.startedAt), OrderingTerm.asc(db.workoutSets.setIndex)]);
     final out = <String, ExerciseSession>{};
+    final weIds = <String>{};
     for (final r in await q.get()) {
       final w = r.readTable(db.workouts);
-      out.putIfAbsent(w.id, () => ExerciseSession(workout: w, sets: [])).sets.add(r.readTable(db.workoutSets));
+      final set = r.readTable(db.workoutSets);
+      weIds.add(set.workoutExerciseId);
+      out.putIfAbsent(w.id, () => ExerciseSession(workout: w, sets: [])).sets.add(set);
+    }
+    // Per-workout notes on this exercise.
+    if (weIds.isNotEmpty) {
+      final wes = await (db.select(db.workoutExercises)..where((e) => e.id.isIn(weIds))).get();
+      for (final we in wes) {
+        if (we.notes.isNotEmpty) out[we.workoutId]?.notes = we.notes;
+      }
     }
     return out.values.toList();
   }

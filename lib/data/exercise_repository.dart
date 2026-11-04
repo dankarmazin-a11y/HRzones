@@ -139,6 +139,8 @@ class ExerciseRepository {
       popularity: Value(e['popularity'] as int?),
       hidden: Value(e['hidden'] == true),
       level: Value(e['level'] as String?),
+      // Only used on insert: on re-seed the user's own choice is kept.
+      unilateral: Value(defaultUnilateral.contains(e['id'])),
     );
   }
 
@@ -220,6 +222,29 @@ class ExerciseRepository {
   }
 
   /// Changes how an exercise is logged (weight × reps, reps, time).
+  /// "Each side" on/off for an exercise; saved for future workouts.
+  Future<Exercise> setUnilateral(String id, bool on) async {
+    await (db.update(db.exercises)..where((e) => e.id.equals(id))).write(
+      ExercisesCompanion(unilateral: Value(on), updatedAt: Value(DateTime.now())),
+    );
+    _cache = null;
+    return (await byId(id))!;
+  }
+
+  /// The permanent note on an exercise (empty text removes it). Dated now.
+  Future<Exercise> setNote(String id, String text) async {
+    final t = text.trim();
+    await (db.update(db.exercises)..where((e) => e.id.equals(id))).write(
+      ExercisesCompanion(
+        note: Value(t.isEmpty ? null : t),
+        noteAt: Value(t.isEmpty ? null : DateTime.now()),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+    _cache = null;
+    return (await byId(id))!;
+  }
+
   Future<Exercise> setTrackingType(String id, TrackingType type) async {
     await (db.update(db.exercises)..where((e) => e.id.equals(id))).write(
       ExercisesCompanion(trackingType: Value(type), updatedAt: Value(DateTime.now())),

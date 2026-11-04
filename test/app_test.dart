@@ -141,6 +141,7 @@ void main() {
   testWidgets('rest bar grows on tap; stretch timer opens full screen', (tester) async {
     final s = (await tester.runAsync(testServices))!;
     await tester.runAsync(() async {
+      await s.exercises.setUnilateral('Hamstring_Stretch', false);
       await s.session.startEmpty();
       await s.session.addExercises([(await s.exercises.byId('Hamstring_Stretch'))!]);
     });

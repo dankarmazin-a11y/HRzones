@@ -9,6 +9,7 @@ import '../../hr/hr_monitor.dart';
 import '../../workout/active_workout.dart';
 import '../../workout/stats.dart';
 import '../../workout/training_level.dart';
+import '../../workout/template_update.dart';
 import '../../workout/workout_session.dart';
 import '../exercises/exercise_avatar.dart';
 import '../exercises/exercise_detail_screen.dart';
@@ -355,6 +356,66 @@ class ActiveWorkoutScreen extends StatelessWidget {
     if (name != null && name.isNotEmpty) session.rename(name);
   }
 
+  /// After a workout started from a template: if anything changed, ask
+  /// whether to update the template – keep it, take the new values only, or
+  /// take everything (exercises, sets and values).
+  static Future<void> _offerTemplateUpdate(BuildContext context, ActiveWorkout w) async {
+    final id = w.templateId;
+    if (id == null) return;
+    final repo = Services.of(context).templates;
+    final t = await repo.byId(id);
+    if (t == null || !context.mounted) return;
+    final change = compareToTemplate(t, w);
+    if (change == TemplateChange.none) return;
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: Text('Update "${t.template.name}"?'),
+        content: Text(
+          change == TemplateChange.valuesOnly
+              ? 'You used different weights, reps or times than the template.'
+              : 'This workout had different exercises or sets than the template.',
+        ),
+        actions: [
+          TextButton(
+            key: const Key('keepTemplate'),
+            onPressed: () => Navigator.pop(c, 'keep'),
+            child: const Text('Keep template'),
+          ),
+          if (change == TemplateChange.structure)
+            TextButton(
+              key: const Key('updateValues'),
+              onPressed: () => Navigator.pop(c, 'values'),
+              child: const Text('Values only'),
+            ),
+          FilledButton(
+            key: const Key('updateTemplate'),
+            onPressed: () => Navigator.pop(c, change == TemplateChange.valuesOnly ? 'values' : 'all'),
+            child: Text(change == TemplateChange.valuesOnly ? 'Update values' : 'Update everything'),
+          ),
+        ],
+      ),
+    );
+    switch (choice) {
+      case 'values':
+        await repo.save(
+          id: t.template.id,
+          name: t.template.name,
+          folder: t.template.folder,
+          hrPresetId: t.template.hrPresetId,
+          slots: templateWithNewValues(t, w),
+        );
+      case 'all':
+        await repo.save(
+          id: t.template.id,
+          name: t.template.name,
+          folder: t.template.folder,
+          hrPresetId: t.template.hrPresetId,
+          slots: WorkoutSession.slotsFrom(w),
+        );
+    }
+  }
+
   /// The list, plus Next/Done right above the keyboard while it is open.
   static Widget _withKeyboardBar(BuildContext context, Widget list) {
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
@@ -419,6 +480,8 @@ class ActiveWorkoutScreen extends StatelessWidget {
     }
     final summary = await session.finish(endedAt: endAt);
     if (summary == null || !context.mounted) return;
+    await _offerTemplateUpdate(context, summary.workout);
+    if (!context.mounted) return;
     await Navigator.of(context)
         .pushReplacement(MaterialPageRoute(builder: (_) => WorkoutSummaryScreen(summary: summary, justFinished: true)));
   }
@@ -611,6 +674,19 @@ class _ExerciseCard extends StatelessWidget {
                         }
                       case 'reorder':
                         if (context.mounted) await showReorderSheet(context, session);
+                      case 'sides':
+                        await session.setUnilateral(e, !e.exercise.unilateral);
+                      case 'workoutNote':
+                        final t = await askNote(context, 'Note for this workout', e.notes);
+                        if (t != null) session.setWorkoutNote(e, t);
+                      case 'stickyNote':
+                        final t = await askNote(
+                          context,
+                          'Permanent note',
+                          e.exercise.note ?? '',
+                          help: 'Shown on this exercise in every workout, with today\'s date.',
+                        );
+                        if (t != null) await session.setExerciseNote(e, t);
                       case 'remove':
                         session.removeExercise(e);
                     }
@@ -623,6 +699,21 @@ class _ExerciseCard extends StatelessWidget {
                         child: Text(linkedToNext ? 'Remove superset with next' : 'Superset with next'),
                       ),
                     if (!isSession) const PopupMenuItem(value: 'swap', child: Text('Swap exercise')),
+                    if (!isSession)
+                      CheckedPopupMenuItem(
+                        value: 'sides',
+                        checked: e.exercise.unilateral,
+                        child: const Text('Each side (left / right)'),
+                      ),
+                    PopupMenuItem(
+                      value: 'workoutNote',
+                      child: Text(e.notes.isEmpty ? 'Add a note (this workout)' : 'Edit note (this workout)'),
+                    ),
+                    if (!isSession)
+                      PopupMenuItem(
+                        value: 'stickyNote',
+                        child: Text(e.exercise.hasNote ? 'Edit permanent note' : 'Add a permanent note'),
+                      ),
                     if (tracking == TrackingType.weightReps && e.sets.isNotEmpty)
                       const PopupMenuItem(value: 'calc', child: Text('Plate & 1RM calculator')),
                     if (list.length > 1) const PopupMenuItem(value: 'reorder', child: Text('Reorder exercises')),
@@ -642,6 +733,36 @@ class _ExerciseCard extends StatelessWidget {
                 style: text.labelSmall,
               ),
             ),
+            if (e.exercise.hasNote && !e.noteHidden)
+              StickyNote(
+                text: e.exercise.note!,
+                date: e.exercise.noteAt,
+                onTap: () async {
+                  final t = await askNote(context, 'Permanent note', e.exercise.note ?? '');
+                  if (t != null) await session.setExerciseNote(e, t);
+                },
+                onClose: () => session.hideNote(e),
+              ),
+            if (e.notes.isNotEmpty)
+              InkWell(
+                onTap: () async {
+                  final t = await askNote(context, 'Note for this workout', e.notes);
+                  if (t != null) session.setWorkoutNote(e, t);
+                },
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(2, 4, 8, 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.notes, size: 16),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(e.notes, style: text.bodyMedium?.copyWith(fontStyle: FontStyle.italic)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             if (isSession)
               const _StretchHeaderRow()
             else
@@ -775,14 +896,28 @@ class _SetRowState extends State<SetRow> {
 
   String _label() {
     final s = widget.set;
-    if (s.subExercise != null) return '${widget.index + 1}';
+    final side = switch (s.side) {
+      Side.left => 'L',
+      Side.right => 'R',
+      null => '',
+    };
+    final sets = widget.entry.sets;
+    if (s.subExercise != null) {
+      // Stretch rows: a left + right pair shares one number.
+      final n = sets.take(widget.index + 1).where((x) => x.side != Side.right).length;
+      return '$n$side';
+    }
+    if (s.side != null && s.type == SetType.normal) {
+      final n = sets.take(widget.index + 1).where((x) => x.type == SetType.normal && x.side != Side.right).length;
+      return '$n$side';
+    }
     switch (s.type) {
       case SetType.warmup:
-        return 'W';
+        return 'W$side';
       case SetType.drop:
-        return 'D';
+        return 'D$side';
       case SetType.failure:
-        return 'F';
+        return 'F$side';
       case SetType.normal:
         final sets = widget.entry.sets;
         return '${sets.take(widget.index + 1).where((x) => x.type == SetType.normal).length}';
@@ -1147,6 +1282,115 @@ class KeyboardBar extends StatelessWidget {
               ),
               const SizedBox(width: 8),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Asks for a note's text. Returns null when cancelled ('' = remove it).
+Future<String?> askNote(BuildContext context, String title, String initial, {String? help}) async {
+  final c = TextEditingController(text: initial);
+  final result = await showDialog<String>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(title),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (help != null) Text(help, style: Theme.of(ctx).textTheme.bodySmall),
+          TextField(
+            key: const Key('noteText'),
+            controller: c,
+            autofocus: true,
+            maxLines: 4,
+            minLines: 2,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(hintText: 'e.g. seat on 4, grip just outside the rings'),
+          ),
+        ],
+      ),
+      actions: [
+        if (initial.isNotEmpty) TextButton(onPressed: () => Navigator.pop(ctx, ''), child: const Text('Remove')),
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+        FilledButton(
+          key: const Key('saveNote'),
+          onPressed: () => Navigator.pop(ctx, c.text),
+          child: const Text('Save'),
+        ),
+      ],
+    ),
+  );
+  c.dispose();
+  return result;
+}
+
+/// The permanent note of an exercise: a bold yellow sticky note that is hard
+/// to miss, with the date it was written.
+class StickyNote extends StatelessWidget {
+  const StickyNote({super.key, required this.text, this.date, this.onTap, this.onClose});
+
+  final String text;
+  final DateTime? date;
+  final VoidCallback? onTap;
+  final VoidCallback? onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final d = date;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 6, 8, 6),
+      child: Material(
+        key: const Key('stickyNote'),
+        color: const Color(0xFFFFE066), // sticky-note yellow
+        elevation: 3,
+        borderRadius: BorderRadius.circular(6),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(6),
+          onTap: onTap,
+          child: Container(
+            decoration: const BoxDecoration(
+              border: Border(left: BorderSide(color: Color(0xFFE6A700), width: 6)),
+            ),
+            padding: const EdgeInsets.fromLTRB(10, 8, 4, 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(top: 2),
+                  child: Icon(Icons.push_pin, size: 18, color: Color(0xFF5D4300)),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        text,
+                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w800, fontSize: 15),
+                      ),
+                      if (d != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            'Note from ${d.day}.${d.month}.${d.year}',
+                            style: const TextStyle(color: Color(0xFF5D4300), fontSize: 12),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (onClose != null)
+                  IconButton(
+                    tooltip: 'Hide for this workout',
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.close, size: 18, color: Color(0xFF5D4300)),
+                    onPressed: onClose,
+                  ),
+              ],
+            ),
           ),
         ),
       ),

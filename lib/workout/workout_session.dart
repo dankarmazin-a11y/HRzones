@@ -39,7 +39,9 @@ class WorkoutSummary {
   ];
 
   double get volume => totalVolume(sets);
-  int get setCount => sets.length;
+
+  /// A left + right pair counts as one set.
+  int get setCount => workout.exercises.expand((e) => e.sets).where((s) => s.done && s.side != Side.right).length;
 
   /// Working sets per primary muscle (stretching rows count for their stretch).
   Map<String, int> get setsPerMuscle {
@@ -90,7 +92,11 @@ enum TimerKind { rest, setTimer, countdown, stopwatch }
 
 /// The one timer shown in the bottom bar of a workout.
 class RunningTimer {
-  RunningTimer({required this.kind, required this.total, this.exercise, this.set}) : startedAt = DateTime.now();
+  RunningTimer({required this.kind, required this.total, this.exercise, this.set, this.switchSides = false})
+    : startedAt = DateTime.now();
+
+  /// The short pause between the left and right side of a timed hold.
+  final bool switchSides;
 
   final TimerKind kind;
   final DateTime startedAt;
@@ -115,8 +121,10 @@ class RunningTimer {
   bool get countsDown => kind != TimerKind.stopwatch;
 
   String get label => switch (kind) {
-    TimerKind.rest => 'Rest',
-    TimerKind.setTimer => set?.subExercise?.name ?? exercise?.exercise.name ?? 'Set',
+    TimerKind.rest => switchSides ? 'Switch sides' : 'Rest',
+    TimerKind.setTimer =>
+      '${set?.subExercise?.name ?? exercise?.exercise.name ?? 'Set'}'
+          '${set?.side == null ? '' : (set!.side == Side.left ? ' · left' : ' · right')}',
     TimerKind.countdown => 'Timer',
     TimerKind.stopwatch => 'Stopwatch',
   };
@@ -172,13 +180,19 @@ class WorkoutSession extends ChangeNotifier {
             supersetGroup: e.supersetGroup,
             subExerciseIds: [
               for (final s in e.sets)
-                if (s.subExercise != null) s.subExercise!.id,
+                if (s.subExercise != null && s.side != Side.right) s.subExercise!.id,
             ],
             sets: e.exercise.isStretchSession
                 ? const []
                 : [
                     for (final s in e.sets)
-                      TemplateSet(type: s.type, weightKg: s.weightKg, reps: s.reps, durationS: s.durationS),
+                      TemplateSet(
+                        type: s.type,
+                        weightKg: s.weightKg,
+                        reps: s.reps,
+                        durationS: s.durationS,
+                        side: s.side,
+                      ),
                   ],
           ),
       ],
@@ -255,6 +269,9 @@ class WorkoutSession extends ChangeNotifier {
 
   /// Length of a timed set when nothing was entered.
   static const defaultSetSeconds = 30;
+
+  /// Pause between the left and right side of a timed hold.
+  static const switchSidesSeconds = 5;
 
   ActiveWorkout? _active;
   ActiveWorkout? get active => _active;
@@ -367,7 +384,7 @@ class WorkoutSession extends ChangeNotifier {
       if (ex.isStretchSession) {
         for (final id in slot.subExerciseIds) {
           final stretch = await exercises.byId(id);
-          if (stretch != null) le.sets.add(LoggedSet(durationS: defaultSetSeconds)..subExercise = stretch);
+          if (stretch != null) _addStretchRows(le, [stretch]);
         }
         w.exercises.add(le);
         continue;
@@ -375,7 +392,9 @@ class WorkoutSession extends ChangeNotifier {
       le.previous = await workouts.previousSets(ex.id);
       if (slot.sets.isNotEmpty) {
         for (final ts in slot.sets) {
-          le.sets.add(LoggedSet(type: ts.type, weightKg: ts.weightKg, reps: ts.reps, durationS: ts.durationS));
+          le.sets.add(
+            LoggedSet(type: ts.type, weightKg: ts.weightKg, reps: ts.reps, durationS: ts.durationS)..side = ts.side,
+          );
         }
       } else {
         for (var i = 0; i < slot.targetSets; i++) {
@@ -383,6 +402,7 @@ class WorkoutSession extends ChangeNotifier {
           le.sets.add(LoggedSet(type: prev?.setType ?? SetType.normal));
         }
       }
+      _matchSides(le);
       w.exercises.add(le);
     }
     return w;
@@ -399,10 +419,7 @@ class WorkoutSession extends ChangeNotifier {
         ..notes = e.notes;
       le.previous = e.exercise.isStretchSession ? const [] : await workouts.previousSets(e.exercise.id);
       for (final s in e.sets) {
-        le.sets.add(
-          LoggedSet(type: s.type, weightKg: s.weightKg, reps: s.reps, durationS: s.durationS)
-            ..subExercise = s.subExercise,
-        );
+        le.sets.add(s.copy());
       }
       w.exercises.add(le);
     }
@@ -425,13 +442,13 @@ class WorkoutSession extends ChangeNotifier {
         supersetGroup: e.supersetGroup,
         subExerciseIds: [
           for (final s in e.sets)
-            if (s.subExercise != null) s.subExercise!.id,
+            if (s.subExercise != null && s.side != Side.right) s.subExercise!.id,
         ],
         sets: e.exercise.isStretchSession
             ? const []
             : [
                 for (final s in e.sets)
-                  TemplateSet(type: s.type, weightKg: s.weightKg, reps: s.reps, durationS: s.durationS),
+                  TemplateSet(type: s.type, weightKg: s.weightKg, reps: s.reps, durationS: s.durationS, side: s.side),
               ],
       ),
   ];
@@ -464,9 +481,60 @@ class WorkoutSession extends ChangeNotifier {
       final le = LoggedExercise(exercise: ex, restSeconds: restFor(ex));
       le.previous = await workouts.previousSets(ex.id, excludeWorkoutId: w.id);
       le.sets.add(LoggedSet(type: le.previousFor(0)?.setType ?? SetType.normal));
+      _matchSides(le);
       w.exercises.add(le);
     }
     _changed();
+  }
+
+  /// One-sided exercises log every set as a left + right pair; others don't
+  /// split. Converts the sets of [e] to match its exercise's setting.
+  void _matchSides(LoggedExercise e) {
+    if (e.exercise.isStretchSession) return;
+    final split = e.exercise.unilateral;
+    final hasSides = e.sets.any((s) => s.side != null);
+    if (split && !hasSides) {
+      final out = <LoggedSet>[];
+      for (final s in e.sets) {
+        out
+          ..add(s..side = Side.left)
+          ..add(s.copy(side: Side.right)..completedAt = s.completedAt);
+      }
+      e.sets
+        ..clear()
+        ..addAll(out);
+    } else if (!split && hasSides) {
+      e.sets.removeWhere((s) => s.side == Side.right);
+      for (final s in e.sets) {
+        s.side = null;
+      }
+    }
+  }
+
+  /// "Each side" on/off for an exercise (saved for future workouts too). Its
+  /// sets become left/right pairs, or single sets again.
+  Future<void> setUnilateral(LoggedExercise e, bool on) async {
+    e.exercise = await exercises.setUnilateral(e.exercise.id, on);
+    _matchSides(e);
+    _changed();
+  }
+
+  /// Writes the permanent note of [e]'s exercise (dated today).
+  Future<void> setExerciseNote(LoggedExercise e, String text) async {
+    e.exercise = await exercises.setNote(e.exercise.id, text);
+    e.noteHidden = false;
+    notifyListeners();
+  }
+
+  /// Note on [e] for this workout only.
+  void setWorkoutNote(LoggedExercise e, String text) {
+    e.notes = text.trim();
+    _changed();
+  }
+
+  void hideNote(LoggedExercise e) {
+    e.noteHidden = true;
+    notifyListeners();
   }
 
   /// Adds stretches as rows of a "Stretching" card.
@@ -477,7 +545,15 @@ class WorkoutSession extends ChangeNotifier {
 
   void _addStretchRows(LoggedExercise card, List<Exercise> stretches) {
     for (final s in stretches) {
-      card.sets.add(LoggedSet(durationS: defaultSetSeconds)..subExercise = s);
+      final row = LoggedSet(durationS: defaultSetSeconds)..subExercise = s;
+      if (s.unilateral) {
+        // One stretch, both sides: left then right.
+        card.sets
+          ..add(row..side = Side.left)
+          ..add(row.copy(side: Side.right));
+      } else {
+        card.sets.add(row);
+      }
     }
   }
 
@@ -532,6 +608,16 @@ class WorkoutSession extends ChangeNotifier {
 
   void addSet(LoggedExercise e) {
     final last = e.sets.lastOrNull;
+    if (last?.side != null && !e.exercise.isStretchSession) {
+      // One-sided: add another left + right pair like the last one.
+      final left = e.sets.lastWhere((s) => s.side == Side.left, orElse: () => last!);
+      final type = last!.type == SetType.warmup ? SetType.normal : last.type;
+      e.sets
+        ..add(left.copy(side: Side.left)..type = type)
+        ..add(last.copy(side: Side.right)..type = type);
+      _changed();
+      return;
+    }
     e.sets.add(
       LoggedSet(
         type: last?.type == SetType.warmup ? SetType.normal : (last?.type ?? SetType.normal),
@@ -544,8 +630,17 @@ class WorkoutSession extends ChangeNotifier {
   }
 
   void removeSet(LoggedExercise e, LoggedSet s) {
-    if (_timer?.set == s) stopTimer();
-    e.sets.remove(s);
+    // A side never stays alone: removing left or right removes the pair.
+    final i = e.sets.indexOf(s);
+    final partner = switch (s.side) {
+      Side.left when i + 1 < e.sets.length && e.sets[i + 1].side == Side.right => e.sets[i + 1],
+      Side.right when i > 0 && e.sets[i - 1].side == Side.left => e.sets[i - 1],
+      _ => null,
+    };
+    for (final x in [s, ?partner]) {
+      if (_timer?.set == x) stopTimer();
+      e.sets.remove(x);
+    }
     _changed();
   }
 
@@ -660,6 +755,16 @@ class WorkoutSession extends ChangeNotifier {
       if (chain) _startNextTimedSet(e);
       return;
     }
+    // Left side done: the right side comes next – no rest. Timed holds get a
+    // short "switch sides" pause, then the right side starts by itself.
+    final idx = e.sets.indexOf(s);
+    if (s.side == Side.left && idx + 1 < e.sets.length && e.sets[idx + 1].side == Side.right) {
+      if (chain) {
+        _start(RunningTimer(kind: TimerKind.rest, total: switchSidesSeconds, switchSides: true)..chainNext = true);
+        _restChainFrom = e;
+      }
+      return;
+    }
     if (e.restSeconds > 0) {
       _start(RunningTimer(kind: TimerKind.rest, total: e.restSeconds)..chainNext = chain);
       _restChainFrom = chain ? e : null;
@@ -765,7 +870,8 @@ class WorkoutSession extends ChangeNotifier {
             _changed();
           }
         case TimerKind.rest:
-          hr.beeper.ding(); // rest is over – a bell, not a beep
+          // Rest is over – a bell, not a beep. "Switch sides" gets a short beep.
+          t.switchSides ? hr.beeper.beep(frequency: 1100, count: 1) : hr.beeper.ding();
 
           final from = _restChainFrom;
           _restChainFrom = null;

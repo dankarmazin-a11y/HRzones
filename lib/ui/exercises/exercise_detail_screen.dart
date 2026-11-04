@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app_services.dart';
 import '../../data/database.dart';
 import '../../data/exercise_repository.dart';
+import '../workout/active_workout_screen.dart';
 import 'exercise_progress.dart';
 
 class ExerciseDetailScreen extends StatefulWidget {
@@ -16,6 +17,23 @@ class ExerciseDetailScreen extends StatefulWidget {
 
 class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
   late Exercise _exercise = widget.exercise;
+
+  Future<void> _editNote() async {
+    final t = await askNote(
+      context,
+      'Permanent note',
+      _exercise.note ?? '',
+      help: 'Shown on this exercise in every workout, with today\'s date.',
+    );
+    if (t == null || !mounted) return;
+    final updated = await Services.of(context).exercises.setNote(_exercise.id, t);
+    if (mounted) setState(() => _exercise = updated);
+  }
+
+  Future<void> _setUnilateral(bool on) async {
+    final updated = await Services.of(context).exercises.setUnilateral(_exercise.id, on);
+    if (mounted) setState(() => _exercise = updated);
+  }
 
   Future<void> _setTracking(TrackingType t) async {
     final updated = await Services.of(context).exercises.setTrackingType(_exercise.id, t);
@@ -54,7 +72,20 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
               Chip(label: Text(titleCase(e.category))),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
+          if (e.hasNote)
+            StickyNote(text: e.note!, date: e.noteAt, onTap: _editNote)
+          else
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: const Key('addStickyNote'),
+                icon: const Icon(Icons.push_pin_outlined),
+                label: const Text('Add a permanent note'),
+                onPressed: _editNote,
+              ),
+            ),
+          const SizedBox(height: 8),
           Text('Log this exercise as', style: text.titleSmall),
           const SizedBox(height: 8),
           SegmentedButton<TrackingType>(
@@ -66,6 +97,14 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
             ],
             selected: {e.trackingType == TrackingType.distance ? TrackingType.duration : e.trackingType},
             onSelectionChanged: (s) => _setTracking(s.first),
+          ),
+          SwitchListTile(
+            key: const Key('unilateralSwitch'),
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Each side (left / right)'),
+            subtitle: const Text('Every set is logged for the left and the right side'),
+            value: e.unilateral,
+            onChanged: _setUnilateral,
           ),
           ExerciseProgressSection(key: ValueKey(e.trackingType), exercise: e),
           if (steps.isNotEmpty) ...[
