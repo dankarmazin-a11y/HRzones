@@ -25,7 +25,7 @@ class HrSourceSection extends StatelessWidget {
           contentPadding: EdgeInsets.zero,
           leading: Icon(isBle ? Icons.bluetooth_connected : Icons.tune),
           title: Text(m.source.displayName),
-          subtitle: Text(isBle ? (m.sourceStatus ?? '') : 'Slider on the Home screen (for testing)'),
+          subtitle: Text(isBle ? (m.sourceStatus ?? '') : 'Fake heart rate from the slider above (for testing)'),
         ),
         Wrap(
           spacing: 8,
