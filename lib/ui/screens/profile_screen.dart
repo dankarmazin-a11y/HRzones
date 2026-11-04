@@ -7,7 +7,6 @@ import '../number_input.dart';
 import '../../workout/training_level.dart';
 import '../export_action.dart';
 import '../streak_card.dart';
-import 'zones_screen.dart';
 
 /// You: streak, goals, body measurements and settings.
 /// Set by CI (`--dart-define=APP_BUILD=<commit> <date>`) so you can see which
@@ -27,17 +26,6 @@ class ProfileScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Card(
-            child: ListTile(
-              key: const Key('openZones'),
-              leading: const Icon(Icons.monitor_heart_outlined),
-              title: const Text('Heart-rate zones'),
-              subtitle: const Text('Zone presets, live monitor, alerts and your strap'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ZonesScreen())),
-            ),
-          ),
-          const SizedBox(height: 8),
           const StreakCard(editable: true),
           const SizedBox(height: 16),
           const GoalsSection(),

@@ -344,7 +344,9 @@ class WorkoutSession extends ChangeNotifier {
   /// Workout (or template draft) from a template: planned sets keep their
   /// target values; old templates without them get empty sets.
   Future<ActiveWorkout> _buildFromTemplate(TemplateWithSlots? t, {required String name}) async {
-    final w = ActiveWorkout(name: name, templateId: t?.template.id)..hrPresetId = t?.template.hrPresetId;
+    // A starter program workout started directly has no saved template (id '').
+    final templateId = (t == null || t.template.id.isEmpty) ? null : t.template.id;
+    final w = ActiveWorkout(name: name, templateId: templateId)..hrPresetId = t?.template.hrPresetId;
     for (final slot in t?.slots ?? const <TemplateSlot>[]) {
       final ex = await exercises.byId(slot.exerciseId);
       if (ex == null) continue;

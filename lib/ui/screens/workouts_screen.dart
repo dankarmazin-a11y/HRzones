@@ -6,6 +6,7 @@ import '../hr_presets.dart';
 import '../../data/template_repository.dart';
 import '../exercises/exercise_library_screen.dart';
 import '../history/history_screen.dart';
+import '../programs/starter_programs_screen.dart';
 import '../workout/workout_editor.dart';
 import '../workout/active_workout_screen.dart';
 
@@ -46,7 +47,18 @@ class WorkoutsScreen extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 8),
+          Card(
+            child: ListTile(
+              key: const Key('starterPrograms'),
+              leading: const Icon(Icons.auto_awesome_outlined),
+              title: const Text('Starter programs'),
+              subtitle: const Text('Ready-made plans for your level'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const StarterProgramsScreen())),
+            ),
+          ),
+          const SizedBox(height: 16),
           Row(
             children: [
               Text('Templates', style: Theme.of(context).textTheme.titleMedium),
@@ -65,7 +77,7 @@ class WorkoutsScreen extends StatelessWidget {
               if (list.isEmpty) {
                 return const Padding(
                   padding: EdgeInsets.symmetric(vertical: 16),
-                  child: Text('No templates yet. Tap "New" to create one, e.g. "Push A".'),
+                  child: Text('No templates yet. Tap "New" to create one, or pick a starter program above.'),
                 );
               }
               // Templates without a folder first, then one section per folder.
