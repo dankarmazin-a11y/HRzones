@@ -18,6 +18,8 @@ class TemplateEditorScreen extends StatefulWidget {
 
 class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
   late final _name = TextEditingController(text: widget.existing?.template.name ?? '');
+  late final _folder = TextEditingController(text: widget.existing?.template.folder ?? '');
+  List<String> _folders = [];
   late final List<TemplateSlot> _slots = [
     for (final s in widget.existing?.slots ?? const <TemplateSlot>[])
       TemplateSlot(
@@ -34,6 +36,9 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _loadNames();
+    Services.of(context).templates.folders().then((f) {
+      if (mounted) setState(() => _folders = f);
+    });
   }
 
   Future<void> _loadNames() async {
@@ -80,7 +85,9 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Add a name and at least one exercise')));
       return;
     }
-    await Services.of(context).templates.save(id: widget.existing?.template.id, name: name, slots: _slots);
+    final folder = _folder.text.trim();
+    await Services.of(context).templates
+        .save(id: widget.existing?.template.id, name: name, folder: folder.isEmpty ? null : folder, slots: _slots);
     if (mounted) Navigator.of(context).pop();
   }
 
@@ -104,6 +111,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
 
   @override
   void dispose() {
+    _folder.dispose();
     _name.dispose();
     super.dispose();
   }
@@ -130,6 +138,32 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
                 border: OutlineInputBorder(),
               ),
               textCapitalization: TextCapitalization.words,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: _folder,
+                  decoration: const InputDecoration(
+                    labelText: 'Folder (optional)',
+                    hintText: 'e.g. Push/Pull/Legs',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  textCapitalization: TextCapitalization.words,
+                ),
+                if (_folders.isNotEmpty)
+                  Wrap(
+                    spacing: 6,
+                    children: [
+                      for (final f in _folders)
+                        ActionChip(label: Text(f), onPressed: () => setState(() => _folder.text = f)),
+                    ],
+                  ),
+              ],
             ),
           ),
           Expanded(

@@ -67,7 +67,28 @@ class WorkoutsScreen extends StatelessWidget {
                   child: Text('No templates yet. Tap "New" to create one, e.g. "Push A".'),
                 );
               }
-              return Column(children: [for (final t in list) TemplateCard(template: t)]);
+              // Templates without a folder first, then one section per folder.
+              final loose = list.where((t) => (t.template.folder ?? '').isEmpty).toList();
+              final folders = <String, List<TemplateWithSlots>>{};
+              for (final t in list.where((t) => (t.template.folder ?? '').isNotEmpty)) {
+                folders.putIfAbsent(t.template.folder!, () => []).add(t);
+              }
+              final names = folders.keys.toList()..sort();
+              return Column(
+                children: [
+                  for (final t in loose) TemplateCard(template: t),
+                  for (final f in names)
+                    ExpansionTile(
+                      key: PageStorageKey('folder-$f'),
+                      initiallyExpanded: true,
+                      tilePadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.folder_outlined),
+                      title: Text(f),
+                      subtitle: Text('${folders[f]!.length} templates'),
+                      children: [for (final t in folders[f]!) TemplateCard(template: t)],
+                    ),
+                ],
+              );
             },
           ),
         ],
@@ -98,12 +119,34 @@ class TemplateCard extends StatelessWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            IconButton(
-              tooltip: 'Edit',
-              icon: const Icon(Icons.edit_outlined),
-              onPressed: () =>
-                  Navigator.of(context)
-                      .push(MaterialPageRoute(builder: (_) => TemplateEditorScreen(existing: template))),
+            PopupMenuButton<String>(
+              onSelected: (v) async {
+                final repo = Services.of(context).templates;
+                switch (v) {
+                  case 'edit':
+                    await Navigator.of(context)
+                        .push(MaterialPageRoute(builder: (_) => TemplateEditorScreen(existing: template)));
+                  case 'duplicate':
+                    await repo.duplicate(template);
+                  case 'delete':
+                    final ok = await showDialog<bool>(
+                      context: context,
+                      builder: (c) => AlertDialog(
+                        title: Text('Delete "${template.template.name}"?'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
+                          TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Delete')),
+                        ],
+                      ),
+                    );
+                    if (ok == true) await repo.delete(template.template.id);
+                }
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'edit', child: Text('Edit')),
+                PopupMenuItem(value: 'duplicate', child: Text('Duplicate')),
+                PopupMenuItem(value: 'delete', child: Text('Delete')),
+              ],
             ),
             FilledButton.tonal(onPressed: () => startTemplateWorkout(context, template), child: const Text('Start')),
           ],

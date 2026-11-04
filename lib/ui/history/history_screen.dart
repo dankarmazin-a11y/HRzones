@@ -4,6 +4,7 @@ import '../../app_services.dart';
 import '../../data/workout_repository.dart';
 import '../../workout/stats.dart';
 import '../../workout/workout_session.dart';
+import '../workout/workout_editor.dart';
 import '../workout/workout_summary_screen.dart';
 
 class HistoryScreen extends StatelessWidget {
@@ -14,6 +15,11 @@ class HistoryScreen extends StatelessWidget {
     final s = Services.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('History')),
+      floatingActionButton: FloatingActionButton.extended(
+        icon: const Icon(Icons.edit_calendar),
+        label: const Text('Log past workout'),
+        onPressed: () => logPastWorkout(context),
+      ),
       body: StreamBuilder<List<WorkoutListItem>>(
         stream: s.workouts.watchFinished(),
         builder: (context, snap) {

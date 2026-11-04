@@ -49,7 +49,7 @@ class ActiveWorkout {
 
   final String id;
   String name;
-  final DateTime startedAt;
+  DateTime startedAt;
   final String? templateId;
   final List<LoggedExercise> exercises;
   String notes = '';

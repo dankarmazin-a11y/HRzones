@@ -21,48 +21,72 @@ import 'workout_summary_screen.dart';
 
 const _supersetColors = [Colors.purpleAccent, Colors.tealAccent, Colors.amberAccent, Colors.pinkAccent];
 
+/// Gives the workout widgets their session: the running workout, or a
+/// separate one when editing a past workout.
+class SessionScope extends InheritedWidget {
+  const SessionScope({super.key, required this.session, required super.child});
+
+  final WorkoutSession session;
+
+  static WorkoutSession of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<SessionScope>()?.session ?? Services.of(context).session;
+
+  @override
+  bool updateShouldNotify(SessionScope oldWidget) => session != oldWidget.session;
+}
+
 class ActiveWorkoutScreen extends StatelessWidget {
-  const ActiveWorkoutScreen({super.key});
+  const ActiveWorkoutScreen({super.key, this.session});
+
+  /// Defaults to the running workout; pass an edit-mode session to edit a
+  /// past workout.
+  final WorkoutSession? session;
 
   @override
   Widget build(BuildContext context) {
-    final session = Services.of(context).session;
+    final session = this.session ?? Services.of(context).session;
+    return SessionScope(session: session, child: _build(context, session));
+  }
+
+  Widget _build(BuildContext context, WorkoutSession session) {
     return ListenableBuilder(
       listenable: session,
       builder: (context, _) {
         final w = session.active;
         if (w == null) return const Scaffold(body: Center(child: Text('No workout in progress')));
         return Scaffold(
-          appBar: AppBar(
-            leading: IconButton(
-              tooltip: 'Minimise',
-              icon: const Icon(Icons.keyboard_arrow_down),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            titleSpacing: 0,
-            title: GestureDetector(
-              onTap: () => _rename(context, session, w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _ElapsedText(since: w.startedAt),
-                  Text(w.name, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall),
-                ],
-              ),
-            ),
-            actions: [
-              IconButton(
-                tooltip: 'Timers',
-                icon: const Icon(Icons.timer_outlined),
-                onPressed: () => showTimerSheet(context, session),
-              ),
-              const _HrChip(),
-              Padding(
-                padding: const EdgeInsets.only(left: 4, right: 8),
-                child: FilledButton(onPressed: () => _finish(context, session), child: const Text('Finish')),
-              ),
-            ],
-          ),
+          appBar: session.editMode
+              ? _editAppBar(context, session, w)
+              : AppBar(
+                  leading: IconButton(
+                    tooltip: 'Minimise',
+                    icon: const Icon(Icons.keyboard_arrow_down),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  titleSpacing: 0,
+                  title: GestureDetector(
+                    onTap: () => _rename(context, session, w),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _ElapsedText(since: w.startedAt),
+                        Text(w.name, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall),
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    IconButton(
+                      tooltip: 'Timers',
+                      icon: const Icon(Icons.timer_outlined),
+                      onPressed: () => showTimerSheet(context, session),
+                    ),
+                    const _HrChip(),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4, right: 8),
+                      child: FilledButton(onPressed: () => _finish(context, session), child: const Text('Finish')),
+                    ),
+                  ],
+                ),
           body: ListView(
             padding: const EdgeInsets.only(bottom: 120),
             children: [
@@ -105,20 +129,104 @@ class ActiveWorkoutScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: TextButton(
-                  style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
-                  onPressed: () => _discard(context, session),
-                  child: const Text('Discard workout'),
+              if (!session.editMode)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: TextButton(
+                    style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+                    onPressed: () => _discard(context, session),
+                    child: const Text('Discard workout'),
+                  ),
                 ),
-              ),
             ],
           ),
-          bottomNavigationBar: session.timer == null ? null : TimerBar(session: session),
+          bottomNavigationBar: session.timer == null || session.editMode ? null : TimerBar(session: session),
         );
       },
     );
+  }
+
+  /// Header when editing a past workout: date + duration (tap to change),
+  /// Cancel and Save.
+  PreferredSizeWidget _editAppBar(BuildContext context, WorkoutSession session, ActiveWorkout w) {
+    final end = session.editEndedAt ?? w.startedAt;
+    return AppBar(
+      leading: IconButton(
+        tooltip: 'Cancel',
+        icon: const Icon(Icons.close),
+        onPressed: () async {
+          if (session.hasUnsavedEdits) {
+            final leave = await showDialog<bool>(
+              context: context,
+              builder: (c) => AlertDialog(
+                title: const Text('Discard changes?'),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Keep editing')),
+                  TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Discard')),
+                ],
+              ),
+            );
+            if (leave != true) return;
+          }
+          await session.discard();
+          if (context.mounted) Navigator.of(context).pop();
+        },
+      ),
+      titleSpacing: 0,
+      title: InkWell(
+        key: const Key('editTimes'),
+        onTap: () => _editTimes(context, session, w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(w.name, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              '${formatDate(w.startedAt)} · ${formatDuration(end.difference(w.startedAt))}  ✎',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        IconButton(
+          tooltip: 'Rename',
+          icon: const Icon(Icons.edit_outlined),
+          onPressed: () => _rename(context, session, w),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: FilledButton(
+            onPressed: () async {
+              final summary = await session.saveEdits();
+              if (!context.mounted) return;
+              if (summary == null) {
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(const SnackBar(content: Text('Add at least one set with a weight, reps or time.')));
+                return;
+              }
+              await Navigator.of(context)
+                  .pushReplacement(MaterialPageRoute(builder: (_) => WorkoutSummaryScreen(summary: summary)));
+            },
+            child: const Text('Save'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  static Future<void> _editTimes(BuildContext context, WorkoutSession session, ActiveWorkout w) async {
+    final start = await pickWorkoutStart(context, w.startedAt);
+    if (start == null || !context.mounted) return;
+    final current = (session.editEndedAt ?? w.startedAt).difference(w.startedAt).inMinutes;
+    final minutes = await promptNumber(
+      context,
+      title: 'Duration (minutes)',
+      initial: current,
+      min: 1,
+      max: 600,
+      suffix: 'min',
+    );
+    session.setTimes(start, Duration(minutes: (minutes ?? current).round().clamp(1, 600)));
   }
 
   static Future<void> _rename(BuildContext context, WorkoutSession session, ActiveWorkout w) async {
@@ -279,7 +387,7 @@ class _ExerciseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final session = Services.of(context).session;
+    final session = SessionScope.of(context);
     final e = entry;
     final isSession = e.exercise.isStretchSession;
     final tracking = e.exercise.trackingType;
@@ -542,7 +650,7 @@ class _SetRowState extends State<SetRow> {
 
   void _fillFromPrevious(WorkoutSet? p) {
     if (p == null) return;
-    final session = Services.of(context).session;
+    final session = SessionScope.of(context);
     if (p.weightKg != null) session.setWeight(widget.set, p.weightKg);
     if (p.reps != null) session.setReps(widget.set, p.reps);
     if (p.durationS != null) session.setDuration(widget.set, p.durationS);
@@ -562,7 +670,7 @@ class _SetRowState extends State<SetRow> {
         onPressed: () => session.toggleDone(widget.entry, s),
       );
     }
-    if (tracking == TrackingType.duration) {
+    if (tracking == TrackingType.duration && !session.editMode) {
       final running = session.timer?.kind == TimerKind.setTimer && session.timer?.set == s;
       return IconButton(
         tooltip: running ? 'Stop' : 'Start timer',
@@ -583,7 +691,7 @@ class _SetRowState extends State<SetRow> {
   }
 
   Future<void> _pickRpe() async {
-    final session = Services.of(context).session;
+    final session = SessionScope.of(context);
     const values = [6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0];
     final v = await showModalBottomSheet<double>(
       context: context,
@@ -603,7 +711,7 @@ class _SetRowState extends State<SetRow> {
 
   @override
   Widget build(BuildContext context) {
-    final session = Services.of(context).session;
+    final session = SessionScope.of(context);
     final s = widget.set;
     final prev = widget.entry.previousFor(widget.index);
     final tracking = widget.entry.exercise.trackingType;
@@ -736,4 +844,19 @@ class _SetRowState extends State<SetRow> {
       child: Row(children: children),
     );
   }
+}
+
+/// Asks for a date and time (for logging or editing a past workout).
+Future<DateTime?> pickWorkoutStart(BuildContext context, DateTime initial) async {
+  final now = DateTime.now();
+  final date = await showDatePicker(
+    context: context,
+    initialDate: initial.isAfter(now) ? now : initial,
+    firstDate: DateTime(now.year - 5),
+    lastDate: now,
+  );
+  if (date == null || !context.mounted) return null;
+  final time = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(initial));
+  if (time == null) return null;
+  return DateTime(date.year, date.month, date.day, time.hour, time.minute);
 }

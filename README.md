@@ -32,6 +32,10 @@ Strength log:
 - [ ] Profile → Connect a strap → your chest strap appears → tap it. In a workout tap ♥ → live heart rate.
 - [ ] Open an exercise you did twice → records, progress chart and history.
 - [ ] ⋮ on a weight exercise → Plate & 1RM calculator; ⋮ → Swap exercise.
+- [ ] History → open a workout → ✎ → change a weight, add a set → Save.
+- [ ] History → "Log past workout" → pick date/time and minutes → add exercises and values → Save.
+- [ ] Template: set a folder (e.g. "PPL") → Workouts tab groups it; ⋮ → Duplicate.
+- [ ] Exercises → body icon → tap a muscle on the figure → list filters to that muscle.
 - [ ] Tap any number next to a slider (age, target range, alert gap) and type a value.
 
 Heart rate:
