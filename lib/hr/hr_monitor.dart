@@ -84,7 +84,7 @@ class HrMonitor extends ChangeNotifier {
     if (_running) return;
     _running = true;
     engine.reset();
-    await beeper.start();
+    await beeper.start('hr');
     _sub = source.readings.listen(_onReading);
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       final before = engine.status;
@@ -101,7 +101,7 @@ class HrMonitor extends ChangeNotifier {
     _ticker?.cancel();
     await _sub?.cancel();
     await source.stop();
-    await beeper.stop();
+    await beeper.stop('hr');
     engine.reset();
     _bpm = null;
     notifyListeners();
@@ -178,8 +178,7 @@ class HrMonitor extends ChangeNotifier {
   }
 
   Future<void> testBeep(ZoneAlert alert) async {
-    if (!_running) await beeper.start();
-    await beeper.alert(alert);
+    await beeper.alert(alert); // the native side starts the audio if needed
   }
 
   @override

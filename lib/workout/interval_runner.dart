@@ -66,7 +66,7 @@ class IntervalRunner extends ChangeNotifier {
   }
 
   Future<void> start() async {
-    await beeper.start();
+    await beeper.start('intervals');
     begin(DateTime.now());
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(milliseconds: 100), (_) => tick(DateTime.now()));
@@ -104,6 +104,8 @@ class IntervalRunner extends ChangeNotifier {
     if (finished) {
       _timer?.cancel();
       beeper.beep(frequency: 1200, count: 3);
+      // Let the last beeps play before the audio may stop.
+      Timer(const Duration(seconds: 2), _release);
       return;
     }
     final step = steps[_index];
@@ -127,12 +129,16 @@ class IntervalRunner extends ChangeNotifier {
   void stop() {
     _timer?.cancel();
     _index = steps.length;
+    _release();
     notifyListeners();
   }
+
+  void _release() => beeper.stop('intervals');
 
   @override
   void dispose() {
     _timer?.cancel();
+    _release();
     super.dispose();
   }
 }

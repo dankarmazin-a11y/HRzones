@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-enum AppTab { home, strength, run, timers, profile }
+enum AppTab { home, strength, run, tools, profile }
 
 /// Lets screens switch tabs (e.g. Home → Zones).
 class AppShell extends InheritedWidget {

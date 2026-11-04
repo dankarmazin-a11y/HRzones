@@ -5,9 +5,35 @@ import '../hr/zone_alert_engine.dart';
 
 /// Plays alert beeps. On iOS this is a native module (AVAudioEngine, mixes
 /// over music, keeps working with the screen locked). On web it is a stub.
+///
+/// Several features keep the audio running at the same time (HR monitor,
+/// live workout timers, interval timer). Each one takes a *hold* with
+/// [start] and releases it with [stop]; the audio only really stops when the
+/// last hold is released – otherwise e.g. finishing an interval timer would
+/// silence the HR beeps of a running workout once the screen is locked.
 abstract class Beeper {
-  Future<void> start();
-  Future<void> stop();
+  final _holds = <String>{};
+
+  /// Who currently keeps the audio running (for tests/debugging).
+  Set<String> get holds => Set.unmodifiable(_holds);
+
+  /// Keeps the audio session running for [owner] (also in the background).
+  Future<void> start([String owner = 'default']) async {
+    _holds.add(owner);
+    // Always ask the platform: it restarts the engine if iOS stopped it.
+    await startAudio();
+  }
+
+  /// Releases [owner]'s hold; stops the audio when nobody needs it any more.
+  Future<void> stop([String owner = 'default']) async {
+    if (!_holds.remove(owner)) return;
+    if (_holds.isEmpty) await stopAudio();
+  }
+
+  @protected
+  Future<void> startAudio();
+  @protected
+  Future<void> stopAudio();
   Future<void> beep({required double frequency, required int count});
   Future<void> setVolume(double volume);
 
@@ -34,10 +60,10 @@ class NativeBeeper extends Beeper {
   }
 
   @override
-  Future<void> start() => _call('start');
+  Future<void> startAudio() => _call('start');
 
   @override
-  Future<void> stop() => _call('stop');
+  Future<void> stopAudio() => _call('stop');
 
   @override
   Future<void> beep({required double frequency, required int count}) =>
@@ -52,10 +78,10 @@ class SilentBeeper extends Beeper {
   final calls = <String>[];
 
   @override
-  Future<void> start() async => calls.add('start');
+  Future<void> startAudio() async => calls.add('start');
 
   @override
-  Future<void> stop() async => calls.add('stop');
+  Future<void> stopAudio() async => calls.add('stop');
 
   @override
   Future<void> beep({required double frequency, required int count}) async =>

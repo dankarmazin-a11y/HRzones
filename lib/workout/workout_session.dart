@@ -269,7 +269,26 @@ class WorkoutSession extends ChangeNotifier {
   Future<void> restore() async {
     defaultRestSeconds = int.tryParse(await workouts.db.getSetting('defaultRestS') ?? '') ?? defaultRestSeconds;
     _active = await workouts.loadActive();
+    final w = _active;
+    if (w != null) {
+      // The app was closed mid-workout: keep the audio alive again and turn
+      // the workout's heart-rate alerts back on.
+      await _holdAudio();
+      final preset = await presets?.byId(w.hrPresetId);
+      if (preset != null && !hr.running) await applyPreset(preset);
+    }
     notifyListeners();
+  }
+
+  /// A live workout keeps the audio session running, so rest/set timers can
+  /// still beep (and the app keeps counting) with the screen locked.
+  Future<void> _holdAudio() => hr.beeper.start('workout');
+
+  void _releaseAudio() {
+    // Give a final beep time to play before the audio may stop.
+    Future<void>.delayed(const Duration(seconds: 2), () {
+      if (_active == null) hr.beeper.stop('workout');
+    });
   }
 
   int restFor(Exercise e) => e.isStretch ? stretchRestSeconds : defaultRestSeconds;
@@ -292,6 +311,7 @@ class WorkoutSession extends ChangeNotifier {
   Future<void> startEmpty({HrPreset? preset}) async {
     _active = ActiveWorkout(name: _defaultName());
     hr.resetSession();
+    await _holdAudio();
     await applyPreset(preset);
     await _saveNow();
     notifyListeners();
@@ -300,6 +320,7 @@ class WorkoutSession extends ChangeNotifier {
   Future<void> startFromTemplate(TemplateWithSlots t) async {
     _active = await _buildFromTemplate(t, name: t.template.name);
     hr.resetSession();
+    await _holdAudio();
     // The template's heart-rate preset applies automatically.
     final preset = await presets?.byId(t.template.hrPresetId);
     if (preset != null) await applyPreset(preset);
@@ -323,7 +344,9 @@ class WorkoutSession extends ChangeNotifier {
   /// Workout (or template draft) from a template: planned sets keep their
   /// target values; old templates without them get empty sets.
   Future<ActiveWorkout> _buildFromTemplate(TemplateWithSlots? t, {required String name}) async {
-    final w = ActiveWorkout(name: name, templateId: t?.template.id)..hrPresetId = t?.template.hrPresetId;
+    // A starter program workout started directly has no saved template (id '').
+    final templateId = (t == null || t.template.id.isEmpty) ? null : t.template.id;
+    final w = ActiveWorkout(name: name, templateId: templateId)..hrPresetId = t?.template.hrPresetId;
     for (final slot in t?.slots ?? const <TemplateSlot>[]) {
       final ex = await exercises.byId(slot.exerciseId);
       if (ex == null) continue;
@@ -698,7 +721,19 @@ class WorkoutSession extends ChangeNotifier {
   /// "now" (e.g. the last set's time when the workout was left open).
   Future<WorkoutSummary?> finish({DateTime? endedAt}) async {
     final w = _active;
-    if (w == null) return null;
+    // A second tap on Finish while the first is still saving does nothing.
+    if (w == null || _finishing) return null;
+    _finishing = true;
+    try {
+      return await _finish(w, endedAt);
+    } finally {
+      _finishing = false;
+    }
+  }
+
+  bool _finishing = false;
+
+  Future<WorkoutSummary> _finish(ActiveWorkout w, DateTime? endedAt) async {
     _timer = null;
     _ticker?.cancel();
     for (final e in w.exercises) {
@@ -711,6 +746,7 @@ class WorkoutSession extends ChangeNotifier {
     await workouts.save(w, endedAt: end, avgHr: avg, maxHr: max);
     final summary = await WorkoutSummary.build(workouts, w, end, avgHr: avg, maxHr: max);
     _active = null;
+    _releaseAudio();
     notifyListeners();
     return summary;
   }
@@ -730,6 +766,7 @@ class WorkoutSession extends ChangeNotifier {
     _saveTimer?.cancel();
     await workouts.delete(w.id);
     _active = null;
+    _releaseAudio();
     notifyListeners();
   }
 

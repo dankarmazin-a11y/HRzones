@@ -12,11 +12,41 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
   private let player = AVAudioPlayerNode()
   private let format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1)!
   private var volume: Float = 0.7
+  /// True between "start" and "stop": the app wants the audio kept alive.
+  private var wanted = false
 
   override init() {
     super.init()
     engine.attach(player)
     engine.connect(player, to: engine.mainMixerNode, format: format)
+    // iOS stops the engine on a phone call / Siri, or when the output changes
+    // (AirPods connected or removed). Without restarting it, a locked phone
+    // would be suspended and the beeps would go silent.
+    let center = NotificationCenter.default
+    center.addObserver(
+      self, selector: #selector(restartIfWanted),
+      name: .AVAudioEngineConfigurationChange, object: engine)
+    center.addObserver(
+      self, selector: #selector(handleInterruption(_:)),
+      name: AVAudioSession.interruptionNotification, object: nil)
+    center.addObserver(
+      self, selector: #selector(restartIfWanted),
+      name: AVAudioSession.mediaServicesWereResetNotification, object: nil)
+  }
+
+  @objc private func handleInterruption(_ note: Notification) {
+    guard let raw = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+      AVAudioSession.InterruptionType(rawValue: raw) == .ended
+    else { return }
+    restartIfWanted()
+  }
+
+  @objc private func restartIfWanted() {
+    guard wanted else { return }
+    DispatchQueue.main.async { [weak self] in
+      guard let self, self.wanted else { return }
+      try? self.start()
+    }
   }
 
   static func register(with registrar: FlutterPluginRegistrar) {
@@ -52,6 +82,7 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
   }
 
   private func start() throws {
+    wanted = true
     let session = AVAudioSession.sharedInstance()
     try session.setCategory(.playback, options: [.mixWithOthers])
     try session.setActive(true)
@@ -60,13 +91,19 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
   }
 
   private func stop() {
+    wanted = false
     player.stop()
     engine.stop()
     try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
   }
 
   private func beep(frequency: Double, count: Int) throws {
-    if !engine.isRunning { try start() }
+    if !engine.isRunning {
+      // Started only for this beep (e.g. "Test beep"): don't keep it alive.
+      let keep = wanted
+      try start()
+      wanted = keep
+    }
     player.scheduleBuffer(makePattern(frequency: frequency, count: count), completionHandler: nil)
     if !player.isPlaying { player.play() }
   }

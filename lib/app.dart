@@ -6,7 +6,7 @@ import 'hr/hr_monitor.dart';
 import 'ui/screens/home_screen.dart';
 import 'ui/screens/profile_screen.dart';
 import 'ui/screens/run_screen.dart';
-import 'ui/timers/timers_screen.dart';
+import 'ui/screens/tools_screen.dart';
 import 'ui/screens/workouts_screen.dart';
 import 'ui/workout/running_workout_bar.dart';
 
@@ -51,7 +51,7 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   AppTab _tab = AppTab.home;
 
-  static const _screens = [HomeScreen(), WorkoutsScreen(), RunScreen(), TimersScreen(), ProfileScreen()];
+  static const _screens = [HomeScreen(), WorkoutsScreen(), RunScreen(), ToolsScreen(), ProfileScreen()];
 
   @override
   Widget build(BuildContext context) {
@@ -79,9 +79,9 @@ class _HomeShellState extends State<HomeShell> {
                   label: 'Run',
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.timer_outlined),
-                  selectedIcon: Icon(Icons.timer),
-                  label: 'Timers',
+                  icon: Icon(Icons.handyman_outlined),
+                  selectedIcon: Icon(Icons.handyman),
+                  label: 'Tools',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.person_outline),
