@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app_services.dart';
 import '../../data/database.dart';
 import '../hr_presets.dart';
+import '../../workout/training_place.dart';
 import '../../data/template_repository.dart';
 import '../exercises/exercise_library_screen.dart';
 import '../history/history_screen.dart';
@@ -191,8 +192,41 @@ Future<bool> _confirmReplace(BuildContext context) async {
   return false;
 }
 
+/// Hybrid trainers say where they train today (filters the exercise list
+/// in this workout). Returns false when cancelled. [known] skips the
+/// question (e.g. a starter program made for that place).
+Future<bool> _pickPlaceIfHybrid(BuildContext context, {TrainingPlace? known}) async {
+  final s = Services.of(context);
+  if (s.place.value != TrainingPlace.hybrid) return true;
+  final place =
+      known ??
+      await showModalBottomSheet<TrainingPlace>(
+        context: context,
+        builder: (c) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const ListTile(title: Text('Where are you training today?')),
+              for (final p in TrainingPlaceInfo.concrete)
+                ListTile(
+                  key: Key('place-${p.name}'),
+                  leading: Icon(p.icon),
+                  title: Text(p.label),
+                  subtitle: Text(p.description),
+                  onTap: () => Navigator.pop(c, p),
+                ),
+            ],
+          ),
+        ),
+      );
+  if (place == null) return false;
+  await s.session.setWorkoutPlace(place);
+  return true;
+}
+
 Future<void> startEmptyWorkout(BuildContext context) async {
   if (!await _confirmReplace(context) || !context.mounted) return;
+  if (!await _pickPlaceIfHybrid(context) || !context.mounted) return;
   // Heart-rate zone preset for this workout (only asked if presets exist).
   final choice = await pickPreset(context, PresetUse.strength);
   if (choice == null || !context.mounted) return;
@@ -200,8 +234,9 @@ Future<void> startEmptyWorkout(BuildContext context) async {
   if (context.mounted) await openActiveWorkout(context);
 }
 
-Future<void> startTemplateWorkout(BuildContext context, TemplateWithSlots t) async {
+Future<void> startTemplateWorkout(BuildContext context, TemplateWithSlots t, {TrainingPlace? place}) async {
   if (!await _confirmReplace(context) || !context.mounted) return;
+  if (!await _pickPlaceIfHybrid(context, known: place) || !context.mounted) return;
   await Services.of(context).session.startFromTemplate(t);
   if (context.mounted) await openActiveWorkout(context);
 }

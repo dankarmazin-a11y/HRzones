@@ -4,6 +4,7 @@ import '../../app_services.dart';
 import '../../data/database.dart';
 import '../../workout/starter_programs.dart';
 import '../../workout/training_level.dart';
+import '../../workout/training_place.dart';
 import '../screens/workouts_screen.dart';
 
 /// Ready-made programs, filtered by level (your level first) and place.
@@ -16,14 +17,16 @@ class StarterProgramsScreen extends StatefulWidget {
 
 class _StarterProgramsScreenState extends State<StarterProgramsScreen> {
   TrainingLevel? _level;
-  ProgramPlace _place = ProgramPlace.gym;
+  TrainingPlace? _place;
 
   @override
   Widget build(BuildContext context) {
-    final level = _level ?? Services.of(context).level.value;
+    final s = Services.of(context);
+    final level = _level ?? s.level.value;
+    // Where you train (Profile); hybrid starts on gym.
+    final place = _place ?? (s.place.value == TrainingPlace.hybrid ? TrainingPlace.gym : s.place.value);
     final text = Theme.of(context).textTheme;
-    final places = {for (final p in starterPrograms) p.place}.toList();
-    final list = starterPrograms.where((p) => p.level == level && p.place == _place).toList();
+    final list = starterPrograms.where((p) => p.level == level && p.place == place).toList();
     return Scaffold(
       appBar: AppBar(title: const Text('Starter programs')),
       body: ListView(
@@ -38,24 +41,28 @@ class _StarterProgramsScreenState extends State<StarterProgramsScreen> {
           Wrap(
             spacing: 8,
             children: [
+              for (final p in TrainingPlaceInfo.concrete)
+                ChoiceChip(
+                  avatar: Icon(p.icon, size: 18),
+                  label: Text(p.label),
+                  selected: p == place,
+                  onSelected: (_) => setState(() => _place = p),
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 8,
+            children: [
               for (final l in TrainingLevel.values)
                 ChoiceChip(label: Text(l.label), selected: l == level, onSelected: (_) => setState(() => _level = l)),
             ],
           ),
-          if (places.length > 1) ...[
-            const SizedBox(height: 4),
-            Wrap(
-              spacing: 8,
-              children: [
-                for (final p in places)
-                  ChoiceChip(
-                    label: Text(p.label),
-                    selected: p == _place,
-                    onSelected: (_) => setState(() => _place = p),
-                  ),
-              ],
+          if (list.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Text('No programs here yet – try another level.', textAlign: TextAlign.center),
             ),
-          ],
           const SizedBox(height: 8),
           for (final p in list)
             Card(
@@ -139,7 +146,8 @@ class StarterProgramScreen extends StatelessWidget {
                       children: [
                         Expanded(child: Text(w.name, style: text.titleMedium)),
                         FilledButton.tonal(
-                          onPressed: () => startTemplateWorkout(context, starterTemplate(program, w)),
+                          onPressed: () =>
+                              startTemplateWorkout(context, starterTemplate(program, w), place: program.place),
                           child: const Text('Start'),
                         ),
                       ],

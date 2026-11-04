@@ -5,6 +5,7 @@ import '../goals_section.dart';
 import '../measurements_section.dart';
 import '../number_input.dart';
 import '../../workout/training_level.dart';
+import '../../workout/training_place.dart';
 import '../export_action.dart';
 import '../streak_card.dart';
 
@@ -64,6 +65,29 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(level.description, style: text.bodySmall),
+              ],
+            ),
+          ),
+          ValueListenableBuilder<TrainingPlace>(
+            valueListenable: s.place,
+            builder: (context, place, _) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 16),
+                const Text('Where you train'),
+                const SizedBox(height: 6),
+                SegmentedButton<TrainingPlace>(
+                  key: const Key('placePicker'),
+                  showSelectedIcon: false,
+                  segments: [
+                    for (final p in TrainingPlace.values)
+                      ButtonSegment(value: p, label: Text(p.label, maxLines: 1, softWrap: false)),
+                  ],
+                  selected: {place},
+                  onSelectionChanged: (v) => s.setPlace(v.first),
+                ),
+                const SizedBox(height: 4),
+                Text('${place.description} Changes the exercise list and the starter programs.', style: text.bodySmall),
               ],
             ),
           ),

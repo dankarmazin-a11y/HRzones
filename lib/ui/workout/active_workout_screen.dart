@@ -99,7 +99,7 @@ class ActiveWorkoutScreen extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 120),
             children: [
               LinearProgressIndicator(value: session.progress, minHeight: 3),
-              if (!session.editMode || session.templateMode)
+              if ((!session.editMode || session.templateMode) && Services.of(context).zonesEnabled.value)
                 PresetRow(presetId: w.hrPresetId, onChanged: session.applyPreset),
               for (final (i, e) in w.exercises.indexed) _ExerciseCard(key: ValueKey(e.id), index: i, entry: e),
               if (w.exercises.length > 1)

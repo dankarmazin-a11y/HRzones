@@ -1,16 +1,7 @@
 import '../data/database.dart';
 import '../data/template_repository.dart';
 import 'training_level.dart';
-
-/// Where a program can be done. Only [gym] has programs for now; home,
-/// outdoors etc. come later and get their own chip automatically.
-enum ProgramPlace { gym }
-
-extension ProgramPlaceInfo on ProgramPlace {
-  String get label => switch (this) {
-    ProgramPlace.gym => 'Gym',
-  };
-}
+import 'training_place.dart';
 
 /// One exercise of a starter workout. [reps] or [seconds] is the target;
 /// [warmups] extra warm-up sets come first (advanced programs).
@@ -55,12 +46,12 @@ class StarterProgram {
     required this.schedule,
     required this.description,
     required this.workouts,
-    this.place = ProgramPlace.gym,
+    this.place = TrainingPlace.gym,
   });
 
   final String name;
   final TrainingLevel level;
-  final ProgramPlace place;
+  final TrainingPlace place;
 
   /// e.g. "3× a week".
   final String schedule;
@@ -304,6 +295,131 @@ const starterPrograms = <StarterProgram>[
         _E('Triceps_Pushdown_-_Rope_Attachment', 3, reps: 12, rest: 60),
         _E('Hanging_Leg_Raise', 3, reps: 12, rest: 60),
         _E('Cable_Crunch', 3, reps: 15, rest: 60),
+      ]),
+    ],
+  ),
+  // ---- Home (dumbbells, kettlebell, bodyweight) ----------------------------
+  StarterProgram(
+    name: 'Home Full Body',
+    level: TrainingLevel.beginner,
+    place: TrainingPlace.home,
+    schedule: '3× a week',
+    description: 'A pair of dumbbells and your body weight – everything you need to start at home.',
+    workouts: [
+      StarterWorkout('Home Full Body', [
+        _E('Bodyweight_Squat', 3, reps: 15, rest: 60),
+        _E('Pushups', 3, reps: 8, rest: 60),
+        _E('One-Arm_Dumbbell_Row', 3, reps: 10, rest: 60),
+        _E('Dumbbell_Shoulder_Press', 3, reps: 10, rest: 60),
+        _E('hz_glute_bridge', 3, reps: 15, rest: 45),
+        _E('Plank', 3, seconds: 30, rest: 45),
+      ]),
+    ],
+  ),
+  StarterProgram(
+    name: 'Home Upper / Lower',
+    level: TrainingLevel.intermediate,
+    place: TrainingPlace.home,
+    schedule: '4× a week',
+    description: 'Dumbbell upper and lower days, each twice a week. A bench helps but the floor works too.',
+    workouts: [
+      StarterWorkout('Home Upper', [
+        _E('Dumbbell_Bench_Press', 4, reps: 10),
+        _E('One-Arm_Dumbbell_Row', 4, reps: 10),
+        _E('Dumbbell_Shoulder_Press', 3, reps: 10),
+        _E('Side_Lateral_Raise', 3, reps: 15, rest: 60),
+        _E('Dumbbell_Bicep_Curl', 3, reps: 12, rest: 60),
+        _E('Standing_Dumbbell_Triceps_Extension', 3, reps: 12, rest: 60),
+      ]),
+      StarterWorkout('Home Lower', [
+        _E('Goblet_Squat', 4, reps: 12),
+        _E('hz_dumbbell_rdl', 4, reps: 10),
+        _E('hz_bulgarian_split_squat', 3, reps: 10),
+        _E('Dumbbell_Lunges', 3, reps: 10, rest: 75),
+        _E('Standing_Dumbbell_Calf_Raise', 3, reps: 15, rest: 45),
+        _E('hz_bicycle_crunch', 3, reps: 20, rest: 45),
+      ]),
+    ],
+  ),
+  StarterProgram(
+    name: 'Home Strength & Conditioning',
+    level: TrainingLevel.advanced,
+    place: TrainingPlace.home,
+    schedule: '3–4× a week, alternate A and B',
+    description: 'Heavy dumbbell and kettlebell work with short rests – strength and fitness in under an hour.',
+    workouts: [
+      StarterWorkout('Home A', [
+        _E('hz_kettlebell_swing', 5, reps: 15, rest: 60),
+        _E('Goblet_Squat', 4, reps: 12),
+        _E('Dumbbell_Bench_Press', 4, reps: 10),
+        _E('One-Arm_Dumbbell_Row', 4, reps: 10),
+        _E('hz_side_plank', 3, seconds: 45, rest: 30),
+      ]),
+      StarterWorkout('Home B', [
+        _E('hz_bulgarian_split_squat', 4, reps: 10),
+        _E('hz_dumbbell_rdl', 4, reps: 10),
+        _E('Arnold_Dumbbell_Press', 4, reps: 10),
+        _E('Pushups', 3, reps: 20, rest: 60),
+        _E('Hammer_Curls', 3, reps: 12, rest: 60),
+        _E('Dead_Bug', 3, reps: 12, rest: 45),
+      ]),
+    ],
+  ),
+  // ---- Outdoors (bodyweight, park bars) ------------------------------------
+  StarterProgram(
+    name: 'Park Starter',
+    level: TrainingLevel.beginner,
+    place: TrainingPlace.outdoors,
+    schedule: '3× a week',
+    description: 'No equipment at all – a bench or low bar in the park is enough. Fits nicely after an easy run.',
+    workouts: [
+      StarterWorkout('Park Starter', [
+        _E('Bodyweight_Squat', 3, reps: 15, rest: 60),
+        _E('Pushups', 3, reps: 8, rest: 60),
+        _E('Inverted_Row', 3, reps: 8, rest: 60),
+        _E('Bodyweight_Walking_Lunge', 3, reps: 10, rest: 60),
+        _E('hz_glute_bridge', 3, reps: 15, rest: 45),
+        _E('Plank', 3, seconds: 30, rest: 45),
+      ]),
+    ],
+  ),
+  StarterProgram(
+    name: 'Calisthenics Full Body',
+    level: TrainingLevel.intermediate,
+    place: TrainingPlace.outdoors,
+    schedule: '3× a week',
+    description: 'Pull-up bar and parallel bars: the classic street-workout basics.',
+    workouts: [
+      StarterWorkout('Calisthenics Full Body', [
+        _E('Pullups', 4, reps: 6, rest: 120),
+        _E('Dips_-_Triceps_Version', 4, reps: 10),
+        _E('Pushups', 3, reps: 15, rest: 60),
+        _E('Bodyweight_Walking_Lunge', 3, reps: 12, rest: 60),
+        _E('Hanging_Leg_Raise', 3, reps: 10, rest: 60),
+        _E('hz_side_plank', 3, seconds: 30, rest: 30),
+      ]),
+    ],
+  ),
+  StarterProgram(
+    name: 'Calisthenics Strength',
+    level: TrainingLevel.advanced,
+    place: TrainingPlace.outdoors,
+    schedule: '4× a week, alternate Pull and Push',
+    description: 'High-volume bar work for experienced athletes, finished with a grip and core block.',
+    workouts: [
+      StarterWorkout('Bar Pull', [
+        _E('Pullups', 5, reps: 8, rest: 120),
+        _E('Chin-Up', 4, reps: 8, rest: 120),
+        _E('Inverted_Row', 3, reps: 15, rest: 60),
+        _E('Hanging_Leg_Raise', 4, reps: 12, rest: 60),
+        _E('hz_dead_hang', 3, seconds: 45, rest: 60),
+      ]),
+      StarterWorkout('Bar Push & Legs', [
+        _E('Dips_-_Triceps_Version', 5, reps: 12),
+        _E('Pushups', 4, reps: 20, rest: 60),
+        _E('Bodyweight_Squat', 4, reps: 25, rest: 60),
+        _E('Bodyweight_Walking_Lunge', 3, reps: 16, rest: 60),
+        _E('hz_side_plank', 3, seconds: 45, rest: 30),
       ]),
     ],
   ),

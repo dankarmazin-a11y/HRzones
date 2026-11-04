@@ -4,6 +4,7 @@ import '../../app_services.dart';
 import '../../data/database.dart';
 import '../../data/exercise_repository.dart';
 import '../../workout/training_level.dart';
+import '../../workout/training_place.dart';
 import '../body_map.dart';
 import 'custom_exercise_screen.dart';
 import 'exercise_avatar.dart';
@@ -40,6 +41,17 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
 
   /// Ignore the training level and list every exercise.
   bool _allLevels = false;
+
+  /// Ignore where the user trains and list every piece of equipment.
+  bool _allEquipment = false;
+
+  /// Where you train decides the equipment (in a workout, hybrid trainers'
+  /// place for today).
+  TrainingPlace get _place {
+    final s = Services.of(context);
+    return s.effectivePlace(inWorkout: widget.pickMode && s.session.active != null);
+  }
+
   ExerciseSearchResult _results = const ExerciseSearchResult(popular: [], others: []);
   final _selected = <Exercise>[];
 
@@ -63,6 +75,7 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
       equipment: _equipment,
       group: _group,
       levels: _allLevels ? null : level.exerciseLevels,
+      allowedEquipment: _allEquipment ? null : _place.equipment,
     );
     if (mounted && id == _searchId) setState(() => _results = r);
   }
@@ -192,9 +205,37 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
                 ],
               ),
             ),
+          if (_place.equipment != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _allEquipment
+                          ? 'Showing all equipment'
+                          : 'Showing ${_place.label.toLowerCase()} equipment (Profile › Where you train)',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                  FilterChip(
+                    key: const Key('allEquipment'),
+                    label: const Text('All equipment'),
+                    selected: _allEquipment,
+                    onSelected: (v) {
+                      setState(() => _allEquipment = v);
+                      _search();
+                    },
+                  ),
+                ],
+              ),
+            ),
           _FilterRow(
             label: 'Equipment',
-            options: equipmentTypes,
+            options: [
+              for (final e in equipmentTypes)
+                if (_allEquipment || _place.allows(e)) e,
+            ],
             selected: _equipment,
             onChanged: (v) {
               _equipment = v;

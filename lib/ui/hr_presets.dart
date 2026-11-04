@@ -199,7 +199,10 @@ class PresetChoice {
 /// Asks which preset to use (or none). Returns null when cancelled, and
 /// "no preset" straight away when there are no presets for [use].
 Future<PresetChoice?> pickPreset(BuildContext context, PresetUse use, {String? current, bool askIfNone = false}) async {
-  final presets = await Services.of(context).presets.forUse(use);
+  final s = Services.of(context);
+  // Zones switched off (Tools › Heart-rate zones): never ask.
+  if (!s.zonesEnabled.value && !askIfNone) return const PresetChoice(null);
+  final presets = await s.presets.forUse(use);
   if (presets.isEmpty && !askIfNone) return const PresetChoice(null);
   if (!context.mounted) return null;
   return showModalBottomSheet<PresetChoice>(
@@ -224,7 +227,7 @@ Future<PresetChoice?> pickPreset(BuildContext context, PresetUse use, {String? c
               onTap: () => Navigator.pop(c, PresetChoice(p)),
             ),
           if (presets.isEmpty)
-            const ListTile(enabled: false, title: Text('Create presets on the HR zones screen (Profile)')),
+            const ListTile(enabled: false, title: Text('Create presets in Tools › Heart-rate zones')),
         ],
       ),
     ),

@@ -7,6 +7,7 @@ import 'data/database.dart';
 import 'data/goal_repository.dart';
 import 'data/preset_repository.dart';
 import 'workout/training_level.dart';
+import 'workout/training_place.dart';
 import 'data/exercise_repository.dart';
 import 'data/template_repository.dart';
 import 'data/workout_repository.dart';
@@ -53,6 +54,33 @@ class AppServices {
     await db.setSetting('level', l.name);
   }
 
+  /// Where the user trains (setting `place`, default gym).
+  final place = ValueNotifier<TrainingPlace>(TrainingPlace.gym);
+
+  Future<void> setPlace(TrainingPlace p) async {
+    place.value = p;
+    await db.setSetting('place', p.name);
+  }
+
+  /// The place whose equipment the exercise list shows. Hybrid: the place
+  /// picked for the running workout (in a workout), otherwise everything.
+  TrainingPlace effectivePlace({bool inWorkout = false}) {
+    final p = place.value;
+    if (p != TrainingPlace.hybrid) return p;
+    return inWorkout ? (session.workoutPlace ?? TrainingPlace.hybrid) : TrainingPlace.hybrid;
+  }
+
+  /// Heart-rate zones on/off (setting `zones`, default on). Off: no preset
+  /// question when a workout starts, no zone row, no automatic monitoring.
+  final zonesEnabled = ValueNotifier<bool>(true);
+
+  Future<void> setZonesEnabled(bool on) async {
+    zonesEnabled.value = on;
+    session.zonesEnabled = on;
+    if (!on) await hr.stop();
+    await db.setSetting('zones', on ? '1' : '0');
+  }
+
   late final GoalRepository goals;
 
   /// Workouts per week for the streak (setting `weeklyTarget`, default 3).
@@ -76,6 +104,7 @@ class AppServices {
     await s.exercises.seedIfNeeded(loadExercises);
     await s.intervals.seedDefaults();
     await s._loadSettings();
+    s.session.zonesEnabled = s.zonesEnabled.value;
     await s.session.restore();
     return s;
   }
@@ -85,6 +114,9 @@ class AppServices {
     weeklyTarget.value = await getInt('weeklyTarget') ?? 3;
     final theme = await db.getSetting('theme');
     themeMode.value = ThemeMode.values.where((m) => m.name == theme).firstOrNull ?? ThemeMode.light;
+    final placeName = await db.getSetting('place');
+    place.value = TrainingPlace.values.where((p) => p.name == placeName).firstOrNull ?? TrainingPlace.gym;
+    zonesEnabled.value = await db.getSetting('zones') != '0';
     final lvl = await db.getSetting('level');
     level.value = TrainingLevel.values.where((l) => l.name == lvl).firstOrNull ?? TrainingLevel.intermediate;
     final age = await getInt('age');
