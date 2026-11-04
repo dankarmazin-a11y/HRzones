@@ -119,12 +119,20 @@ class AppServices {
     required Future<String> Function() loadExercises,
     AppDatabase? db,
     HrMonitor? hr,
+    ValueChanged<String>? onStep,
   }) async {
     final s = AppServices._(db ?? AppDatabase(), hr ?? HrMonitor(), loadExercises);
+    // Each step is reported so a stuck start-up shows where it hangs.
+    onStep?.call('Opening the database');
+    await s.db.customSelect('SELECT 1').get();
+    onStep?.call('Loading the exercise list');
     await s.exercises.seedIfNeeded(loadExercises);
+    onStep?.call('Loading timers');
     await s.intervals.seedDefaults();
+    onStep?.call('Loading settings');
     await s._loadSettings();
     s.session.zonesEnabled = s.zonesEnabled.value;
+    onStep?.call('Restoring your workout');
     await s.session.restore();
     return s;
   }

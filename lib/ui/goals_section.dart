@@ -42,6 +42,13 @@ class GoalsSection extends StatelessWidget {
                         Expanded(child: Text('Goals', style: text.titleMedium)),
                         if (onSeeAll != null && goals.isNotEmpty)
                           TextButton(onPressed: onSeeAll, child: const Text('See all')),
+                        if (limit != null && goals.isNotEmpty)
+                          IconButton(
+                            key: const Key('addGoalHome'),
+                            tooltip: 'Add goal',
+                            icon: const Icon(Icons.add),
+                            onPressed: () => addGoal(context),
+                          ),
                         if (limit == null)
                           TextButton.icon(
                             icon: const Icon(Icons.add),

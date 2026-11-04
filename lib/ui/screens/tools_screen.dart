@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app_services.dart';
+import '../../data/exercise_repository.dart';
 import '../timers/timers_screen.dart';
 import 'zones_screen.dart';
 
@@ -37,6 +38,8 @@ class ToolsScreen extends StatelessWidget {
             subtitle: 'Intervals (Tabata, EMOM…), your own timers and quick countdowns',
             onTap: () => open(const TimersScreen()),
           ),
+          const SizedBox(height: 12),
+          const ToolsGuide(),
         ],
       ),
     );
@@ -90,6 +93,90 @@ class _ToolBox extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// "How the tools work": a short guide below the tool boxes. Open until the
+/// user closes it once (setting `toolsGuideClosed`).
+class ToolsGuide extends StatefulWidget {
+  const ToolsGuide({super.key});
+
+  @override
+  State<ToolsGuide> createState() => _ToolsGuideState();
+}
+
+class _ToolsGuideState extends State<ToolsGuide> {
+  bool? _open;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_open != null) return;
+    Services.of(context).db.getSetting('toolsGuideClosed').then((v) {
+      if (mounted) setState(() => _open = v != '1');
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final open = _open;
+    if (open == null) return const SizedBox.shrink();
+    final text = Theme.of(context).textTheme;
+    Widget section(IconData icon, String title, List<String> lines) => Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18),
+              const SizedBox(width: 6),
+              Text(title, style: text.titleSmall),
+            ],
+          ),
+          for (final l in lines)
+            Padding(
+              padding: const EdgeInsets.only(left: 24, top: 4),
+              child: Text('• $l', style: text.bodyMedium),
+            ),
+        ],
+      ),
+    );
+    return Card(
+      key: const Key('toolsGuide'),
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        initiallyExpanded: open,
+        leading: const Icon(Icons.info_outline),
+        title: const Text('How the tools work'),
+        shape: const Border(),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        expandedCrossAxisAlignment: CrossAxisAlignment.start,
+        onExpansionChanged: (v) {
+          _open = v;
+          Services.of(context).db.setSetting('toolsGuideClosed', v ? '0' : '1');
+        },
+        children: [
+          section(Icons.monitor_heart_outlined, 'Heart-rate zones', const [
+            'Pick a target range (or a zone Z1–Z5) and tap Start monitoring.',
+            'Above the range: 3 high beeps. Below it: 2 low beeps. Also with the screen locked and music on.',
+            'Save ranges you use often as presets (e.g. "Easy run") and choose one when a workout starts.',
+            'Connect a Bluetooth chest strap or arm band for your real heart rate (the slider is for testing).',
+            "Don't want zones at all? Turn them off with the switch at the top.",
+          ]),
+          section(Icons.timer_outlined, 'Timers', const [
+            'Quick: one tap starts a countdown (30 s, 1 min…) or type your own.',
+            'Interval timers: work and rest rounds, e.g. Tabata or EMOM. Tap the play button to start, ⋯ to edit.',
+            'Sounds: 2 high beeps = work, 1 low beep = rest, short ticks = last 3 seconds, 3 high beeps = done.',
+            '"New timer" builds your own (any number of steps and rounds).',
+          ]),
+          section(Icons.lightbulb_outline, 'Good to know', const [
+            'Rest between sets runs inside a workout – it ends with a ding.',
+            'Tap a tab again to jump back to the top.',
+          ]),
+        ],
       ),
     );
   }

@@ -183,6 +183,7 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('Tools').last);
     await settle(tester);
+    await tester.scrollUntilVisible(find.byKey(const Key('toolZones')), 200, scrollable: find.byType(Scrollable).first);
     await tester.tap(find.byKey(const Key('toolZones')));
     await settle(tester);
     await tester.scrollUntilVisible(find.byKey(const Key('bpm')), 200);

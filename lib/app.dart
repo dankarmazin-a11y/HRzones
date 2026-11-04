@@ -54,19 +54,52 @@ class _HomeShellState extends State<HomeShell> {
 
   static const _screens = [HomeScreen(), WorkoutsScreen(), RunScreen(), ToolsScreen(), ProfileScreen()];
 
+  /// One scroll position per tab. Without this, on iPhone every tab's list
+  /// attached to the same (route-wide) controller and the tabs' scroll
+  /// positions got mixed up.
+  final _scroll = [for (final _ in AppTab.values) ScrollController()];
+
+  @override
+  void dispose() {
+    for (final c in _scroll) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  /// Tapping the tab you are on scrolls it back to the top (like iOS apps).
+  void _select(AppTab t) {
+    if (t == _tab) {
+      final c = _scroll[t.index];
+      if (c.hasClients) c.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+      return;
+    }
+    setState(() => _tab = t);
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppShell(
       goTo: (t) => setState(() => _tab = t),
       child: Scaffold(
-        body: IndexedStack(index: _tab.index, children: _screens),
+        body: IndexedStack(
+          index: _tab.index,
+          children: [
+            for (final (i, screen) in _screens.indexed)
+              PrimaryScrollController(
+                controller: _scroll[i],
+                automaticallyInheritForPlatforms: TargetPlatform.values.toSet(),
+                child: screen,
+              ),
+          ],
+        ),
         bottomNavigationBar: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const RunningWorkoutBar(),
             NavigationBar(
               selectedIndex: _tab.index,
-              onDestinationSelected: (i) => setState(() => _tab = AppTab.values[i]),
+              onDestinationSelected: (i) => _select(AppTab.values[i]),
               destinations: const [
                 NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
                 NavigationDestination(
