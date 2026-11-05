@@ -41,13 +41,17 @@ class RunVoice {
   void paused() => _say('Run paused.');
   void resumed() => _say('Run resumed.');
 
-  void finished(double distanceM, Duration moving) {
+  /// [newRecords]: record distance (m) → new fastest time (s).
+  void finished(double distanceM, Duration moving, {Map<int, double> newRecords = const {}}) {
     final pace = paceSecPerKm(distanceM, moving.inMilliseconds / 1000);
     _say(
       [
         'Run complete.',
         '${spokenKm(distanceM)} in ${spokenDuration(moving)}.',
         if (pace != null && distanceM >= 200) 'Average pace ${spokenPace(pace)}.',
+        for (final e in newRecords.entries)
+          'New record! Fastest ${e.key == 21097 ? 'half marathon' : spokenKm(e.key.toDouble())}, '
+              '${spokenDuration(Duration(seconds: e.value.round()))}.',
       ].join(' '),
     );
   }

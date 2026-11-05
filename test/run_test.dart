@@ -9,6 +9,7 @@ import 'package:hrzones/data/exercise_repository.dart';
 import 'package:hrzones/data/run_repository.dart';
 import 'package:hrzones/hr/hr_monitor.dart';
 import 'package:hrzones/hr/zones.dart';
+import 'package:hrzones/run/best_efforts.dart';
 import 'package:hrzones/run/geo.dart';
 import 'package:hrzones/run/location_source.dart';
 import 'package:hrzones/run/run_session.dart';
@@ -16,6 +17,8 @@ import 'package:hrzones/run/route_zones.dart';
 import 'package:hrzones/run/run_voice.dart';
 import 'package:hrzones/run/splits.dart';
 import 'package:hrzones/ui/run/run_map.dart';
+import 'package:hrzones/ui/screens/home_screen.dart';
+import 'package:hrzones/ui/screens/run_screen.dart';
 
 import 'app_test.dart' show settle, tearDownApp;
 import 'test_helpers.dart';
@@ -640,6 +643,120 @@ void main() {
     expect(find.byKey(const Key('zoneTime_3')), findsOneWidget);
     expect(tester.widget<Text>(find.byKey(const Key('zoneTime_3'))).data, '02:00');
     expect(find.textContaining('In your zone (120–150) 100%'), findsOneWidget);
+    await tearDownApp(tester, s);
+  });
+
+  group('records', () {
+    EffortPoint ep(double metres, int s, {int segment = 0}) {
+      final f = north(metres, s);
+      return (time: f.time, lat: f.lat, lon: f.lon, accuracy: 5.0, segment: segment);
+    }
+
+    test('the fastest km anywhere in the run, not just the first', () {
+      // 1 km at 3 m/s, then 1 km at 5 m/s (200 s), then 1 km at 3 m/s.
+      final pts = <EffortPoint>[ep(0, 0)];
+      var d = 0.0, t = 0;
+      for (final speed in [3.0, 5.0, 3.0]) {
+        final steps = (1000 / speed).round();
+        for (var i = 0; i < steps; i++) {
+          d += speed;
+          t++;
+          pts.add(ep(d, t));
+        }
+      }
+      final b = bestEfforts(pts);
+      expect(b[1000], closeTo(200, 3));
+      expect(b.containsKey(5000), isFalse, reason: 'run shorter than 5 km');
+    });
+
+    test('pauses are not counted', () {
+      final pts = [
+        for (var i = 0; i <= 100; i++) ep(i * 5.0, i),
+        for (var i = 0; i <= 100; i++) ep(500 + i * 5.0, 1000 + i, segment: 1),
+      ];
+      expect(bestEfforts(pts)[1000], closeTo(200, 2));
+    });
+
+    test('a faster run sets a record (announced); the first run does not', () async {
+      final beeper = SilentBeeper();
+      final hr = HrMonitor(beeper: beeper);
+      var clock = t0;
+      final gps = FakeLocation();
+      final repo = RunRepository(memoryDb());
+      final run = RunSession(runs: repo, hr: hr, location: gps, clock: () => clock)..voice = RunVoice(beeper.speak);
+
+      Future<void> oneRun(DateTime start, double mps) async {
+        clock = start;
+        await run.start();
+        gps.emit(GeoFix(time: start, lat: lat0, lon: lon0, accuracy: 5));
+        for (var i = 1; i <= 1100 / mps; i++) {
+          clock = start.add(Duration(seconds: i));
+          gps.emit(GeoFix(time: clock, lat: lat0 + i * mps / 111195, lon: lon0, accuracy: 5));
+          await Future<void>.delayed(Duration.zero);
+        }
+        await run.finish();
+      }
+
+      await oneRun(t0, 3);
+      expect(beeper.spoken.last, isNot(contains('New record')));
+      await oneRun(t0.add(const Duration(days: 1)), 4);
+      expect(beeper.spoken.last, contains('New record! Fastest 1 kilometre'));
+      await oneRun(t0.add(const Duration(days: 2)), 3.5);
+      expect(beeper.spoken.last, isNot(contains('New record')));
+
+      final rec = await repo.records();
+      expect(rec.fastest[1000]!.value, closeTo(250, 3));
+      expect(rec.longest!.value, closeTo(1100, 10));
+    });
+  });
+
+  testWidgets('a run counts on Home (this week, streak, last workout) and in the records', (tester) async {
+    final s = (await tester.runAsync(testServices))!;
+    final gps = FakeLocation();
+    s.run.location = gps;
+    await tester.runAsync(() => s.setWeeklyTarget(1));
+    await tester.pumpWidget(HrZonesApp(services: s));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('startRunHome')));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('goRun')));
+    await countdown(tester);
+    gps.emit(north(0, 0));
+    for (var i = 1; i <= 400; i++) {
+      gps.emit(north(i * 3.0, i));
+    }
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('pauseRun')));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('finishRun')));
+    await settle(tester);
+    await tester.tap(find.text('Save'));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+    await settle(tester);
+    expect(find.byKey(const Key('runBests')), findsOneWidget, reason: 'best 1 km of this run');
+    await tester.pageBack();
+    await settle(tester);
+
+    // Home.
+    await tester.tap(find.text('Home').last);
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+    await settle(tester);
+    expect(find.text('1-week streak'), findsOneWidget);
+    expect(find.text('km run'), findsOneWidget);
+    final homeTile = find.descendant(of: find.byType(HomeScreen), matching: find.byType(RunTile));
+    await tester.scrollUntilVisible(
+      homeTile,
+      200,
+      scrollable: find.descendant(of: find.byType(HomeScreen), matching: find.byType(Scrollable)).first,
+    );
+    expect(homeTile, findsOneWidget, reason: 'the run is the last workout');
+
+    // Run tab: records.
+    await tester.tap(find.text('Run').last);
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+    await settle(tester);
+    expect(find.byKey(const Key('runRecords')), findsOneWidget);
+    expect(find.byKey(const Key('record_1000')), findsOneWidget);
     await tearDownApp(tester, s);
   });
 }

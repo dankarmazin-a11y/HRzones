@@ -10,6 +10,9 @@ import '../goals_section.dart';
 import '../history/history_screen.dart';
 import '../streak_card.dart';
 import '../run/run_start.dart';
+import '../../data/database.dart';
+import '../../run/geo.dart';
+import 'run_screen.dart';
 import 'workouts_screen.dart';
 
 /// Dashboard: streak, quick start (strength / run / zones), goals, this week.
@@ -102,63 +105,80 @@ class _ThisWeek extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final s = Services.of(context);
     return StreamBuilder<List<WorkoutListItem>>(
-      stream: Services.of(context).workouts.watchFinished(),
-      builder: (context, snap) {
-        final list = snap.data ?? const <WorkoutListItem>[];
-        final monday = weekStart(DateTime.now());
-        final week = list.where((i) => !i.workout.startedAt.isBefore(monday)).toList();
-        final volume = week.fold(0.0, (v, i) => v + i.volume);
-        final sets = week.fold(0, (v, i) => v + i.setCount);
-        final minutes = week.fold(
-          0,
-          (v, i) => v + ((i.workout.endedAt ?? i.workout.startedAt).difference(i.workout.startedAt).inMinutes),
-        );
-        Widget stat(String label, String value) => Expanded(
-          child: Column(
-            children: [
-              Text(value, style: text.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-              Text(label, style: text.labelSmall),
-            ],
-          ),
-        );
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('This week', style: text.titleMedium),
-            const SizedBox(height: 8),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Row(
-                  children: [
-                    stat('workouts', '${week.length}'),
-                    stat('sets', '$sets'),
-                    stat('kg lifted', formatKg(volume)),
-                    stat('minutes', '$minutes'),
-                  ],
+      stream: s.workouts.watchFinished(),
+      builder: (context, snap) => StreamBuilder<List<Run>>(
+        stream: s.runs.watchFinished(),
+        builder: (context, runSnap) {
+          final list = snap.data ?? const <WorkoutListItem>[];
+          final runs = runSnap.data ?? const <Run>[];
+          final monday = weekStart(DateTime.now());
+          final week = list.where((i) => !i.workout.startedAt.isBefore(monday)).toList();
+          final weekRuns = runs.where((r) => !r.startedAt.isBefore(monday)).toList();
+          final volume = week.fold(0.0, (v, i) => v + i.volume);
+          final sets = week.fold(0, (v, i) => v + i.setCount);
+          final km = weekRuns.fold(0.0, (v, r) => v + r.distanceM);
+          final minutes =
+              week.fold(
+                0,
+                (v, i) => v + ((i.workout.endedAt ?? i.workout.startedAt).difference(i.workout.startedAt).inMinutes),
+              ) +
+              weekRuns.fold(0, (v, r) => v + r.durationS ~/ 60);
+          // The newest workout of either kind.
+          final lastRun = runs.firstOrNull;
+          final lastStrength = list.firstOrNull;
+          final runIsLast =
+              lastRun != null && (lastStrength == null || lastRun.startedAt.isAfter(lastStrength.workout.startedAt));
+          Widget stat(String label, String value) => Expanded(
+            child: Column(
+              children: [
+                FittedBox(
+                  child: Text(value, style: text.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
                 ),
-              ),
+                Text(label, style: text.labelSmall),
+              ],
             ),
-            if (list.isNotEmpty) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
-                child: Row(
-                  children: [
-                    Expanded(child: Text('Last workout', style: text.titleMedium)),
-                    TextButton(
-                      onPressed: () =>
-                          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const HistoryScreen())),
-                      child: const Text('History'),
-                    ),
-                  ],
+          );
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('This week', style: text.titleMedium),
+              const SizedBox(height: 8),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Row(
+                    children: [
+                      stat('workouts', '${week.length + weekRuns.length}'),
+                      stat('sets', '$sets'),
+                      stat('kg lifted', formatKg(volume)),
+                      stat('km run', formatKm(km)),
+                      stat('minutes', '$minutes'),
+                    ],
+                  ),
                 ),
               ),
-              WorkoutTile(item: list.first),
+              if (list.isNotEmpty || runs.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 12, 4, 4),
+                  child: Row(
+                    children: [
+                      Expanded(child: Text('Last workout', style: text.titleMedium)),
+                      TextButton(
+                        onPressed: () =>
+                            Navigator.of(context).push(MaterialPageRoute(builder: (_) => const HistoryScreen())),
+                        child: const Text('History'),
+                      ),
+                    ],
+                  ),
+                ),
+                if (runIsLast) RunTile(run: lastRun) else WorkoutTile(item: lastStrength!),
+              ],
             ],
-          ],
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

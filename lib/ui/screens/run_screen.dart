@@ -4,6 +4,7 @@ import '../../app_services.dart';
 import '../../data/database.dart';
 import '../../run/geo.dart';
 import '../../workout/stats.dart';
+import '../run/run_records.dart';
 import '../run/run_start.dart';
 import '../run/run_summary_screen.dart';
 import 'zones_screen.dart';
@@ -52,6 +53,8 @@ class RunScreen extends StatelessWidget {
               const SizedBox(height: 8),
               if (runs.isNotEmpty) ...[
                 _Totals(runs: runs),
+                const SizedBox(height: 8),
+                RunRecordsCard(runs: runs),
                 const SizedBox(height: 16),
                 Text('Your runs', style: text.titleMedium),
                 for (final r in runs) RunTile(run: r),
