@@ -22,7 +22,11 @@ void main() {
         for (final e in w.exercises) {
           expect(byId[e.id], isNotNull, reason: '${p.name} / ${w.name}: ${e.id} missing');
           expect(byId[e.id]!['hidden'], isNot(true), reason: '${e.id} is hidden');
-          expect((e.reps == null) != (e.seconds == null), isTrue, reason: '${e.id}: reps or seconds');
+          expect(
+            [e.reps, e.seconds, e.metres].where((x) => x != null).length,
+            1,
+            reason: '${e.id}: reps, seconds or metres',
+          );
         }
       }
     }

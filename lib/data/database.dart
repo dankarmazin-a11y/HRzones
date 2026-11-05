@@ -18,6 +18,10 @@ enum Side { left, right }
 
 enum WorkoutType { strength, run, walk, cycle, other }
 
+/// Id of the "Run" exercise: in a strength workout its sets can be measured
+/// with GPS (hybrid workouts).
+const runExerciseId = 'hz_run';
+
 /// Id of the "Stretching" session container exercise.
 const stretchingSessionId = 'hz_stretching';
 

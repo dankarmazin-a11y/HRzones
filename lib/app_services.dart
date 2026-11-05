@@ -49,6 +49,7 @@ class AppServices {
       ..voice = RunVoice(hr.beeper.speak)
       ..notifier = restNotifier
       ..plans = runPlans.byId;
+    session.locationFor = () => run.location;
   }
 
   final RunRepository runs;

@@ -6,18 +6,21 @@ import 'training_place.dart';
 /// One exercise of a starter workout. [reps] or [seconds] is the target;
 /// [warmups] extra warm-up sets come first (advanced programs).
 class StarterExercise {
-  const StarterExercise(this.id, this.sets, {this.reps, this.seconds, this.rest = 90, this.warmups = 0});
+  const StarterExercise(this.id, this.sets, {this.reps, this.seconds, this.metres, this.rest = 90, this.warmups = 0});
 
   final String id;
   final int sets;
   final int? reps;
   final int? seconds;
+
+  /// Distance target (hybrid workouts: run, row, sled…).
+  final int? metres;
   final int rest;
   final int warmups;
 
   /// "3 × 10", "3 × 30 s", "2 W + 4 × 6".
   String get scheme {
-    final target = seconds != null ? '$seconds s' : '$reps';
+    final target = metres != null ? '$metres m' : (seconds != null ? '$seconds s' : '$reps');
     return '${warmups > 0 ? '$warmups W + ' : ''}$sets × $target';
   }
 
@@ -27,7 +30,7 @@ class StarterExercise {
     restSeconds: rest,
     sets: [
       for (var i = 0; i < warmups; i++) TemplateSet(type: SetType.warmup, reps: reps, durationS: seconds),
-      for (var i = 0; i < sets; i++) TemplateSet(reps: reps, durationS: seconds),
+      for (var i = 0; i < sets; i++) TemplateSet(reps: reps, durationS: seconds, distanceM: metres?.toDouble()),
     ],
   );
 }
@@ -397,6 +400,44 @@ const starterPrograms = <StarterProgram>[
         _E('Bodyweight_Walking_Lunge', 3, reps: 12, rest: 60),
         _E('Hanging_Leg_Raise', 3, reps: 10, rest: 60),
         _E('hz_side_plank', 3, seconds: 30, rest: 30),
+      ]),
+    ],
+  ),
+  StarterProgram(
+    name: 'Hybrid Race Prep',
+    level: TrainingLevel.advanced,
+    schedule: '1–2× a week, next to your runs',
+    description:
+        'HYROX-style: 1 km runs between functional stations. Tap ▶ on a Run row and it measures the distance '
+        'with GPS. Rest is short – keep moving.',
+    workouts: [
+      StarterWorkout('Hybrid Full', [
+        _E('hz_run', 1, metres: 1000, rest: 0),
+        _E('hz_ski_erg', 1, metres: 1000, rest: 0),
+        _E('hz_run', 1, metres: 1000, rest: 0),
+        _E('Sled_Push', 1, metres: 50, rest: 0),
+        _E('hz_run', 1, metres: 1000, rest: 0),
+        _E('hz_sled_pull', 1, metres: 50, rest: 0),
+        _E('hz_run', 1, metres: 1000, rest: 0),
+        _E('hz_burpee_broad_jump', 1, metres: 80, rest: 0),
+        _E('hz_run', 1, metres: 1000, rest: 0),
+        _E('Rowing_Stationary', 1, metres: 1000, rest: 0),
+        _E('hz_run', 1, metres: 1000, rest: 0),
+        _E('Farmers_Walk', 1, metres: 200, rest: 0),
+        _E('hz_run', 1, metres: 1000, rest: 0),
+        _E('hz_sandbag_lunge', 1, metres: 100, rest: 0),
+        _E('hz_run', 1, metres: 1000, rest: 0),
+        _E('hz_wall_ball', 1, reps: 100, rest: 0),
+      ]),
+      StarterWorkout('Hybrid Half', [
+        _E('hz_run', 1, metres: 1000, rest: 0),
+        _E('hz_ski_erg', 1, metres: 500, rest: 0),
+        _E('hz_run', 1, metres: 1000, rest: 0),
+        _E('hz_burpee_broad_jump', 1, metres: 40, rest: 0),
+        _E('hz_run', 1, metres: 1000, rest: 0),
+        _E('Rowing_Stationary', 1, metres: 500, rest: 0),
+        _E('hz_run', 1, metres: 1000, rest: 0),
+        _E('hz_wall_ball', 1, reps: 50, rest: 0),
       ]),
     ],
   ),

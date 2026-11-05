@@ -11,6 +11,9 @@ class LoggedSet {
   double? weightKg;
   int? reps;
   int? durationS;
+
+  /// Metres (distance sets: run, row, sled…).
+  double? distanceM;
   double? rpe;
   int? maxHr;
   DateTime? completedAt;
@@ -25,6 +28,7 @@ class LoggedSet {
 
   /// A copy with the same values, not done (new id).
   LoggedSet copy({Side? side}) => LoggedSet(type: type, weightKg: weightKg, reps: reps, durationS: durationS)
+    ..distanceM = distanceM
     ..subExercise = subExercise
     ..side = side ?? this.side;
 }

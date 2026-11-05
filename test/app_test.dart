@@ -118,7 +118,7 @@ void main() {
     await tearDownApp(tester, s);
   });
 
-  testWidgets('measure-type button cycles weight × reps → reps → time', (tester) async {
+  testWidgets('measure-type button cycles weight × reps → reps → time → metres', (tester) async {
     final s = (await tester.runAsync(testServices))!;
     await tester.runAsync(() async {
       await s.session.startEmpty();
@@ -129,7 +129,7 @@ void main() {
     await tester.tap(find.byKey(const Key('runningWorkoutBar')));
     await settle(tester);
     expect(find.text('kg×reps'), findsOneWidget);
-    for (final next in ['reps', 'time', 'kg×reps']) {
+    for (final next in ['reps', 'time', 'metres', 'kg×reps']) {
       await tester.tap(find.byKey(const Key('trackingToggle')));
       await settle(tester);
       expect(find.text(next), findsOneWidget);

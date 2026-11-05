@@ -13,6 +13,7 @@ import '../../workout/stats.dart';
 import '../../workout/training_level.dart';
 import '../../workout/template_update.dart';
 import '../../workout/workout_session.dart';
+import '../../run/location_source.dart';
 import '../exercises/exercise_avatar.dart';
 import '../exercises/exercise_detail_screen.dart';
 import '../exercises/exercise_library_screen.dart';
@@ -558,14 +559,20 @@ class TrackingToggle extends StatelessWidget {
   final TrackingType type;
   final ValueChanged<TrackingType> onChanged;
 
-  static const _order = [TrackingType.weightReps, TrackingType.bodyweightReps, TrackingType.duration];
+  static const _order = [
+    TrackingType.weightReps,
+    TrackingType.bodyweightReps,
+    TrackingType.duration,
+    TrackingType.distance,
+  ];
 
   @override
   Widget build(BuildContext context) {
     final (icon, label) = switch (type) {
       TrackingType.weightReps => (Icons.fitness_center, 'kg×reps'),
       TrackingType.bodyweightReps => (Icons.repeat, 'reps'),
-      TrackingType.duration || TrackingType.distance => (Icons.timer_outlined, 'time'),
+      TrackingType.duration => (Icons.timer_outlined, 'time'),
+      TrackingType.distance => (Icons.straighten, 'metres'),
     };
     final scheme = Theme.of(context).colorScheme;
     return Tooltip(
@@ -829,6 +836,9 @@ class _HeaderRow extends StatelessWidget {
           if (tracking == TrackingType.duration) ...[
             Expanded(child: cell('+KG')),
             Expanded(child: cell('SECONDS')),
+          ] else if (tracking == TrackingType.distance) ...[
+            Expanded(child: cell('METRES')),
+            Expanded(child: cell('SECONDS')),
           ] else ...[
             Expanded(child: cell(tracking == TrackingType.bodyweightReps ? '+KG' : 'KG')),
             Expanded(child: cell('REPS')),
@@ -883,6 +893,7 @@ class _SetRowState extends State<SetRow> {
   late final _weight = TextEditingController(text: formatKg(widget.set.weightKg));
   late final _reps = TextEditingController(text: widget.set.reps?.toString() ?? '');
   late final _secs = TextEditingController(text: widget.set.durationS?.toString() ?? '');
+  late final _metres = TextEditingController(text: widget.set.distanceM == null ? '' : formatKg(widget.set.distanceM));
 
   @override
   void didUpdateWidget(SetRow old) {
@@ -904,6 +915,7 @@ class _SetRowState extends State<SetRow> {
     _weight.dispose();
     _reps.dispose();
     _secs.dispose();
+    _metres.dispose();
     super.dispose();
   }
 
@@ -950,6 +962,9 @@ class _SetRowState extends State<SetRow> {
     if (widget.entry.exercise.trackingType == TrackingType.duration) {
       return (w == null || w == 0) ? '${p.durationS ?? 0} s' : '+${formatKg(w)} · ${p.durationS ?? 0}s';
     }
+    if (widget.entry.exercise.trackingType == TrackingType.distance) {
+      return '${formatKg(p.distanceM ?? 0)} m · ${formatDuration(Duration(seconds: p.durationS ?? 0))}';
+    }
     final reps = p.reps ?? 0;
     return (w == null || w == 0) ? '$reps reps' : '${formatKg(w)} × $reps';
   }
@@ -960,7 +975,9 @@ class _SetRowState extends State<SetRow> {
     if (p.weightKg != null) session.setWeight(widget.set, p.weightKg);
     if (p.reps != null) session.setReps(widget.set, p.reps);
     if (p.durationS != null) session.setDuration(widget.set, p.durationS);
+    if (p.distanceM != null) session.setDistance(widget.set, p.distanceM);
     setState(() {
+      _metres.text = widget.set.distanceM == null ? '' : formatKg(widget.set.distanceM);
       _weight.text = formatKg(widget.set.weightKg);
       _reps.text = widget.set.reps?.toString() ?? '';
       _secs.text = widget.set.durationS?.toString() ?? '';
@@ -975,6 +992,23 @@ class _SetRowState extends State<SetRow> {
         tooltip: 'Undo',
         icon: const Icon(Icons.check_box, color: Colors.green),
         onPressed: () => session.toggleDone(widget.entry, s),
+      );
+    }
+    if (tracking == TrackingType.distance && widget.entry.exercise.id == runExerciseId && !session.editMode) {
+      final going = session.setRun?.set == s;
+      return IconButton(
+        key: Key('setRun_${widget.index}'),
+        tooltip: going ? 'Stop' : 'Run it (GPS)',
+        icon: Icon(going ? Icons.stop_circle : Icons.directions_run, color: timedColor(context)),
+        onPressed: () async {
+          FocusScope.of(context).unfocus();
+          if (going) return session.stopSetRun();
+          final messenger = ScaffoldMessenger.of(context);
+          final access = await session.startSetRun(widget.entry, s);
+          if (access != LocationAccess.granted) {
+            messenger.showSnackBar(const SnackBar(content: Text('Location is needed to measure the run.')));
+          }
+        },
       );
     }
     if (tracking == TrackingType.duration && !session.editMode) {
@@ -1151,6 +1185,37 @@ class _SetRowState extends State<SetRow> {
             if (tracking == TrackingType.duration) ...[
               Expanded(child: weightField(hintOf(prev?.weightKg))),
               Expanded(child: secondsCell()),
+            ] else if (tracking == TrackingType.distance && session.setRun?.set == s) ...[
+              // Running it now: live metres and time.
+              for (final metres in [true, false])
+                Expanded(
+                  child: Center(
+                    child: ListenableBuilder(
+                      listenable: session.ticks,
+                      builder: (context, _) {
+                        final r = session.setRun;
+                        if (r == null) return const SizedBox.shrink();
+                        return Text(
+                          metres
+                              ? '${r.metres.round()}${r.target == null ? '' : '/${formatKg(r.target)}'} m'
+                              : formatDuration(r.elapsed),
+                          key: metres ? const Key('setRunMetres') : null,
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: timedColor(context)),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+            ] else if (tracking == TrackingType.distance) ...[
+              Expanded(
+                child: field(
+                  _metres,
+                  hintOf(prev?.distanceM),
+                  (v) => session.setDistance(s, double.tryParse(v.replaceAll(',', '.'))),
+                  decimal: true,
+                ),
+              ),
+              Expanded(child: field(_secs, hintOf(prev?.durationS), (v) => session.setDuration(s, int.tryParse(v)))),
             ] else ...[
               Expanded(child: weightField(hintOf(prev?.weightKg))),
               Expanded(child: field(_reps, hintOf(prev?.reps), (v) => session.setReps(s, int.tryParse(v)))),
