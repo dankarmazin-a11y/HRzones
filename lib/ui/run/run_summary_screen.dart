@@ -10,6 +10,7 @@ import '../hr_presets.dart';
 import 'run_map.dart';
 import 'edit_run_screen.dart';
 import 'run_feel.dart';
+import 'run_plans.dart';
 import 'run_records.dart';
 import 'run_start.dart';
 import 'share_run.dart';
@@ -155,6 +156,7 @@ class _Body extends StatelessWidget {
         const SizedBox(height: 8),
         RunShoeRow(runId: run.id, shoeId: run.shoeId),
         RunFeelCard(key: ValueKey('feel_${run.id}'), run: run),
+        LapsCard(run: run),
         RunCompareCard(key: ValueKey('compare_${run.id}'), run: run),
         RunBestsCard(run: run),
         _SplitsSection(run: run),

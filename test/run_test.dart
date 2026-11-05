@@ -58,6 +58,9 @@ final t0 = DateTime(2026, 11, 5, 7);
 /// The run summary's main list (it also holds a notes text field).
 Finder summaryList() => find.descendant(of: find.byType(RunSummaryScreen), matching: find.byType(Scrollable)).first;
 
+/// The Run tab's list.
+Finder runTabList() => find.descendant(of: find.byType(RunScreen), matching: find.byType(Scrollable)).first;
+
 /// Lets the 3-2-1 countdown before a run run out.
 Future<void> countdown(WidgetTester tester) async {
   await settle(tester);
@@ -249,7 +252,10 @@ void main() {
 
     await tester.tap(find.text('Run').last);
     await settle(tester);
+    await tester.scrollUntilVisible(find.textContaining('Your runs will show up here'), 200, scrollable: runTabList());
     expect(find.textContaining('Your runs will show up here'), findsOneWidget);
+    await tester.scrollUntilVisible(find.byKey(const Key('startRun')), -200, scrollable: runTabList());
+    await settle(tester);
     await tester.tap(find.byKey(const Key('startRun')));
     await settle(tester);
     await tester.tap(find.byKey(const Key('goRun')));
@@ -279,6 +285,7 @@ void main() {
 
     await tester.pageBack();
     await settle(tester);
+    await tester.dragUntilVisible(find.byType(RunTile), find.byType(RunScreen), const Offset(0, -200));
     expect(find.text('1.20 km'), findsWidgets);
     expect(find.byKey(const Key('runningRunBar')), findsNothing);
     await tearDownApp(tester, s);
@@ -760,6 +767,7 @@ void main() {
     await tester.tap(find.text('Run').last);
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
     await settle(tester);
+    await tester.scrollUntilVisible(find.byKey(const Key('record_1000')), 200, scrollable: runTabList());
     expect(find.byKey(const Key('runRecords')), findsOneWidget);
     expect(find.byKey(const Key('record_1000')), findsOneWidget);
     await tearDownApp(tester, s);

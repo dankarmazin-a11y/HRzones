@@ -13,6 +13,7 @@ import '../timer_style.dart';
 import '../number_input.dart';
 import '../zone_colors.dart';
 import 'run_map.dart';
+import 'run_plans.dart';
 import 'run_start.dart';
 import 'run_summary_screen.dart';
 
@@ -67,6 +68,15 @@ class _LiveRunScreenState extends State<LiveRunScreen> {
                 ? const SizedBox.shrink()
                 : Column(
                     children: [
+                      if (run.plan != null)
+                        ValueListenableBuilder<int>(
+                          valueListenable: run.ticks,
+                          builder: (context, _, _) => PlanBanner(
+                            plan: run.plan!,
+                            metres: run.distanceM,
+                            seconds: run.moving.inMilliseconds / 1000,
+                          ),
+                        ),
                       if (map) ...[
                         Expanded(child: _LiveMap(run: run)),
                         ValueListenableBuilder<int>(

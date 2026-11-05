@@ -5442,6 +5442,24 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _planIdMeta = const VerificationMeta('planId');
+  @override
+  late final GeneratedColumn<String> planId = GeneratedColumn<String>(
+    'plan_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lapsJsonMeta = const VerificationMeta('lapsJson');
+  @override
+  late final GeneratedColumn<String> lapsJson = GeneratedColumn<String>(
+    'laps_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -5464,6 +5482,8 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
     shoeId,
     steps,
     avgCadence,
+    planId,
+    lapsJson,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -5533,6 +5553,12 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
     if (data.containsKey('avg_cadence')) {
       context.handle(_avgCadenceMeta, avgCadence.isAcceptableOrUnknown(data['avg_cadence']!, _avgCadenceMeta));
     }
+    if (data.containsKey('plan_id')) {
+      context.handle(_planIdMeta, planId.isAcceptableOrUnknown(data['plan_id']!, _planIdMeta));
+    }
+    if (data.containsKey('laps_json')) {
+      context.handle(_lapsJsonMeta, lapsJson.isAcceptableOrUnknown(data['laps_json']!, _lapsJsonMeta));
+    }
     return context;
   }
 
@@ -5564,6 +5590,8 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
       shoeId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}shoe_id']),
       steps: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}steps']),
       avgCadence: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}avg_cadence']),
+      planId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}plan_id']),
+      lapsJson: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}laps_json']),
     );
   }
 
@@ -5619,6 +5647,10 @@ class Run extends DataClass implements Insertable<Run> {
 
   /// Average cadence, steps per minute of moving time.
   final int? avgCadence;
+
+  /// The planned run followed (null = free run) and its laps (JSON).
+  final String? planId;
+  final String? lapsJson;
   const Run({
     required this.id,
     required this.updatedAt,
@@ -5640,6 +5672,8 @@ class Run extends DataClass implements Insertable<Run> {
     this.shoeId,
     this.steps,
     this.avgCadence,
+    this.planId,
+    this.lapsJson,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -5688,6 +5722,12 @@ class Run extends DataClass implements Insertable<Run> {
     if (!nullToAbsent || avgCadence != null) {
       map['avg_cadence'] = Variable<int>(avgCadence);
     }
+    if (!nullToAbsent || planId != null) {
+      map['plan_id'] = Variable<String>(planId);
+    }
+    if (!nullToAbsent || lapsJson != null) {
+      map['laps_json'] = Variable<String>(lapsJson);
+    }
     return map;
   }
 
@@ -5713,6 +5753,8 @@ class Run extends DataClass implements Insertable<Run> {
       shoeId: shoeId == null && nullToAbsent ? const Value.absent() : Value(shoeId),
       steps: steps == null && nullToAbsent ? const Value.absent() : Value(steps),
       avgCadence: avgCadence == null && nullToAbsent ? const Value.absent() : Value(avgCadence),
+      planId: planId == null && nullToAbsent ? const Value.absent() : Value(planId),
+      lapsJson: lapsJson == null && nullToAbsent ? const Value.absent() : Value(lapsJson),
     );
   }
 
@@ -5739,6 +5781,8 @@ class Run extends DataClass implements Insertable<Run> {
       shoeId: serializer.fromJson<String?>(json['shoeId']),
       steps: serializer.fromJson<int?>(json['steps']),
       avgCadence: serializer.fromJson<int?>(json['avgCadence']),
+      planId: serializer.fromJson<String?>(json['planId']),
+      lapsJson: serializer.fromJson<String?>(json['lapsJson']),
     );
   }
   @override
@@ -5765,6 +5809,8 @@ class Run extends DataClass implements Insertable<Run> {
       'shoeId': serializer.toJson<String?>(shoeId),
       'steps': serializer.toJson<int?>(steps),
       'avgCadence': serializer.toJson<int?>(avgCadence),
+      'planId': serializer.toJson<String?>(planId),
+      'lapsJson': serializer.toJson<String?>(lapsJson),
     };
   }
 
@@ -5789,6 +5835,8 @@ class Run extends DataClass implements Insertable<Run> {
     Value<String?> shoeId = const Value.absent(),
     Value<int?> steps = const Value.absent(),
     Value<int?> avgCadence = const Value.absent(),
+    Value<String?> planId = const Value.absent(),
+    Value<String?> lapsJson = const Value.absent(),
   }) => Run(
     id: id ?? this.id,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -5810,6 +5858,8 @@ class Run extends DataClass implements Insertable<Run> {
     shoeId: shoeId.present ? shoeId.value : this.shoeId,
     steps: steps.present ? steps.value : this.steps,
     avgCadence: avgCadence.present ? avgCadence.value : this.avgCadence,
+    planId: planId.present ? planId.value : this.planId,
+    lapsJson: lapsJson.present ? lapsJson.value : this.lapsJson,
   );
   Run copyWithCompanion(RunsCompanion data) {
     return Run(
@@ -5833,6 +5883,8 @@ class Run extends DataClass implements Insertable<Run> {
       shoeId: data.shoeId.present ? data.shoeId.value : this.shoeId,
       steps: data.steps.present ? data.steps.value : this.steps,
       avgCadence: data.avgCadence.present ? data.avgCadence.value : this.avgCadence,
+      planId: data.planId.present ? data.planId.value : this.planId,
+      lapsJson: data.lapsJson.present ? data.lapsJson.value : this.lapsJson,
     );
   }
 
@@ -5858,13 +5910,15 @@ class Run extends DataClass implements Insertable<Run> {
           ..write('weather: $weather, ')
           ..write('shoeId: $shoeId, ')
           ..write('steps: $steps, ')
-          ..write('avgCadence: $avgCadence')
+          ..write('avgCadence: $avgCadence, ')
+          ..write('planId: $planId, ')
+          ..write('lapsJson: $lapsJson')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     updatedAt,
     name,
@@ -5885,7 +5939,9 @@ class Run extends DataClass implements Insertable<Run> {
     shoeId,
     steps,
     avgCadence,
-  );
+    planId,
+    lapsJson,
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -5909,7 +5965,9 @@ class Run extends DataClass implements Insertable<Run> {
           other.weather == this.weather &&
           other.shoeId == this.shoeId &&
           other.steps == this.steps &&
-          other.avgCadence == this.avgCadence);
+          other.avgCadence == this.avgCadence &&
+          other.planId == this.planId &&
+          other.lapsJson == this.lapsJson);
 }
 
 class RunsCompanion extends UpdateCompanion<Run> {
@@ -5933,6 +5991,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
   final Value<String?> shoeId;
   final Value<int?> steps;
   final Value<int?> avgCadence;
+  final Value<String?> planId;
+  final Value<String?> lapsJson;
   final Value<int> rowid;
   const RunsCompanion({
     this.id = const Value.absent(),
@@ -5955,6 +6015,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
     this.shoeId = const Value.absent(),
     this.steps = const Value.absent(),
     this.avgCadence = const Value.absent(),
+    this.planId = const Value.absent(),
+    this.lapsJson = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RunsCompanion.insert({
@@ -5978,6 +6040,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
     this.shoeId = const Value.absent(),
     this.steps = const Value.absent(),
     this.avgCadence = const Value.absent(),
+    this.planId = const Value.absent(),
+    this.lapsJson = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : startedAt = Value(startedAt);
   static Insertable<Run> custom({
@@ -6001,6 +6065,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
     Expression<String>? shoeId,
     Expression<int>? steps,
     Expression<int>? avgCadence,
+    Expression<String>? planId,
+    Expression<String>? lapsJson,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -6024,6 +6090,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
       if (shoeId != null) 'shoe_id': shoeId,
       if (steps != null) 'steps': steps,
       if (avgCadence != null) 'avg_cadence': avgCadence,
+      if (planId != null) 'plan_id': planId,
+      if (lapsJson != null) 'laps_json': lapsJson,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -6049,6 +6117,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
     Value<String?>? shoeId,
     Value<int?>? steps,
     Value<int?>? avgCadence,
+    Value<String?>? planId,
+    Value<String?>? lapsJson,
     Value<int>? rowid,
   }) {
     return RunsCompanion(
@@ -6072,6 +6142,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
       shoeId: shoeId ?? this.shoeId,
       steps: steps ?? this.steps,
       avgCadence: avgCadence ?? this.avgCadence,
+      planId: planId ?? this.planId,
+      lapsJson: lapsJson ?? this.lapsJson,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -6139,6 +6211,12 @@ class RunsCompanion extends UpdateCompanion<Run> {
     if (avgCadence.present) {
       map['avg_cadence'] = Variable<int>(avgCadence.value);
     }
+    if (planId.present) {
+      map['plan_id'] = Variable<String>(planId.value);
+    }
+    if (lapsJson.present) {
+      map['laps_json'] = Variable<String>(lapsJson.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -6168,6 +6246,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
           ..write('shoeId: $shoeId, ')
           ..write('steps: $steps, ')
           ..write('avgCadence: $avgCadence, ')
+          ..write('planId: $planId, ')
+          ..write('lapsJson: $lapsJson, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -7062,6 +7142,308 @@ class ShoesCompanion extends UpdateCompanion<Shoe> {
   }
 }
 
+class $RunPlansTable extends RunPlans with TableInfo<$RunPlansTable, RunPlan> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RunPlansTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    clientDefault: newId,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    clientDefault: DateTime.now,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _specJsonMeta = const VerificationMeta('specJson');
+  @override
+  late final GeneratedColumn<String> specJson = GeneratedColumn<String>(
+    'spec_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _positionMeta = const VerificationMeta('position');
+  @override
+  late final GeneratedColumn<int> position = GeneratedColumn<int>(
+    'position',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, updatedAt, name, specJson, position];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'run_plans';
+  @override
+  VerificationContext validateIntegrity(Insertable<RunPlan> instance, {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta, updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(_nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('spec_json')) {
+      context.handle(_specJsonMeta, specJson.isAcceptableOrUnknown(data['spec_json']!, _specJsonMeta));
+    } else if (isInserting) {
+      context.missing(_specJsonMeta);
+    }
+    if (data.containsKey('position')) {
+      context.handle(_positionMeta, position.isAcceptableOrUnknown(data['position']!, _positionMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  RunPlan map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RunPlan(
+      id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      updatedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+      name: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      specJson: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}spec_json'])!,
+      position: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}position'])!,
+    );
+  }
+
+  @override
+  $RunPlansTable createAlias(String alias) {
+    return $RunPlansTable(attachedDatabase, alias);
+  }
+}
+
+class RunPlan extends DataClass implements Insertable<RunPlan> {
+  final String id;
+  final DateTime updatedAt;
+  final String name;
+  final String specJson;
+  final int position;
+  const RunPlan({
+    required this.id,
+    required this.updatedAt,
+    required this.name,
+    required this.specJson,
+    required this.position,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['name'] = Variable<String>(name);
+    map['spec_json'] = Variable<String>(specJson);
+    map['position'] = Variable<int>(position);
+    return map;
+  }
+
+  RunPlansCompanion toCompanion(bool nullToAbsent) {
+    return RunPlansCompanion(
+      id: Value(id),
+      updatedAt: Value(updatedAt),
+      name: Value(name),
+      specJson: Value(specJson),
+      position: Value(position),
+    );
+  }
+
+  factory RunPlan.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RunPlan(
+      id: serializer.fromJson<String>(json['id']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      name: serializer.fromJson<String>(json['name']),
+      specJson: serializer.fromJson<String>(json['specJson']),
+      position: serializer.fromJson<int>(json['position']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'name': serializer.toJson<String>(name),
+      'specJson': serializer.toJson<String>(specJson),
+      'position': serializer.toJson<int>(position),
+    };
+  }
+
+  RunPlan copyWith({String? id, DateTime? updatedAt, String? name, String? specJson, int? position}) => RunPlan(
+    id: id ?? this.id,
+    updatedAt: updatedAt ?? this.updatedAt,
+    name: name ?? this.name,
+    specJson: specJson ?? this.specJson,
+    position: position ?? this.position,
+  );
+  RunPlan copyWithCompanion(RunPlansCompanion data) {
+    return RunPlan(
+      id: data.id.present ? data.id.value : this.id,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      name: data.name.present ? data.name.value : this.name,
+      specJson: data.specJson.present ? data.specJson.value : this.specJson,
+      position: data.position.present ? data.position.value : this.position,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RunPlan(')
+          ..write('id: $id, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('name: $name, ')
+          ..write('specJson: $specJson, ')
+          ..write('position: $position')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, updatedAt, name, specJson, position);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RunPlan &&
+          other.id == this.id &&
+          other.updatedAt == this.updatedAt &&
+          other.name == this.name &&
+          other.specJson == this.specJson &&
+          other.position == this.position);
+}
+
+class RunPlansCompanion extends UpdateCompanion<RunPlan> {
+  final Value<String> id;
+  final Value<DateTime> updatedAt;
+  final Value<String> name;
+  final Value<String> specJson;
+  final Value<int> position;
+  final Value<int> rowid;
+  const RunPlansCompanion({
+    this.id = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.name = const Value.absent(),
+    this.specJson = const Value.absent(),
+    this.position = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  RunPlansCompanion.insert({
+    this.id = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    required String name,
+    required String specJson,
+    this.position = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : name = Value(name),
+       specJson = Value(specJson);
+  static Insertable<RunPlan> custom({
+    Expression<String>? id,
+    Expression<DateTime>? updatedAt,
+    Expression<String>? name,
+    Expression<String>? specJson,
+    Expression<int>? position,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (name != null) 'name': name,
+      if (specJson != null) 'spec_json': specJson,
+      if (position != null) 'position': position,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  RunPlansCompanion copyWith({
+    Value<String>? id,
+    Value<DateTime>? updatedAt,
+    Value<String>? name,
+    Value<String>? specJson,
+    Value<int>? position,
+    Value<int>? rowid,
+  }) {
+    return RunPlansCompanion(
+      id: id ?? this.id,
+      updatedAt: updatedAt ?? this.updatedAt,
+      name: name ?? this.name,
+      specJson: specJson ?? this.specJson,
+      position: position ?? this.position,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (specJson.present) {
+      map['spec_json'] = Variable<String>(specJson.value);
+    }
+    if (position.present) {
+      map['position'] = Variable<int>(position.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RunPlansCompanion(')
+          ..write('id: $id, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('name: $name, ')
+          ..write('specJson: $specJson, ')
+          ..write('position: $position, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -7079,6 +7461,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $RunsTable runs = $RunsTable(this);
   late final $RunPointsTable runPoints = $RunPointsTable(this);
   late final $ShoesTable shoes = $ShoesTable(this);
+  late final $RunPlansTable runPlans = $RunPlansTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables => allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
@@ -7097,6 +7480,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     runs,
     runPoints,
     shoes,
+    runPlans,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -10617,6 +11001,8 @@ typedef $$RunsTableCreateCompanionBuilder = RunsCompanion Function({
   Value<String?> shoeId,
   Value<int?> steps,
   Value<int?> avgCadence,
+  Value<String?> planId,
+  Value<String?> lapsJson,
   Value<int> rowid,
 });
 typedef $$RunsTableUpdateCompanionBuilder = RunsCompanion Function({
@@ -10640,6 +11026,8 @@ typedef $$RunsTableUpdateCompanionBuilder = RunsCompanion Function({
   Value<String?> shoeId,
   Value<int?> steps,
   Value<int?> avgCadence,
+  Value<String?> planId,
+  Value<String?> lapsJson,
   Value<int> rowid,
 });
 
@@ -10722,6 +11110,12 @@ class $$RunsTableFilterComposer extends Composer<_$AppDatabase, $RunsTable> {
 
   ColumnFilters<int> get avgCadence =>
       $composableBuilder(column: $table.avgCadence, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get planId =>
+      $composableBuilder(column: $table.planId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get lapsJson =>
+      $composableBuilder(column: $table.lapsJson, builder: (column) => ColumnFilters(column));
 
   Expression<bool> runPointsRefs(Expression<bool> Function($$RunPointsTableFilterComposer f) f) {
     final $$RunPointsTableFilterComposer composer = $composerBuilder(
@@ -10808,6 +11202,12 @@ class $$RunsTableOrderingComposer extends Composer<_$AppDatabase, $RunsTable> {
 
   ColumnOrderings<int> get avgCadence =>
       $composableBuilder(column: $table.avgCadence, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get planId =>
+      $composableBuilder(column: $table.planId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get lapsJson =>
+      $composableBuilder(column: $table.lapsJson, builder: (column) => ColumnOrderings(column));
 }
 
 class $$RunsTableAnnotationComposer extends Composer<_$AppDatabase, $RunsTable> {
@@ -10858,6 +11258,10 @@ class $$RunsTableAnnotationComposer extends Composer<_$AppDatabase, $RunsTable> 
   GeneratedColumn<int> get steps => $composableBuilder(column: $table.steps, builder: (column) => column);
 
   GeneratedColumn<int> get avgCadence => $composableBuilder(column: $table.avgCadence, builder: (column) => column);
+
+  GeneratedColumn<String> get planId => $composableBuilder(column: $table.planId, builder: (column) => column);
+
+  GeneratedColumn<String> get lapsJson => $composableBuilder(column: $table.lapsJson, builder: (column) => column);
 
   Expression<T> runPointsRefs<T extends Object>(Expression<T> Function($$RunPointsTableAnnotationComposer a) f) {
     final $$RunPointsTableAnnotationComposer composer = $composerBuilder(
@@ -10923,6 +11327,8 @@ class $$RunsTableTableManager
                 Value<String?> shoeId = const Value.absent(),
                 Value<int?> steps = const Value.absent(),
                 Value<int?> avgCadence = const Value.absent(),
+                Value<String?> planId = const Value.absent(),
+                Value<String?> lapsJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RunsCompanion(
                 id: id,
@@ -10945,6 +11351,8 @@ class $$RunsTableTableManager
                 shoeId: shoeId,
                 steps: steps,
                 avgCadence: avgCadence,
+                planId: planId,
+                lapsJson: lapsJson,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -10969,6 +11377,8 @@ class $$RunsTableTableManager
                 Value<String?> shoeId = const Value.absent(),
                 Value<int?> steps = const Value.absent(),
                 Value<int?> avgCadence = const Value.absent(),
+                Value<String?> planId = const Value.absent(),
+                Value<String?> lapsJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RunsCompanion.insert(
                 id: id,
@@ -10991,6 +11401,8 @@ class $$RunsTableTableManager
                 shoeId: shoeId,
                 steps: steps,
                 avgCadence: avgCadence,
+                planId: planId,
+                lapsJson: lapsJson,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) =>
@@ -11545,6 +11957,169 @@ typedef $$ShoesTableProcessedTableManager =
       Shoe,
       PrefetchHooks Function()
     >;
+typedef $$RunPlansTableCreateCompanionBuilder = RunPlansCompanion Function({
+  Value<String> id,
+  Value<DateTime> updatedAt,
+  required String name,
+  required String specJson,
+  Value<int> position,
+  Value<int> rowid,
+});
+typedef $$RunPlansTableUpdateCompanionBuilder = RunPlansCompanion Function({
+  Value<String> id,
+  Value<DateTime> updatedAt,
+  Value<String> name,
+  Value<String> specJson,
+  Value<int> position,
+  Value<int> rowid,
+});
+
+class $$RunPlansTableFilterComposer extends Composer<_$AppDatabase, $RunPlansTable> {
+  $$RunPlansTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get specJson =>
+      $composableBuilder(column: $table.specJson, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => ColumnFilters(column));
+}
+
+class $$RunPlansTableOrderingComposer extends Composer<_$AppDatabase, $RunPlansTable> {
+  $$RunPlansTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get specJson =>
+      $composableBuilder(column: $table.specJson, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => ColumnOrderings(column));
+}
+
+class $$RunPlansTableAnnotationComposer extends Composer<_$AppDatabase, $RunPlansTable> {
+  $$RunPlansTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id => $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt => $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get name => $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get specJson => $composableBuilder(column: $table.specJson, builder: (column) => column);
+
+  GeneratedColumn<int> get position => $composableBuilder(column: $table.position, builder: (column) => column);
+}
+
+class $$RunPlansTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $RunPlansTable,
+          RunPlan,
+          $$RunPlansTableFilterComposer,
+          $$RunPlansTableOrderingComposer,
+          $$RunPlansTableAnnotationComposer,
+          $$RunPlansTableCreateCompanionBuilder,
+          $$RunPlansTableUpdateCompanionBuilder,
+          (RunPlan, BaseReferences<_$AppDatabase, $RunPlansTable, RunPlan>),
+          RunPlan,
+          PrefetchHooks Function()
+        > {
+  $$RunPlansTableTableManager(_$AppDatabase db, $RunPlansTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () => $$RunPlansTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () => $$RunPlansTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () => $$RunPlansTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> specJson = const Value.absent(),
+                Value<int> position = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => RunPlansCompanion(
+                id: id,
+                updatedAt: updatedAt,
+                name: name,
+                specJson: specJson,
+                position: position,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                required String name,
+                required String specJson,
+                Value<int> position = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => RunPlansCompanion.insert(
+                id: id,
+                updatedAt: updatedAt,
+                name: name,
+                specJson: specJson,
+                position: position,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$RunPlansTable, RunPlan>(table),
+                  BaseReferences<_$AppDatabase, $RunPlansTable, RunPlan>(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$RunPlansTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $RunPlansTable,
+      RunPlan,
+      $$RunPlansTableFilterComposer,
+      $$RunPlansTableOrderingComposer,
+      $$RunPlansTableAnnotationComposer,
+      $$RunPlansTableCreateCompanionBuilder,
+      $$RunPlansTableUpdateCompanionBuilder,
+      (RunPlan, BaseReferences<_$AppDatabase, $RunPlansTable, RunPlan>),
+      RunPlan,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -11567,4 +12142,5 @@ class $AppDatabaseManager {
   $$RunsTableTableManager get runs => $$RunsTableTableManager(_db, _db.runs);
   $$RunPointsTableTableManager get runPoints => $$RunPointsTableTableManager(_db, _db.runPoints);
   $$ShoesTableTableManager get shoes => $$ShoesTableTableManager(_db, _db.shoes);
+  $$RunPlansTableTableManager get runPlans => $$RunPlansTableTableManager(_db, _db.runPlans);
 }
