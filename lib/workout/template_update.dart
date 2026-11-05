@@ -18,10 +18,36 @@ enum TemplateChange {
 String _setKey(SetType type, double? kg, int? reps, int? secs, Side? side) =>
     '${type.index}|${kg ?? ''}|${reps ?? ''}|${secs ?? ''}|${side?.index ?? ''}';
 
+/// A template slot as the workout shows it: an exercise now logged per side
+/// turns each planned set into a left + right pair (the workout does the
+/// same), so an unchanged workout doesn't look different.
+TemplateSlot _asLogged(TemplateSlot a, TemplateSlot logged) {
+  final split = logged.sets.any((s) => s.side != null);
+  if (!split || a.sets.any((s) => s.side != null) || a.exerciseId == stretchingSessionId) return a;
+  final planned = a.sets.isEmpty ? [for (var i = 0; i < a.targetSets; i++) const TemplateSet()] : a.sets;
+  final pairs = [
+    for (final s in planned) ...[
+      TemplateSet(type: s.type, weightKg: s.weightKg, reps: s.reps, durationS: s.durationS, side: Side.left),
+      TemplateSet(type: s.type, weightKg: s.weightKg, reps: s.reps, durationS: s.durationS, side: Side.right),
+    ],
+  ];
+  return TemplateSlot(
+    exerciseId: a.exerciseId,
+    targetSets: pairs.length,
+    restSeconds: a.restSeconds,
+    supersetGroup: a.supersetGroup,
+    subExerciseIds: [...a.subExerciseIds],
+    sets: a.sets.isEmpty ? const [] : pairs,
+  );
+}
+
 /// Compares the finished workout [w] (done sets only) with template [t].
 TemplateChange compareToTemplate(TemplateWithSlots t, ActiveWorkout w) {
   final now = WorkoutSession.slotsFrom(w);
-  final before = t.slots;
+  final before = [
+    for (final (i, a) in t.slots.indexed)
+      i < now.length && now[i].exerciseId == a.exerciseId ? _asLogged(a, now[i]) : a,
+  ];
   if (now.length != before.length) return TemplateChange.structure;
   var values = false;
   for (var i = 0; i < now.length; i++) {
@@ -54,11 +80,12 @@ List<TemplateSlot> templateWithNewValues(TemplateWithSlots t, ActiveWorkout w) {
   final done = WorkoutSession.slotsFrom(w);
   final used = <int>{};
   return [
-    for (final slot in t.slots)
+    for (final original in t.slots)
       () {
-        final i = done.indexWhere((d) => d.exerciseId == slot.exerciseId && !used.contains(done.indexOf(d)));
-        if (i < 0 || slot.exerciseId == stretchingSessionId) return slot;
+        final i = done.indexWhere((d) => d.exerciseId == original.exerciseId && !used.contains(done.indexOf(d)));
+        if (i < 0 || original.exerciseId == stretchingSessionId) return original;
         used.add(i);
+        final slot = _asLogged(original, done[i]);
         final logged = done[i].sets;
         final count = slot.sets.isEmpty ? slot.targetSets : slot.sets.length;
         return TemplateSlot(

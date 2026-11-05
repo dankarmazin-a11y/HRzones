@@ -1264,6 +1264,27 @@ class _SetNumberFieldState extends State<SetNumberField> {
   }
 }
 
+/// Moves to the next number field (kg → reps → next set's kg), skipping the
+/// buttons in between (RPE, ✓) – landing on those closed the keyboard.
+void focusNextNumberField(BuildContext context) {
+  final current = FocusManager.instance.primaryFocus;
+  bool isText(FocusNode n) => n.context?.findAncestorWidgetOfExactType<EditableText>() != null;
+  // Text fields on this screen in reading order (rows top → bottom, then left
+  // → right). Positions are used because focus changes apply only on the
+  // next frame, so stepping with nextFocus() can't check where it landed.
+  final fields = FocusScope.of(context).traversalDescendants.where((n) => n.canRequestFocus && isText(n)).toList()
+    ..sort((a, b) {
+      final dy = a.rect.top - b.rect.top;
+      return dy.abs() > 4 ? dy.sign.toInt() : a.rect.left.compareTo(b.rect.left);
+    });
+  final i = current == null ? -1 : fields.indexOf(current);
+  if (i + 1 < fields.length) {
+    fields[i + 1].requestFocus();
+  } else {
+    current?.unfocus(); // last field: close the keyboard
+  }
+}
+
 /// Above the keyboard while typing in a workout: Next (kg → reps → next
 /// set) and Done. The iPhone number pad has no return key, so without this
 /// the keyboard could not be closed.
@@ -1285,7 +1306,7 @@ class KeyboardBar extends StatelessWidget {
               const Spacer(),
               TextButton(
                 key: const Key('keyboardNext'),
-                onPressed: () => FocusScope.of(context).nextFocus(),
+                onPressed: () => focusNextNumberField(context),
                 child: const Text('Next'),
               ),
               TextButton(

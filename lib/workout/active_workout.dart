@@ -51,7 +51,15 @@ class LoggedExercise {
 
   /// Stretching sessions have different stretches per row, so no
   /// "previous" by position.
-  WorkoutSet? previousFor(int index) => exercise.isStretchSession || index >= previous.length ? null : previous[index];
+  WorkoutSet? previousFor(int index) {
+    if (exercise.isStretchSession) return null;
+    var i = index;
+    // Logged per side now but not last time: 1L and 1R both show set 1.
+    if (index < sets.length && sets[index].side != null && previous.every((p) => p.side == null)) i = index ~/ 2;
+    // …and the other way round: one set now, pairs last time → its left side.
+    if (index < sets.length && sets[index].side == null && previous.any((p) => p.side != null)) i = index * 2;
+    return i < previous.length ? previous[i] : null;
+  }
 }
 
 class ActiveWorkout {

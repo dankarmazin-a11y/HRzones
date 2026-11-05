@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../app_services.dart';
 import '../../workout/stats.dart';
+import '../../workout/workout_session.dart';
 import '../screens/workouts_screen.dart';
 
 /// Shown above the tabs while a workout is running: name, time, % done.
@@ -17,17 +18,36 @@ class RunningWorkoutBar extends StatefulWidget {
 
 class _RunningWorkoutBarState extends State<RunningWorkoutBar> {
   Timer? _tick;
+  WorkoutSession? _session;
 
   @override
-  void initState() {
-    super.initState();
-    _tick = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
-    });
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final s = Services.of(context).session;
+    if (s != _session) {
+      _session?.removeListener(_syncTicker);
+      _session = s..addListener(_syncTicker);
+      _syncTicker();
+    }
+  }
+
+  /// Ticks once a second only while a workout runs (it used to tick forever,
+  /// waking the phone every second for nothing).
+  void _syncTicker() {
+    final running = _session?.active != null;
+    if (running && _tick == null) {
+      _tick = Timer.periodic(const Duration(seconds: 1), (_) {
+        if (mounted) setState(() {});
+      });
+    } else if (!running) {
+      _tick?.cancel();
+      _tick = null;
+    }
   }
 
   @override
   void dispose() {
+    _session?.removeListener(_syncTicker);
     _tick?.cancel();
     super.dispose();
   }
