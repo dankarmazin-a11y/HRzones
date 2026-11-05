@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../app_services.dart';
 import '../../hr/hr_monitor.dart';
@@ -8,19 +10,29 @@ import '../../run/run_session.dart';
 import '../../workout/stats.dart';
 import '../timer_style.dart';
 import '../zone_colors.dart';
+import 'run_map.dart';
 import 'run_start.dart';
 import 'run_summary_screen.dart';
 
 /// The run being recorded: distance, time, pace, heart rate; pause / finish.
 /// Bold white numbers on a dark background (readable while running).
-class LiveRunScreen extends StatelessWidget {
+class LiveRunScreen extends StatefulWidget {
   const LiveRunScreen({super.key});
 
+  /// Numbers or map (kept while the app runs).
+  static bool showMap = false;
+
+  @override
+  State<LiveRunScreen> createState() => _LiveRunScreenState();
+}
+
+class _LiveRunScreenState extends State<LiveRunScreen> {
   static const _bg = TimerStyle.neutralBackground;
 
   @override
   Widget build(BuildContext context) {
     final run = Services.of(context).run;
+    final map = LiveRunScreen.showMap;
     return ListenableBuilder(
       listenable: run,
       builder: (context, _) {
@@ -38,7 +50,13 @@ class LiveRunScreen extends StatelessWidget {
             title: Text(run.paused ? 'Paused' : 'Run'),
             actions: [
               _GpsChip(status: run.gps),
-              const SizedBox(width: 12),
+              IconButton(
+                key: const Key('toggleRunMap'),
+                tooltip: map ? 'Show numbers' : 'Show map',
+                icon: Icon(map ? Icons.speed : Icons.map_outlined),
+                onPressed: () => setState(() => LiveRunScreen.showMap = !map),
+              ),
+              const SizedBox(width: 4),
             ],
           ),
           body: SafeArea(
@@ -46,12 +64,19 @@ class LiveRunScreen extends StatelessWidget {
                 ? const SizedBox.shrink()
                 : Column(
                     children: [
-                      Expanded(
-                        child: ValueListenableBuilder<int>(
+                      if (map) ...[
+                        Expanded(child: _LiveMap(run: run)),
+                        ValueListenableBuilder<int>(
                           valueListenable: run.ticks,
-                          builder: (context, _, _) => _Numbers(run: run),
+                          builder: (context, _, _) => _Strip(run: run),
                         ),
-                      ),
+                      ] else
+                        Expanded(
+                          child: ValueListenableBuilder<int>(
+                            valueListenable: run.ticks,
+                            builder: (context, _, _) => _Numbers(run: run),
+                          ),
+                        ),
                       if (run.location.isSimulated && run.location is SimulatedLocationSource)
                         _SimulatedControls(source: run.location as SimulatedLocationSource),
                       _Controls(run: run),
@@ -335,6 +360,126 @@ class _SimulatedControlsState extends State<_SimulatedControls> {
             value: s.paceSecPerKm.clamp(180, 600),
             onChanged: (v) => setState(() => s.paceSecPerKm = v),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Map view while running: follows you until you drag it; ◎ follows again.
+class _LiveMap extends StatefulWidget {
+  const _LiveMap({required this.run});
+
+  final RunSession run;
+
+  @override
+  State<_LiveMap> createState() => _LiveMapState();
+}
+
+class _LiveMapState extends State<_LiveMap> {
+  final _map = MapController();
+  bool _follow = true;
+  bool _ready = false;
+  int _count = -1;
+  RouteSegments _segments = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    widget.run.ticks.addListener(_onTick);
+  }
+
+  @override
+  void dispose() {
+    widget.run.ticks.removeListener(_onTick);
+    _map.dispose();
+    super.dispose();
+  }
+
+  LatLng? get _here {
+    final r = widget.run.route;
+    return r.isEmpty ? null : LatLng(r.last.lat, r.last.lon);
+  }
+
+  void _onTick() {
+    final route = widget.run.route;
+    if (route.length == _count) return; // nothing new
+    setState(() {
+      _count = route.length;
+      _segments = routeSegments(route.map((p) => (lat: p.lat, lon: p.lon, segment: p.segment)));
+    });
+    final here = _here;
+    if (_follow && _ready && here != null) _map.move(here, _map.camera.zoom);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_count < 0) {
+      _count = widget.run.route.length;
+      _segments = routeSegments(widget.run.route.map((p) => (lat: p.lat, lon: p.lon, segment: p.segment)));
+    }
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: RunMap(
+            key: const Key('liveMap'),
+            segments: _segments,
+            controller: _map,
+            current: _here ?? RunMap.fallbackCenter,
+            fitRoute: false,
+            onUserMove: () => _follow ? setState(() => _follow = false) : null,
+            onReady: () => _ready = true,
+          ),
+        ),
+        if (!_follow)
+          Positioned(
+            right: 12,
+            bottom: 24,
+            child: FloatingActionButton.small(
+              key: const Key('followMe'),
+              tooltip: 'Follow me',
+              onPressed: () {
+                setState(() => _follow = true);
+                final here = _here;
+                if (here != null && _ready) _map.move(here, _map.camera.zoom);
+              },
+              child: const Icon(Icons.my_location),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Distance / time / pace under the live map.
+class _Strip extends StatelessWidget {
+  const _Strip({required this.run});
+
+  final RunSession run;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget stat(String value, String label, Key key) => Expanded(
+      child: Column(
+        children: [
+          FittedBox(
+            child: Text(
+              value,
+              key: key,
+              style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w900),
+            ),
+          ),
+          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+        ],
+      ),
+    );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 12, 8, 4),
+      child: Row(
+        children: [
+          stat(formatKm(run.distanceM), 'km', const Key('runDistance')),
+          stat(formatDuration(run.moving), 'Time', const Key('runTime')),
+          stat(formatPace(run.currentPace), 'Pace /km', const Key('runPace')),
         ],
       ),
     );

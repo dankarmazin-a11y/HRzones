@@ -10,6 +10,7 @@ import 'package:hrzones/hr/hr_monitor.dart';
 import 'package:hrzones/run/geo.dart';
 import 'package:hrzones/run/location_source.dart';
 import 'package:hrzones/run/run_session.dart';
+import 'package:hrzones/ui/run/run_map.dart';
 
 import 'app_test.dart' show settle, tearDownApp;
 import 'test_helpers.dart';
@@ -392,5 +393,67 @@ void main() {
     expect(s.run.paused, isTrue);
     await tester.runAsync(s.run.discard);
     await tearDownApp(tester, s);
+  });
+
+  testWidgets('live map follows you; the summary shows the route from start to finish', (tester) async {
+    final s = (await tester.runAsync(testServices))!;
+    final gps = FakeLocation();
+    s.run.location = gps;
+    await tester.pumpWidget(HrZonesApp(services: s));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('startRunHome')));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('goRun')));
+    await countdown(tester);
+
+    await tester.tap(find.byKey(const Key('toggleRunMap')));
+    await settle(tester);
+    expect(find.byKey(const Key('liveMap')), findsOneWidget);
+    for (var i = 0; i <= 100; i++) {
+      gps.emit(north(i * 3.0, i));
+    }
+    await tester.pump(const Duration(seconds: 1));
+    await settle(tester);
+    expect(find.byKey(const Key('mapMarker_current')), findsOneWidget);
+    expect(find.text('0.30'), findsOneWidget, reason: 'distance strip under the map');
+
+    // Dragging the map stops following; the button brings it back.
+    await tester.drag(find.byKey(const Key('liveMap')), const Offset(0, 150));
+    await settle(tester);
+    expect(find.byKey(const Key('followMe')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('followMe')));
+    await settle(tester);
+    expect(find.byKey(const Key('followMe')), findsNothing);
+
+    // Back to the numbers.
+    await tester.tap(find.byKey(const Key('toggleRunMap')));
+    await settle(tester);
+    expect(find.byKey(const Key('liveMap')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('pauseRun')));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('finishRun')));
+    await settle(tester);
+    await tester.tap(find.text('Save'));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+    await settle(tester);
+    expect(find.byKey(const Key('summaryMap')), findsOneWidget);
+    expect(find.byKey(const Key('mapMarker_start')), findsOneWidget);
+    expect(find.byKey(const Key('mapMarker_end')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('openRunMap')));
+    await settle(tester);
+    expect(find.byType(RunMapScreen), findsOneWidget);
+    await tearDownApp(tester, s);
+  });
+
+  test('route segments split at pauses', () {
+    final segs = routeSegments([
+      (lat: 1.0, lon: 1.0, segment: 0),
+      (lat: 1.1, lon: 1.0, segment: 0),
+      (lat: 2.0, lon: 1.0, segment: 1),
+      (lat: 2.1, lon: 1.0, segment: 1),
+      (lat: 2.2, lon: 1.0, segment: 1),
+    ]);
+    expect(segs.map((s) => s.length), [2, 3]);
   });
 }

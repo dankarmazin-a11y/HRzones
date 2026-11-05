@@ -5,6 +5,7 @@ import '../../data/database.dart';
 import '../../run/geo.dart';
 import '../../workout/stats.dart';
 import '../hr_presets.dart';
+import 'run_map.dart';
 
 /// A finished run: distance, time, pace, heart rate.
 class RunSummaryScreen extends StatelessWidget {
@@ -78,6 +79,8 @@ class _Body extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        _RouteCard(run: run),
+        const SizedBox(height: 16),
         Center(
           child: Text(
             formatKm(run.distanceM),
@@ -140,4 +143,71 @@ String runTitle(Run r) {
   final h = d.hour;
   final part = h < 5 ? 'Night' : (h < 12 ? 'Morning' : (h < 17 ? 'Afternoon' : (h < 21 ? 'Evening' : 'Night')));
   return '${_weekdays[d.weekday - 1]} ${d.day} ${_months[d.month - 1]} · $part run';
+}
+
+/// The route on a small map; tap for the full-screen map.
+class _RouteCard extends StatefulWidget {
+  const _RouteCard({required this.run});
+
+  final Run run;
+
+  @override
+  State<_RouteCard> createState() => _RouteCardState();
+}
+
+class _RouteCardState extends State<_RouteCard> {
+  RouteSegments? _segments;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_segments == null) _load();
+  }
+
+  Future<void> _load() async {
+    final points = await Services.of(context).runs.points(widget.run.id);
+    if (!mounted) return;
+    setState(() => _segments = routeSegments(points.map((p) => (lat: p.lat, lon: p.lon, segment: p.segment))));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final segments = _segments;
+    if (segments == null) return const SizedBox(height: 220);
+    if (segments.isEmpty) {
+      return Card(
+        child: SizedBox(
+          height: 80,
+          child: Center(child: Text('No GPS route recorded', style: Theme.of(context).textTheme.bodyMedium)),
+        ),
+      );
+    }
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: SizedBox(
+        height: 220,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: RunMap(key: const Key('summaryMap'), segments: segments, interactive: false),
+            ),
+            Positioned.fill(
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  key: const Key('openRunMap'),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => RunMapScreen(segments: segments, title: runTitle(widget.run)),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const Positioned(right: 8, top: 8, child: Icon(Icons.open_in_full, size: 20)),
+          ],
+        ),
+      ),
+    );
+  }
 }

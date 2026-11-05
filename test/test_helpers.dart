@@ -8,6 +8,7 @@ import 'package:hrzones/data/database.dart';
 import 'package:hrzones/hr/hr_monitor.dart';
 import 'package:hrzones/hr/simulated_hr_source.dart';
 import 'package:hrzones/ui/exercises/exercise_avatar.dart';
+import 'package:hrzones/ui/run/run_map.dart';
 
 /// Small exercise list instead of the full 873-entry asset.
 final testExercisesJson = jsonEncode([
@@ -71,6 +72,7 @@ final testExercisesJson = jsonEncode([
 
 AppDatabase memoryDb() {
   ExerciseAvatar.loadImages = false; // no network in tests
+  RunMap.loadTiles = false; // no map tiles from the network in tests
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
   return AppDatabase(NativeDatabase.memory());
 }
