@@ -13,6 +13,7 @@ import '../../beep/sounds.dart';
 import '../hr_presets.dart';
 import '../timer_style.dart';
 import '../zone_colors.dart';
+import '../screens/settings_screen.dart';
 import '../screens/workouts_screen.dart';
 import 'live_run_screen.dart';
 
@@ -338,7 +339,8 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
                     ),
                   ),
               ],
-              const SizedBox(height: 20),
+              const RunVoiceSettings(compact: true),
+              const SizedBox(height: 12),
               SizedBox(
                 height: 64,
                 child: FilledButton.icon(

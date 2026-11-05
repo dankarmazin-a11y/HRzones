@@ -107,6 +107,9 @@ class SettingsScreen extends StatelessWidget {
           Text('Reminders', style: text.titleMedium),
           const _IdleReminderSwitch(),
           const Divider(height: 32),
+          Text('Running', style: text.titleMedium),
+          const RunVoiceSettings(),
+          const Divider(height: 32),
           Text('Sounds', style: text.titleMedium),
           Text('Pick the sound for each moment. Tap ▷ to hear it.', style: text.bodySmall),
           const SizedBox(height: 4),
@@ -239,6 +242,59 @@ class _IdleReminderSwitchState extends State<_IdleReminderSwitch> {
         await s.setIdleReminder(v);
         if (mounted) setState(() {});
       },
+    );
+  }
+}
+
+/// Voice updates during runs: on/off and how often. Also in the
+/// "Ready to run" sheet.
+class RunVoiceSettings extends StatefulWidget {
+  const RunVoiceSettings({super.key, this.compact = false});
+
+  /// Only the switch (for the "Ready to run" sheet).
+  final bool compact;
+
+  @override
+  State<RunVoiceSettings> createState() => _RunVoiceSettingsState();
+}
+
+class _RunVoiceSettingsState extends State<RunVoiceSettings> {
+  @override
+  Widget build(BuildContext context) {
+    final s = Services.of(context);
+    final v = s.run.voice!;
+    String every(int m) => m == 500 ? '½ km' : '${m ~/ 1000} km';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SwitchListTile(
+          key: const Key('runVoiceSwitch'),
+          contentPadding: EdgeInsets.zero,
+          secondary: const Icon(Icons.record_voice_over_outlined),
+          title: const Text('Voice updates'),
+          subtitle: Text(v.enabled ? 'Every ${every(v.everyM)}: distance, time, pace, heart rate' : 'Off'),
+          value: v.enabled,
+          onChanged: (on) async {
+            await s.setRunVoice(on: on);
+            setState(() {});
+          },
+        ),
+        if (!widget.compact && v.enabled)
+          Padding(
+            padding: const EdgeInsets.only(left: 56),
+            child: SegmentedButton<int>(
+              key: const Key('runVoiceEvery'),
+              segments: [
+                for (final m in const [500, 1000, 2000]) ButtonSegment(value: m, label: Text(every(m))),
+              ],
+              selected: {v.everyM},
+              onSelectionChanged: (sel) async {
+                await s.setRunVoice(everyM: sel.first);
+                setState(() {});
+              },
+            ),
+          ),
+      ],
     );
   }
 }

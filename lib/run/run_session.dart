@@ -9,6 +9,7 @@ import '../hr/hr_monitor.dart';
 import '../hr/zones.dart';
 import 'geo.dart';
 import 'location_source.dart';
+import 'run_voice.dart';
 
 /// GPS signal as shown on the run screen.
 enum GpsStatus {
@@ -56,6 +57,9 @@ class RunSession extends ChangeNotifier {
   final HrMonitor hr;
   LocationSource location;
   final DateTime Function() now;
+
+  /// Spoken updates (set by AppServices; none in some tests).
+  RunVoice? voice;
 
   /// Changes every second while recording and on every GPS fix: the live
   /// numbers listen to this, the rest of the screen to the session itself.
@@ -144,6 +148,7 @@ class RunSession extends ChangeNotifier {
     }
     await _saveRun();
     _listen();
+    voice?.started();
     notifyListeners();
     return access;
   }
@@ -155,6 +160,7 @@ class RunSession extends ChangeNotifier {
     _tracker.newSegment();
     _recent.clear();
     _segment++;
+    voice?.paused();
     await flush();
     notifyListeners();
   }
@@ -165,6 +171,7 @@ class RunSession extends ChangeNotifier {
     _pausedMs += now().difference(p).inMilliseconds;
     _pausedAt = null;
     _lastGoodAt = null;
+    voice?.resumed();
     await flush();
     _listen();
     notifyListeners();
@@ -180,6 +187,7 @@ class RunSession extends ChangeNotifier {
       final end = _pausedAt ?? now();
       await _savePoints();
       await _saveRun(endedAt: end, avgHr: hr.sessionAvg, maxHr: hr.sessionMax);
+      voice?.finished(distanceM, moving);
       if (_hrStartedByRun) await hr.stop();
       _reset();
       notifyListeners();
@@ -231,6 +239,7 @@ class RunSession extends ChangeNotifier {
     // The app was closed: don't draw a line across the gap.
     _segment = segment + 1;
     _tracker.newSegment();
+    voice?.restored(distanceM, moving);
     if (!paused) _listen();
     notifyListeners();
   }
@@ -284,6 +293,7 @@ class RunSession extends ChangeNotifier {
       _recent.removeAt(0);
     }
     ticks.value++;
+    voice?.progress(distanceM, moving, bpm: hr.running ? hr.bpm : null);
     if (!wasGood) notifyListeners();
   }
 

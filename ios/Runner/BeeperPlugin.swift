@@ -18,6 +18,8 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
   /// single sound doesn't bump it: the delay is long enough for any sound,
   /// and the engine must not stay on forever.)
   private var generation = 0
+  /// Voice updates during runs ("1 kilometre, 5 minutes 30…").
+  private let speech = AVSpeechSynthesizer()
 
   override init() {
     super.init()
@@ -28,6 +30,7 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
     try? AVAudioSession.sharedInstance().setCategory(.playback, options: [.mixWithOthers])
     engine.attach(player)
     engine.connect(player, to: engine.mainMixerNode, format: format)
+    speech.delegate = self
     // iOS stops the engine on a phone call / Siri, or when the output changes
     // (AirPods connected or removed). Without restarting it, a locked phone
     // would be suspended and the beeps would go silent.
@@ -97,6 +100,9 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
         let count = max(1, (args?["count"] as? NSNumber)?.intValue ?? 1)
         try play(repeated(makeSound(name), count: count))
         result(nil)
+      case "speak":
+        try speak(args?["text"] as? String ?? "")
+        result(nil)
       case "setVolume":
         volume = Float((args?["volume"] as? NSNumber)?.doubleValue ?? 0.7)
         result(nil)
@@ -123,6 +129,31 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
     player.stop()
     engine.stop()
     try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+  }
+
+  /// Speaks [text] over the user's music, which is turned down (ducked)
+  /// while talking and back up afterwards. Works with the screen locked.
+  private func speak(_ text: String) throws {
+    guard !text.isEmpty else { return }
+    let session = AVAudioSession.sharedInstance()
+    try session.setCategory(.playback, mode: .voicePrompt, options: [.mixWithOthers, .duckOthers])
+    try session.setActive(true)
+    let utterance = AVSpeechUtterance(string: text)
+    utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
+    utterance.volume = 1.0
+    speech.speak(utterance)
+  }
+
+  /// After speaking: other apps' music only comes back to full volume when
+  /// our session is deactivated; then the beeper is started again if needed.
+  private func unduck() {
+    guard !speech.isSpeaking else { return }
+    player.stop()
+    engine.stop()
+    let session = AVAudioSession.sharedInstance()
+    try? session.setActive(false, options: .notifyOthersOnDeactivation)
+    try? session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+    if wanted { try? start() }
   }
 
   private func beep(frequency: Double, count: Int) throws {
@@ -275,5 +306,15 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
       }
     }
     return buffer
+  }
+}
+
+extension BeeperPlugin: AVSpeechSynthesizerDelegate {
+  func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+    DispatchQueue.main.async { [weak self] in self?.unduck() }
+  }
+
+  func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
+    DispatchQueue.main.async { [weak self] in self?.unduck() }
   }
 }
