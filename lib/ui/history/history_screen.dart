@@ -1,14 +1,26 @@
 import 'package:flutter/material.dart';
 
 import '../../app_services.dart';
+import '../../data/database.dart';
 import '../../data/workout_repository.dart';
+import '../screens/run_screen.dart';
 import '../../workout/stats.dart';
 import '../../workout/workout_session.dart';
 import '../workout/workout_editor.dart';
 import '../workout/workout_summary_screen.dart';
 
-class HistoryScreen extends StatelessWidget {
+enum _Show { all, strength, run }
+
+/// Every finished workout – strength and runs – newest first.
+class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
+
+  @override
+  State<HistoryScreen> createState() => _HistoryScreenState();
+}
+
+class _HistoryScreenState extends State<HistoryScreen> {
+  _Show _show = _Show.all;
 
   @override
   Widget build(BuildContext context) {
@@ -22,15 +34,55 @@ class HistoryScreen extends StatelessWidget {
       ),
       body: StreamBuilder<List<WorkoutListItem>>(
         stream: s.workouts.watchFinished(),
-        builder: (context, snap) {
-          final list = snap.data;
-          if (list == null) return const Center(child: CircularProgressIndicator());
-          if (list.isEmpty) return const Center(child: Text('No workouts yet'));
-          return ListView.builder(
-            itemCount: list.length,
-            itemBuilder: (context, i) => WorkoutTile(item: list[i]),
-          );
-        },
+        builder: (context, snap) => StreamBuilder<List<Run>>(
+          stream: s.runs.watchFinished(),
+          builder: (context, runSnap) {
+            final list = snap.data;
+            final runs = runSnap.data;
+            if (list == null || runs == null) return const Center(child: CircularProgressIndicator());
+            final items = <(DateTime, Widget)>[
+              if (_show != _Show.run)
+                for (final w in list) (w.workout.startedAt, WorkoutTile(item: w)),
+              if (_show != _Show.strength)
+                for (final r in runs)
+                  (
+                    r.startedAt,
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: RunTile(run: r),
+                      ),
+                    ),
+                  ),
+            ]..sort((a, b) => b.$1.compareTo(a.$1));
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                  child: SegmentedButton<_Show>(
+                    key: const Key('historyFilter'),
+                    segments: const [
+                      ButtonSegment(value: _Show.all, label: Text('All')),
+                      ButtonSegment(value: _Show.strength, label: Text('Strength'), icon: Icon(Icons.fitness_center)),
+                      ButtonSegment(value: _Show.run, label: Text('Run'), icon: Icon(Icons.directions_run)),
+                    ],
+                    selected: {_show},
+                    onSelectionChanged: (v) => setState(() => _show = v.first),
+                  ),
+                ),
+                Expanded(
+                  child: items.isEmpty
+                      ? const Center(child: Text('No workouts yet'))
+                      : ListView.builder(
+                          padding: const EdgeInsets.only(bottom: 88),
+                          itemCount: items.length,
+                          itemBuilder: (context, i) => items[i].$2,
+                        ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

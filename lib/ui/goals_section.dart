@@ -5,6 +5,7 @@ import '../data/body_repository.dart';
 import '../data/database.dart';
 import '../data/goal_repository.dart';
 import '../data/workout_repository.dart';
+import '../run/best_efforts.dart';
 import '../workout/stats.dart';
 import 'exercises/exercise_library_screen.dart';
 import 'number_input.dart';
@@ -23,56 +24,59 @@ class GoalsSection extends StatelessWidget {
     // Progress depends on workouts and measurements too: rebuild on any change.
     return StreamBuilder<List<WorkoutListItem>>(
       stream: s.workouts.watchFinished(),
-      builder: (context, _) => StreamBuilder<List<BodyMeasurement>>(
-        stream: s.body.watchAll(),
-        builder: (context, _) => StreamBuilder<List<Goal>>(
-          stream: s.goals.watchAll(),
-          builder: (context, snap) {
-            final goals = snap.data ?? const <Goal>[];
-            final shown = limit == null ? goals : goals.take(limit!).toList();
-            return FutureBuilder<List<GoalProgress>>(
-              future: Future.wait(shown.map(s.goals.progress)),
-              builder: (context, p) {
-                final items = p.data ?? const <GoalProgress>[];
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(child: Text('Goals', style: text.titleMedium)),
-                        if (onSeeAll != null && goals.isNotEmpty)
-                          TextButton(onPressed: onSeeAll, child: const Text('See all')),
-                        if (limit != null && goals.isNotEmpty)
-                          IconButton(
-                            key: const Key('addGoalHome'),
-                            tooltip: 'Add goal',
-                            icon: const Icon(Icons.add),
-                            onPressed: () => addGoal(context),
-                          ),
-                        if (limit == null)
-                          TextButton.icon(
-                            icon: const Icon(Icons.add),
-                            label: const Text('Add goal'),
-                            onPressed: () => addGoal(context),
-                          ),
-                      ],
-                    ),
-                    if (goals.isEmpty)
-                      Card(
-                        child: ListTile(
-                          leading: const Icon(Icons.flag_outlined),
-                          title: const Text('No goals yet'),
-                          subtitle: const Text('e.g. Bench 100 kg, or body weight 80 kg'),
-                          trailing: const Icon(Icons.add),
-                          onTap: () => addGoal(context),
-                        ),
+      builder: (context, _) => StreamBuilder<List<Run>>(
+        stream: s.runs.watchFinished(),
+        builder: (context, _) => StreamBuilder<List<BodyMeasurement>>(
+          stream: s.body.watchAll(),
+          builder: (context, _) => StreamBuilder<List<Goal>>(
+            stream: s.goals.watchAll(),
+            builder: (context, snap) {
+              final goals = snap.data ?? const <Goal>[];
+              final shown = limit == null ? goals : goals.take(limit!).toList();
+              return FutureBuilder<List<GoalProgress>>(
+                future: Future.wait(shown.map(s.goals.progress)),
+                builder: (context, p) {
+                  final items = p.data ?? const <GoalProgress>[];
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(child: Text('Goals', style: text.titleMedium)),
+                          if (onSeeAll != null && goals.isNotEmpty)
+                            TextButton(onPressed: onSeeAll, child: const Text('See all')),
+                          if (limit != null && goals.isNotEmpty)
+                            IconButton(
+                              key: const Key('addGoalHome'),
+                              tooltip: 'Add goal',
+                              icon: const Icon(Icons.add),
+                              onPressed: () => addGoal(context),
+                            ),
+                          if (limit == null)
+                            TextButton.icon(
+                              icon: const Icon(Icons.add),
+                              label: const Text('Add goal'),
+                              onPressed: () => addGoal(context),
+                            ),
+                        ],
                       ),
-                    for (final g in items) _GoalTile(progress: g, compact: limit != null),
-                  ],
-                );
-              },
-            );
-          },
+                      if (goals.isEmpty)
+                        Card(
+                          child: ListTile(
+                            leading: const Icon(Icons.flag_outlined),
+                            title: const Text('No goals yet'),
+                            subtitle: const Text('e.g. Bench 100 kg, body weight 80 kg, or 5 km under 25 min'),
+                            trailing: const Icon(Icons.add),
+                            onTap: () => addGoal(context),
+                          ),
+                        ),
+                      for (final g in items) _GoalTile(progress: g, compact: limit != null),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
         ),
       ),
     );
@@ -115,8 +119,8 @@ class _GoalTile extends StatelessWidget {
                           ? 'Achieved! 🎉'
                           : [
                               '$pct%',
-                              if (g.current != null) 'now ${formatKg(g.current)} ${g.unit}',
-                              if (!compact && start != null) 'start ${formatKg(start)} ${g.unit}',
+                              if (g.current != null) 'now ${_value(g, g.current!)}',
+                              if (!compact && start != null) 'start ${_value(g, start)}',
                             ].join(' · '),
                       style: text.bodySmall,
                     ),
@@ -236,11 +240,26 @@ Future<void> addGoal(BuildContext context) async {
             subtitle: const Text('e.g. body weight 80 kg, waist 85 cm'),
             onTap: () => Navigator.pop(c, GoalType.measurement),
           ),
-          const ListTile(
-            enabled: false,
-            leading: Icon(Icons.directions_run),
-            title: Text('Running goals'),
-            subtitle: Text('Coming with run tracking (Phase 2)'),
+          ListTile(
+            key: const Key('goalRunWeek'),
+            leading: const Icon(Icons.directions_run),
+            title: const Text('Run km per week'),
+            subtitle: const Text('e.g. 20 km every week'),
+            onTap: () => Navigator.pop(c, GoalType.runKmPerWeek),
+          ),
+          ListTile(
+            key: const Key('goalRunDistance'),
+            leading: const Icon(Icons.route),
+            title: const Text('Run a distance'),
+            subtitle: const Text('e.g. 10 km in one run'),
+            onTap: () => Navigator.pop(c, GoalType.runDistance),
+          ),
+          ListTile(
+            key: const Key('goalRunTime'),
+            leading: const Icon(Icons.timer_outlined),
+            title: const Text('Run faster'),
+            subtitle: const Text('e.g. 5 km under 25 minutes'),
+            onTap: () => Navigator.pop(c, GoalType.runTime),
           ),
         ],
       ),
@@ -294,7 +313,61 @@ Future<void> addGoal(BuildContext context) async {
         suffix: kind.unit,
       );
       if (target != null) await s.goals.addMeasurement(kind.key, target.toDouble());
+    case GoalType.runKmPerWeek:
+      final target = await promptNumber(
+        context,
+        title: 'Km per week',
+        initial: 20,
+        decimal: true,
+        min: 1,
+        max: 500,
+        suffix: 'km',
+      );
+      if (target != null) await s.goals.addRun(GoalType.runKmPerWeek, target.toDouble());
+    case GoalType.runDistance:
+      final target = await promptNumber(
+        context,
+        title: 'Distance in one run',
+        initial: 10,
+        decimal: true,
+        min: 1,
+        max: 200,
+        suffix: 'km',
+      );
+      if (target != null) await s.goals.addRun(GoalType.runDistance, target.toDouble());
+    case GoalType.runTime:
+      final d = await showModalBottomSheet<int>(
+        context: context,
+        builder: (c) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const ListTile(title: Text('Which distance?')),
+              for (final e in recordDistances.entries)
+                ListTile(key: Key('goalDistance_${e.key}'), title: Text(e.value), onTap: () => Navigator.pop(c, e.key)),
+            ],
+          ),
+        ),
+      );
+      if (d == null || !context.mounted) return;
+      final best = (await s.runs.records()).fastest[d]?.value;
+      if (!context.mounted) return;
+      final target = await promptNumber(
+        context,
+        title: '${recordDistances[d]}: target time (minutes)',
+        initial: best == null ? (d / 1000 * 6).roundToDouble() : (best / 60 * 0.95).floorToDouble(),
+        decimal: true,
+        min: 1,
+        max: 600,
+        suffix: 'min',
+      );
+      if (target != null) await s.goals.addRun(GoalType.runTime, target.toDouble(), distanceM: d.toDouble());
     case GoalType.workoutsPerWeek:
       break;
   }
 }
+
+/// "26:30" for run times, "12.4 km", "82.5 kg"…
+String _value(GoalProgress g, double v) => g.goal.type == GoalType.runTime
+    ? minutesText(v)
+    : '${g.goal.type == GoalType.runKmPerWeek || g.goal.type == GoalType.runDistance ? v.toStringAsFixed(1) : formatKg(v)} ${g.unit}';

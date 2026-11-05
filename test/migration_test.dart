@@ -63,6 +63,7 @@ const _v6Columns = [
 ];
 const _v7Changes = ['DROP TABLE run_points', 'DROP TABLE runs'];
 const _v8Columns = ['runs DROP COLUMN bests_json'];
+const _v9Columns = ['goals DROP COLUMN distance_m'];
 const _v4Changes = [
   'exercises DROP COLUMN hidden',
   'template_exercises DROP COLUMN sets_json',
@@ -79,11 +80,12 @@ void main() {
     ),
     ('v2 database is upgraded', 2, [..._v3Columns, ..._v4Changes, ..._v5Changes, ..._v6Columns, ..._v7Changes]),
     ('v3 database is upgraded', 3, [..._v4Changes, ..._v5Changes, ..._v6Columns, ..._v7Changes]),
-    ('v4 database is upgraded', 4, [..._v5Changes, ..._v6Columns, ..._v7Changes]),
-    ('v5 database is upgraded', 5, [..._v6Columns, ..._v7Changes]),
-    ('v6 database is upgraded', 6, _v7Changes),
-    ('v7 database is upgraded', 7, _v8Columns),
-    ('missing column/table is repaired', 8, [..._v2Columns, 'DROP TABLE goals']),
+    ('v4 database is upgraded', 4, [..._v5Changes, ..._v6Columns, ..._v7Changes, ..._v9Columns]),
+    ('v5 database is upgraded', 5, [..._v6Columns, ..._v7Changes, ..._v9Columns]),
+    ('v6 database is upgraded', 6, [..._v7Changes, ..._v9Columns]),
+    ('v7 database is upgraded', 7, [..._v8Columns, ..._v9Columns]),
+    ('v8 database is upgraded', 8, _v9Columns),
+    ('missing column/table is repaired', 9, [..._v2Columns, 'DROP TABLE goals']),
   ];
   for (final (label, version, drop) in cases) {
     test(label, () async {
@@ -101,7 +103,7 @@ void main() {
       expect(await cols('template_exercises'), contains('sets_json'));
       expect(await cols('exercises'), contains('hidden'));
       expect(await cols('body_measurements'), contains('kind'));
-      expect(await cols('goals'), contains('target'));
+      expect(await cols('goals'), containsAll(['target', 'distance_m']));
       expect(await cols('exercises'), contains('level'));
       expect(await cols('workouts'), contains('hr_preset_id'));
       expect(await cols('templates'), contains('hr_preset_id'));

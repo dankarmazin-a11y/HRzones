@@ -147,7 +147,7 @@ void main() {
     final sets = file('xl/worksheets/sheet2.xml');
     expect(sets, contains('Barbell Bench Press'));
     expect(sets, contains('<v>61.25</v>'));
-    expect(file('xl/worksheets/sheet3.xml'), contains('Body weight'));
+    expect(file('xl/worksheets/sheet5.xml'), contains('Body weight'));
     await s.close();
   });
 
