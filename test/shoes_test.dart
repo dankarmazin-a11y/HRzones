@@ -62,6 +62,12 @@ void main() {
     await tester.pageBack();
     await settle(tester);
 
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('startRun')),
+      -200,
+      scrollable: find.descendant(of: find.byType(RunScreen), matching: find.byType(Scrollable)).first,
+    );
+    await settle(tester);
     await tester.tap(find.byKey(const Key('startRun')));
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
     await settle(tester);

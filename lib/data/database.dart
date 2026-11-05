@@ -292,6 +292,10 @@ class Runs extends Table with SyncColumns {
   /// Average cadence, steps per minute of moving time.
   IntColumn get avgCadence => integer().nullable()();
 
+  /// The planned run followed (null = free run) and its laps (JSON).
+  TextColumn get planId => text().nullable()();
+  TextColumn get lapsJson => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -309,6 +313,16 @@ class Shoes extends Table with SyncColumns {
 
   /// Picked automatically for new runs.
   BoolColumn get isDefault => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// A planned run: a goal or intervals (`PlanSpec` as JSON).
+class RunPlans extends Table with SyncColumns {
+  TextColumn get name => text()();
+  TextColumn get specJson => text()();
+  IntColumn get position => integer().withDefault(const Constant(0))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -385,13 +399,14 @@ const defaultUnilateral = [
     Runs,
     RunPoints,
     Shoes,
+    RunPlans,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -447,6 +462,13 @@ class AppDatabase extends _$AppDatabase {
       if (from >= 7 && from < 12) {
         await m.addColumn(runs, runs.steps);
         await m.addColumn(runs, runs.avgCadence);
+      }
+      if (from < 13) {
+        if (from >= 7) {
+          await m.addColumn(runs, runs.planId);
+          await m.addColumn(runs, runs.lapsJson);
+        }
+        await m.createTable(runPlans);
       }
     },
     beforeOpen: (details) async {

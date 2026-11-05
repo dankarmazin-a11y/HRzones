@@ -8,6 +8,7 @@ import 'data/body_repository.dart';
 import 'data/database.dart';
 import 'data/goal_repository.dart';
 import 'data/preset_repository.dart';
+import 'data/run_plan_repository.dart';
 import 'data/run_repository.dart';
 import 'data/shoe_repository.dart';
 import 'workout/training_level.dart';
@@ -32,6 +33,7 @@ class AppServices {
     : exercises = ExerciseRepository(db),
       runs = RunRepository(db),
       shoes = ShoeRepository(db),
+      runPlans = RunPlanRepository(db),
       templates = TemplateRepository(db),
       body = BodyRepository(db),
       presets = HrPresetRepository(db),
@@ -45,11 +47,13 @@ class AppServices {
     goals = GoalRepository(db, workouts, exercises, body, runs);
     run = RunSession(runs: runs, hr: hr, location: location, motion: location == null ? MotionSource.create() : null)
       ..voice = RunVoice(hr.beeper.speak)
-      ..notifier = restNotifier;
+      ..notifier = restNotifier
+      ..plans = runPlans.byId;
   }
 
   final RunRepository runs;
   final ShoeRepository shoes;
+  final RunPlanRepository runPlans;
 
   /// Target pace range in s/km for pace beeps (setting `runPaceAlert`,
   /// "330-350"; empty = off).
@@ -239,6 +243,7 @@ class AppServices {
     onStep?.call('Loading timers');
     await s.intervals.seedDefaults();
     await s.intervals.syncExercises(); // interval timers usable as exercises
+    await s.runPlans.seedDefaults();
     onStep?.call('Loading settings');
     await s._loadSettings();
     s.session.zonesEnabled = s.zonesEnabled.value;
