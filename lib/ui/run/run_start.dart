@@ -9,7 +9,9 @@ import '../../data/exercise_repository.dart';
 import '../../hr/ble_hr_source.dart';
 import '../../hr/hr_monitor.dart';
 import '../../run/location_source.dart';
+import '../../beep/sounds.dart';
 import '../hr_presets.dart';
+import '../timer_style.dart';
 import '../zone_colors.dart';
 import '../screens/workouts_screen.dart';
 import 'live_run_screen.dart';
@@ -41,11 +43,14 @@ Future<void> startRun(BuildContext context) async {
   );
   if (choice == null || !context.mounted) return;
   await s.db.setSetting('runPresetId', choice.preset?.id ?? '');
-  final access = await s.run.start(preset: s.zonesEnabled.value ? choice.preset : null);
+  // Permission first, so the iPhone question doesn't interrupt the countdown.
+  final access = await s.run.location.ensureAccess();
   if (!context.mounted) return;
   if (access == LocationAccess.granted) {
-    runVibration(start: true);
-    return openLiveRun(context);
+    final preset = s.zonesEnabled.value ? choice.preset : null;
+    await Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => RunCountdownScreen(preset: preset), fullscreenDialog: true));
+    return;
   }
   await showDialog<void>(
     context: context,
@@ -95,11 +100,135 @@ Future<bool> confirmNoRun(BuildContext context) async {
   return false;
 }
 
-/// A noticeable buzz when a run starts (once) and finishes (twice) – you
-/// feel it with the phone in an armband or pocket.
-void runVibration({required bool start}) {
-  HapticFeedback.vibrate();
-  if (!start) Timer(const Duration(milliseconds: 600), HapticFeedback.vibrate);
+/// A noticeable buzz – you feel it with the phone in an armband or pocket.
+/// Once when a run starts, pauses or resumes; twice when it finishes.
+void runVibration({int times = 1}) {
+  for (var i = 0; i < times; i++) {
+    i == 0 ? HapticFeedback.vibrate() : Timer(Duration(milliseconds: 600 * i), HapticFeedback.vibrate);
+  }
+}
+
+/// Length of the countdown before a run starts (0 in some tests).
+int runCountdownSeconds = 3;
+
+/// 3-2-1 before the run starts: big white digits, a tick each second, then
+/// the run starts with a vibration and the live screen takes over. Tap ✕ to
+/// cancel, or "Start now" to skip the countdown.
+class RunCountdownScreen extends StatefulWidget {
+  const RunCountdownScreen({super.key, this.preset});
+
+  final HrPreset? preset;
+
+  @override
+  State<RunCountdownScreen> createState() => _RunCountdownScreenState();
+}
+
+class _RunCountdownScreenState extends State<RunCountdownScreen> {
+  late int _left = runCountdownSeconds;
+  Timer? _timer;
+  bool _started = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Services can't be read in initState: begin after the first frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) => mounted ? _begin() : null);
+  }
+
+  void _begin() {
+    if (_left <= 0) {
+      _go();
+      return;
+    }
+    _tick();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (--_left <= 0) {
+        _go();
+      } else {
+        setState(() {});
+        _tick();
+      }
+    });
+  }
+
+  void _tick() {
+    Services.of(context).hr.beeper.play(SoundEvent.intervalTick);
+    HapticFeedback.lightImpact();
+  }
+
+  Future<void> _go() async {
+    if (_started) return;
+    _started = true;
+    _timer?.cancel();
+    setState(() => _left = 0); // "GO"
+    final s = Services.of(context);
+    final nav = Navigator.of(context);
+    s.hr.beeper.play(SoundEvent.intervalWork);
+    final access = await s.run.start(preset: widget.preset);
+    if (!mounted) return;
+    if (access != LocationAccess.granted) {
+      nav.pop();
+      return;
+    }
+    runVibration();
+    await nav.pushReplacement(
+      PageRouteBuilder<void>(
+        pageBuilder: (_, _, _) => const LiveRunScreen(),
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: const Duration(milliseconds: 300),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: TimerStyle.neutralBackground,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        leading: IconButton(
+          key: const Key('cancelCountdown'),
+          tooltip: 'Cancel',
+          icon: const Icon(Icons.close),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            const Text(
+              'Get ready',
+              style: TextStyle(color: TimerStyle.readyAccent, fontSize: 28, fontWeight: FontWeight.w700),
+            ),
+            Expanded(
+              child: Center(
+                child: FittedBox(
+                  child: Text(
+                    _left > 0 ? '$_left' : 'GO',
+                    key: const Key('runCountdown'),
+                    style: TimerStyle.digits.copyWith(fontSize: 260),
+                  ),
+                ),
+              ),
+            ),
+            TextButton(
+              key: const Key('startNow'),
+              onPressed: _go,
+              child: const Text('Start now', style: TextStyle(color: Colors.white70, fontSize: 18)),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// Before a run: pick the heart-rate zone (or none), then Start. The last

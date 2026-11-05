@@ -98,14 +98,20 @@ class _HomeShellState extends State<HomeShell> {
           body: PageView(
             key: const Key('tabPages'),
             controller: _pages,
+            physics: const SnappyPagePhysics(),
+            // Builds the neighbouring tabs ahead of time: no stutter at the
+            // start of a swipe.
+            allowImplicitScrolling: true,
             onPageChanged: (i) => setState(() => _tab = AppTab.values[i]),
             children: [
               for (final (i, screen) in _screens.indexed)
                 _KeepAlive(
-                  child: PrimaryScrollController(
-                    controller: _scroll[i],
-                    automaticallyInheritForPlatforms: TargetPlatform.values.toSet(),
-                    child: screen,
+                  child: RepaintBoundary(
+                    child: PrimaryScrollController(
+                      controller: _scroll[i],
+                      automaticallyInheritForPlatforms: TargetPlatform.values.toSet(),
+                      child: screen,
+                    ),
                   ),
                 ),
             ],
@@ -165,4 +171,27 @@ class _KeepAliveState extends State<_KeepAlive> with AutomaticKeepAliveClientMix
     super.build(context);
     return widget.child;
   }
+}
+
+/// Tab swiping that reacts to a short, quick flick and settles fast (the
+/// default needs a long drag or a hard fling and glides slowly).
+class SnappyPagePhysics extends PageScrollPhysics {
+  const SnappyPagePhysics({super.parent});
+
+  @override
+  SnappyPagePhysics applyTo(ScrollPhysics? ancestor) => SnappyPagePhysics(parent: buildParent(ancestor));
+
+  /// A slower, shorter flick already turns the page (default 50 px/s).
+  @override
+  double get minFlingVelocity => 30;
+
+  @override
+  double get minFlingDistance => 8;
+
+  /// Settles about twice as fast as the default (stiffness 100).
+  @override
+  SpringDescription get spring => SpringDescription.withDampingRatio(mass: 0.5, stiffness: 400, ratio: 1.05);
+
+  @override
+  double get dragStartDistanceMotionThreshold => 3.5;
 }

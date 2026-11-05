@@ -44,6 +44,16 @@ class FakeLocation extends LocationSource {
 }
 
 final t0 = DateTime(2026, 11, 5, 7);
+
+/// Lets the 3-2-1 countdown before a run run out.
+Future<void> countdown(WidgetTester tester) async {
+  await settle(tester);
+  for (var i = 0; i < 4; i++) {
+    await tester.pump(const Duration(seconds: 1));
+  }
+  await settle(tester);
+}
+
 const lat0 = 32.1, lon0 = 34.8;
 
 /// A fix [metres] north of the start, [s] seconds after t0.
@@ -230,7 +240,7 @@ void main() {
     await tester.tap(find.byKey(const Key('startRun')));
     await settle(tester);
     await tester.tap(find.byKey(const Key('goRun')));
-    await settle(tester);
+    await countdown(tester);
     expect(find.byKey(const Key('runDistance')), findsOneWidget);
     expect(find.text('Finding GPS…'), findsOneWidget);
 
@@ -266,7 +276,7 @@ void main() {
     await tester.tap(find.byKey(const Key('startRunHome')));
     await settle(tester);
     await tester.tap(find.byKey(const Key('goRun')));
-    await settle(tester);
+    await countdown(tester);
     await tester.tap(find.byKey(const Key('minimizeRun')));
     await settle(tester);
     expect(find.byKey(const Key('runningRunBar')), findsOneWidget);
@@ -297,7 +307,7 @@ void main() {
     await tester.tap(find.byKey(Key('runZone_$presetId')));
     await settle(tester);
     await tester.tap(find.byKey(const Key('goRun')));
-    await settle(tester);
+    await countdown(tester);
     expect(s.run.presetId, presetId);
     expect(s.hr.running, isTrue, reason: 'zone beeps on');
     expect(s.hr.range.min, 130);
@@ -313,7 +323,7 @@ void main() {
     await tester.tap(find.byKey(const Key('runZoneNone')));
     await settle(tester);
     await tester.tap(find.byKey(const Key('goRun')));
-    await settle(tester);
+    await countdown(tester);
     expect(s.run.presetId, isNull);
     expect(s.hr.running, isFalse);
     await tester.runAsync(s.run.discard);
@@ -340,6 +350,47 @@ void main() {
     await settle(tester);
     expect(bar().selectedIndex, 4);
     expect(find.descendant(of: find.byType(AppBar), matching: find.text('Profile')), findsWidgets);
+    await tearDownApp(tester, s);
+  });
+
+  testWidgets('3-2-1 countdown with ticks before the run starts; cancel or start now', (tester) async {
+    final beeper = SilentBeeper();
+    final s = (await tester.runAsync(() => testServices(beeper: beeper)))!;
+    s.run.location = FakeLocation();
+    await tester.pumpWidget(HrZonesApp(services: s));
+    await settle(tester);
+
+    await tester.tap(find.byKey(const Key('startRunHome')));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('goRun')));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text('3'), findsOneWidget);
+    expect(s.run.active, isFalse, reason: 'the run starts after the countdown');
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text('2'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('cancelCountdown')));
+    await settle(tester);
+    await tester.pump(const Duration(seconds: 3));
+    expect(s.run.active, isFalse, reason: 'cancelled');
+    final ticks = beeper.calls.where((c) => c.startsWith('beep 880x1')).length;
+    expect(ticks, 2);
+
+    await tester.tap(find.byKey(const Key('startRunHome')));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('goRun')));
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await tester.tap(find.byKey(const Key('startNow')));
+    await settle(tester);
+    expect(s.run.active, isTrue);
+    expect(find.byKey(const Key('runDistance')), findsOneWidget);
+    await tester.pump(const Duration(seconds: 4)); // the countdown timer is gone
+    await tester.tap(find.byKey(const Key('pauseRun')));
+    await settle(tester);
+    expect(s.run.paused, isTrue);
+    await tester.runAsync(s.run.discard);
     await tearDownApp(tester, s);
   });
 }

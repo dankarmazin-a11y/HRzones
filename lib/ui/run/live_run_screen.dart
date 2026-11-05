@@ -231,7 +231,7 @@ class _Controls extends StatelessWidget {
       nav.pop();
     } else if (choice == 'save') {
       final id = await run.finish();
-      if (id != null) runVibration(start: false);
+      if (id != null) runVibration(times: 2);
       if (id != null) await nav.pushReplacement(MaterialPageRoute(builder: (_) => RunSummaryScreen(runId: id)));
     }
   }
@@ -284,7 +284,10 @@ class _Controls extends StatelessWidget {
                   icon: Icons.play_arrow,
                   label: 'Resume',
                   color: TimerStyle.workAccent,
-                  onTap: run.resume,
+                  onTap: () {
+                    runVibration();
+                    run.resume();
+                  },
                 ),
               ],
             )
@@ -294,7 +297,10 @@ class _Controls extends StatelessWidget {
                 icon: Icons.pause,
                 label: 'Pause',
                 color: TimerStyle.readyAccent,
-                onTap: run.pause,
+                onTap: () {
+                  runVibration();
+                  run.pause();
+                },
               ),
             ),
     );
