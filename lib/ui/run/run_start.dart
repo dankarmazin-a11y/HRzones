@@ -18,11 +18,12 @@ import '../screens/workouts_screen.dart';
 import 'live_run_screen.dart';
 import 'run_summary_screen.dart' show runTitle;
 import 'pace_alert.dart';
+import '../../run/run_plan.dart';
 import '../../data/shoe_repository.dart';
 
 /// Start a run: the "Ready to run" sheet (heart-rate zone), location
 /// permission, a vibration, then the live run screen.
-Future<void> startRun(BuildContext context, {Run? ghostOf}) async {
+Future<void> startRun(BuildContext context, {Run? ghostOf, RunPlan? plan}) async {
   final s = Services.of(context);
   if (s.run.active) return openLiveRun(context);
   if (s.session.active != null) {
@@ -43,7 +44,7 @@ Future<void> startRun(BuildContext context, {Run? ghostOf}) async {
   final choice = await showModalBottomSheet<RunSetup>(
     context: context,
     isScrollControlled: true,
-    builder: (_) => ReadyToRunSheet(ghostOf: ghostOf),
+    builder: (_) => ReadyToRunSheet(ghostOf: ghostOf, plan: plan),
   );
   if (choice == null || !context.mounted) return;
   await s.db.setSetting('runPresetId', choice.preset?.id ?? '');
@@ -61,6 +62,7 @@ Future<void> startRun(BuildContext context, {Run? ghostOf}) async {
           treadmill: choice.treadmill,
           shoeId: choice.shoeId,
           ghostOf: choice.treadmill ? null : ghostOf,
+          plan: plan,
         ),
         fullscreenDialog: true,
       ),
@@ -130,7 +132,7 @@ int runCountdownSeconds = 3;
 /// the run starts with a vibration and the live screen takes over. Tap ✕ to
 /// cancel, or "Start now" to skip the countdown.
 class RunCountdownScreen extends StatefulWidget {
-  const RunCountdownScreen({super.key, this.preset, this.treadmill = false, this.shoeId, this.ghostOf});
+  const RunCountdownScreen({super.key, this.preset, this.treadmill = false, this.shoeId, this.ghostOf, this.plan});
 
   final HrPreset? preset;
   final bool treadmill;
@@ -138,6 +140,9 @@ class RunCountdownScreen extends StatefulWidget {
 
   /// Race against this earlier run.
   final Run? ghostOf;
+
+  /// Follow this planned run.
+  final RunPlan? plan;
 
   @override
   State<RunCountdownScreen> createState() => _RunCountdownScreenState();
@@ -191,6 +196,7 @@ class _RunCountdownScreenState extends State<RunCountdownScreen> {
       treadmill: widget.treadmill,
       shoeId: widget.shoeId,
       ghost: ghost,
+      plan: widget.plan,
     );
     if (!mounted) return;
     if (access != LocationAccess.granted) {
@@ -271,10 +277,13 @@ class RunSetup {
 /// Start. The last choices are remembered (settings `runPresetId`,
 /// `runTreadmill`). Returns null if closed.
 class ReadyToRunSheet extends StatefulWidget {
-  const ReadyToRunSheet({super.key, this.ghostOf});
+  const ReadyToRunSheet({super.key, this.ghostOf, this.plan});
 
   /// "Run this route again": the run to race against.
   final Run? ghostOf;
+
+  /// A planned run to follow.
+  final RunPlan? plan;
 
   @override
   State<ReadyToRunSheet> createState() => _ReadyToRunSheetState();
@@ -339,6 +348,15 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text('Ready to run', style: text.headlineSmall),
+              if (widget.plan != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    '${widget.plan!.name}: ${PlanSpec.fromJson(widget.plan!.specJson).description}',
+                    key: const Key('planInfo'),
+                    style: text.titleSmall,
+                  ),
+                ),
               if (widget.ghostOf != null && !_treadmill)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),

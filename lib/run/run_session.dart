@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show HapticFeedback;
 
 import '../data/database.dart';
 import '../data/run_repository.dart';
@@ -14,6 +15,7 @@ import 'best_efforts.dart';
 import 'geo.dart';
 import 'location_source.dart';
 import 'motion_source.dart';
+import 'run_plan.dart';
 import 'run_voice.dart';
 
 /// GPS signal as shown on the run screen.
@@ -118,6 +120,9 @@ class RunSession extends ChangeNotifier {
 
   /// Spoken updates (set by AppServices; none in some tests).
   RunVoice? voice;
+
+  /// Looks up a planned run (set by AppServices; used when restoring).
+  Future<RunPlan?> Function(String id)? plans;
 
   /// "Still running?" notification (set by AppServices).
   RestNotifier? notifier;
@@ -248,6 +253,34 @@ class RunSession extends ChangeNotifier {
   /// An earlier run on the same route to race against (null = none).
   GhostRun? ghost;
 
+  /// The planned run being followed (null = free run).
+  PlanRunner? plan;
+  String? _planId;
+  String? get planId => _planId;
+
+  /// Moves the plan on (every fix and every second).
+  void _advancePlan() {
+    final p = plan;
+    if (p == null || p.done || paused) return;
+    final event = p.update(distanceM, moving.inMilliseconds / 1000);
+    if (event == null) return;
+    switch (event) {
+      case PlanEvent.halfway:
+        voice?.planHalfway();
+      case PlanEvent.nextStep:
+        final step = p.current!;
+        final hard = step.kind == StepKind.work || step.kind == StepKind.goal;
+        hr.beeper.play(hard ? SoundEvent.intervalWork : SoundEvent.intervalRest);
+        HapticFeedback.vibrate();
+        voice?.planStep(step, repeat: p.repeat, repeats: p.spec.repeats);
+      case PlanEvent.done:
+        hr.beeper.play(SoundEvent.intervalDone);
+        HapticFeedback.vibrate();
+        voice?.planDone();
+    }
+    notifyListeners();
+  }
+
   /// Seconds behind (+) or ahead (−) of [ghost] at the current distance.
   double? get ghostDelta {
     final g = ghost;
@@ -256,7 +289,13 @@ class RunSession extends ChangeNotifier {
     return t == null ? null : moving.inMilliseconds / 1000 - t;
   }
 
-  Future<LocationAccess> start({HrPreset? preset, bool treadmill = false, String? shoeId, GhostRun? ghost}) async {
+  Future<LocationAccess> start({
+    HrPreset? preset,
+    bool treadmill = false,
+    String? shoeId,
+    GhostRun? ghost,
+    RunPlan? plan,
+  }) async {
     if (active) return LocationAccess.granted;
     final access = treadmill ? LocationAccess.granted : await location.ensureAccess();
     if (access != LocationAccess.granted) return access;
@@ -266,6 +305,8 @@ class RunSession extends ChangeNotifier {
     _treadmill = treadmill;
     _shoeId = shoeId;
     this.ghost = treadmill ? null : ghost;
+    _planId = plan?.id;
+    this.plan = plan == null ? null : PlanRunner(PlanSpec.fromJson(plan.specJson));
     _lastMoveAt = _startedAt;
     _presetId = preset?.id;
     hr.resetSession();
@@ -281,6 +322,8 @@ class RunSession extends ChangeNotifier {
     _listen();
     _hookAlerts();
     voice?.started();
+    final first = this.plan?.current;
+    if (first != null) voice?.planStep(first, repeat: this.plan!.repeat, repeats: this.plan!.spec.repeats);
     notifyListeners();
     return access;
   }
@@ -345,7 +388,14 @@ class RunSession extends ChangeNotifier {
         for (final e in bests.entries)
           if (before.fastest[e.key] != null && e.value < before.fastest[e.key]!.value) e.key: e.value,
       };
-      await _saveRun(endedAt: end, avgHr: hr.sessionAvg, maxHr: hr.sessionMax, bests: bests);
+      final laps = plan?.finish(this.distanceM, moving.inMilliseconds / 1000);
+      await _saveRun(
+        endedAt: end,
+        avgHr: hr.sessionAvg,
+        maxHr: hr.sessionMax,
+        bests: bests,
+        laps: laps == null || laps.isEmpty ? null : encodeLaps(laps),
+      );
       voice?.finished(this.distanceM, moving, newRecords: newRecords);
       if (_hrStartedByRun) await hr.stop();
       hr.onAlert = null;
@@ -410,6 +460,19 @@ class RunSession extends ChangeNotifier {
     _moveMark = distanceM;
     voice?.restored(distanceM, moving);
     _hookAlerts();
+    _planId = row.planId;
+    final planRow = row.planId == null ? null : await plans?.call(row.planId!);
+    if (planRow != null) {
+      // Catch up with the steps already run (from the route).
+      final runner = PlanRunner(PlanSpec.fromJson(planRow.specJson));
+      final (:dist, :time) = cumulativeProfile(
+        _route.map((p) => (time: p.time, lat: p.lat, lon: p.lon, accuracy: p.accuracy, segment: p.segment)),
+      );
+      for (var i = 0; i < dist.length; i++) {
+        runner.update(dist[i], time[i]);
+      }
+      plan = runner;
+    }
     if (!paused) await _startSteps();
     if (!paused) _listen();
     notifyListeners();
@@ -490,6 +553,7 @@ class RunSession extends ChangeNotifier {
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       ticks.value++;
       _paceEngine.tick(now());
+      _advancePlan(); // time-based steps (and treadmill runs)
       if (ticks.value % 5 == 0) _readSteps();
       if (++_sinceSave >= saveEvery) flush();
     });
@@ -539,6 +603,7 @@ class RunSession extends ChangeNotifier {
       ghostDelta: ghostDelta,
     );
     _checkPace(pace);
+    _advancePlan();
     if (!wasGood) notifyListeners();
   }
 
@@ -562,7 +627,7 @@ class RunSession extends ChangeNotifier {
     ]);
   }
 
-  Future<void> _saveRun({DateTime? endedAt, int? avgHr, int? maxHr, Map<int, double>? bests}) async {
+  Future<void> _saveRun({DateTime? endedAt, int? avgHr, int? maxHr, Map<int, double>? bests, String? laps}) async {
     final id = _id, start = _startedAt;
     if (id == null || start == null) return;
     await runs.saveRun(
@@ -580,6 +645,8 @@ class RunSession extends ChangeNotifier {
         bestsJson: Value(bests == null ? null : encodeBests(bests)),
         kind: Value(_treadmill ? RunKind.treadmill : RunKind.outdoor),
         shoeId: Value(_shoeId),
+        planId: Value(_planId),
+        lapsJson: Value(laps),
         steps: Value(steps),
         avgCadence: Value(_avgCadence()),
         updatedAt: Value(now()),
@@ -600,6 +667,8 @@ class RunSession extends ChangeNotifier {
     _presetId = null;
     _shoeId = null;
     ghost = null;
+    plan = null;
+    _planId = null;
     _stepsBefore = 0;
     _steps = 0;
     _counting = false;

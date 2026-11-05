@@ -1,4 +1,5 @@
 import 'geo.dart';
+import 'run_plan.dart';
 
 /// Spoken updates during a run: every km (or ½ / 2 km) the distance, time,
 /// average pace, the last km's pace and the heart rate; plus start, pause,
@@ -52,6 +53,22 @@ class RunVoice {
   /// "Test voice" in Settings (also when updates are off).
   void test() =>
       _say('2 kilometres. Time 11 minutes 40 seconds. Average pace 5 minutes 50 per kilometre.', force: true);
+
+  /// A planned run moves to [step] ("Run 400 metres. Repeat 2 of 6.").
+  void planStep(PlanStep step, {int? repeat, int repeats = 1}) {
+    final amount = step.byDistance ? spokenMetres(step.value) : spokenDuration(Duration(seconds: step.value));
+    _say(
+      [
+        '${step.label} $amount.',
+        if (step.kind == StepKind.work && repeat != null && repeats > 1) 'Repeat $repeat of $repeats.',
+      ].join(' '),
+      force: true,
+    );
+  }
+
+  void planHalfway() => _say('Halfway.', force: true);
+
+  void planDone() => _say('Workout complete. Keep running, or finish when you\'re ready.', force: true);
 
   /// Heart rate out of the zone during a run.
   void heartRateAlert({required bool high, required int bpm}) {
@@ -161,3 +178,6 @@ String spokenGhost(double delta) {
   if (secs < 2) return 'Level with last time.';
   return '${spokenDuration(Duration(seconds: secs))} ${delta < 0 ? 'ahead of' : 'behind'} last time.';
 }
+
+/// "400 metres", "1 kilometre", "1.5 kilometres".
+String spokenMetres(int m) => m < 1000 ? '$m metres' : spokenKm(m.toDouble());
