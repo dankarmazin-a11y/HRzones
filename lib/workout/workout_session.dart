@@ -12,6 +12,8 @@ import '../hr/hr_monitor.dart';
 import '../data/preset_repository.dart';
 import '../hr/zones.dart';
 import '../notify/rest_notifier.dart';
+import '../run/geo.dart';
+import '../run/location_source.dart';
 
 import 'active_workout.dart';
 import 'interval_runner.dart';
@@ -200,6 +202,7 @@ class WorkoutSession extends ChangeNotifier {
                         reps: s.reps,
                         durationS: s.durationS,
                         side: s.side,
+                        distanceM: s.distanceM,
                       ),
                   ],
           ),
@@ -480,7 +483,9 @@ class WorkoutSession extends ChangeNotifier {
       if (slot.sets.isNotEmpty) {
         for (final ts in slot.sets) {
           le.sets.add(
-            LoggedSet(type: ts.type, weightKg: ts.weightKg, reps: ts.reps, durationS: ts.durationS)..side = ts.side,
+            LoggedSet(type: ts.type, weightKg: ts.weightKg, reps: ts.reps, durationS: ts.durationS)
+              ..side = ts.side
+              ..distanceM = ts.distanceM,
           );
         }
       } else {
@@ -535,7 +540,14 @@ class WorkoutSession extends ChangeNotifier {
             ? const []
             : [
                 for (final s in e.sets)
-                  TemplateSet(type: s.type, weightKg: s.weightKg, reps: s.reps, durationS: s.durationS, side: s.side),
+                  TemplateSet(
+                    type: s.type,
+                    weightKg: s.weightKg,
+                    reps: s.reps,
+                    durationS: s.durationS,
+                    side: s.side,
+                    distanceM: s.distanceM,
+                  ),
               ],
       ),
   ];
@@ -767,6 +779,11 @@ class WorkoutSession extends ChangeNotifier {
     _changed(notify: false);
   }
 
+  void setDistance(LoggedSet s, double? v) {
+    s.distanceM = v;
+    _changed(notify: false);
+  }
+
   void setDuration(LoggedSet s, int? v) {
     s.durationS = v;
     _changed(notify: false);
@@ -829,6 +846,7 @@ class WorkoutSession extends ChangeNotifier {
       s.weightKg ??= prev?.weightKg;
       s.reps ??= prev?.reps;
       s.durationS ??= prev?.durationS;
+      s.distanceM ??= prev?.distanceM;
       _complete(e, s);
     }
     _changed();
@@ -1130,11 +1148,90 @@ class WorkoutSession extends ChangeNotifier {
     await _saveNow();
   }
 
+  // ── Hybrid workouts: a distance set measured with GPS ──────────────────
+  /// Where GPS comes from (set by AppServices; the run's location source).
+  LocationSource Function()? locationFor;
+
+  /// The distance set being run now (GPS), if any.
+  SetRun? setRun;
+  StreamSubscription<GeoFix>? _setRunSub;
+  Timer? _setRunTicker;
+
+  /// ▶ on a Run row: measures the distance with GPS. The set ends by itself
+  /// at the typed distance (or with ■), then the normal rest starts.
+  /// Returns what the phone said about location access.
+  Future<LocationAccess> startSetRun(LoggedExercise e, LoggedSet s) async {
+    final loc = locationFor?.call();
+    if (loc == null) return LocationAccess.denied;
+    final access = await loc.ensureAccess();
+    if (access != LocationAccess.granted) return access;
+    await stopSetRun(save: false);
+    stopTimer();
+    final run = setRun = SetRun(
+      exercise: e,
+      set: s,
+      target: s.distanceM ?? e.previousFor(e.sets.indexOf(s))?.distanceM,
+    );
+    await _holdAudio(); // the finishing beep also with the screen locked
+    _setRunSub = loc.start().listen((fix) {
+      run.add(fix);
+      ticks.value = run.metres.round();
+      final target = run.target;
+      if (target != null && run.metres >= target) stopSetRun();
+    });
+    _setRunTicker = Timer.periodic(const Duration(seconds: 1), (_) => ticks.value = -run.elapsed.inSeconds);
+    notifyListeners();
+    return access;
+  }
+
+  /// Ends the GPS set: saves metres and time and ticks it ([save]), or
+  /// throws the measurement away.
+  Future<void> stopSetRun({bool save = true}) async {
+    final run = setRun;
+    if (run == null) return;
+    setRun = null;
+    _setRunTicker?.cancel();
+    await _setRunSub?.cancel();
+    _setRunSub = null;
+    await locationFor?.call().stop();
+    if (save && run.metres > 0) {
+      final s = run.set;
+      s.distanceM = (run.target != null && run.metres >= run.target!) ? run.target : run.metres.roundToDouble();
+      s.durationS = run.elapsed.inSeconds;
+      hr.beeper.play(SoundEvent.setTimerOver);
+      HapticFeedback.vibrate();
+      if (!s.done) toggleDone(run.exercise, s);
+    } else {
+      _releaseAudio();
+      notifyListeners();
+    }
+  }
+
   @override
   void dispose() {
+    _setRunTicker?.cancel();
+    _setRunSub?.cancel();
     ticks.dispose();
     _saveTimer?.cancel();
     _ticker?.cancel();
     super.dispose();
   }
+}
+
+/// A distance set in a strength workout measured with GPS.
+class SetRun {
+  SetRun({required this.exercise, required this.set, this.target}) : startedAt = DateTime.now();
+
+  final LoggedExercise exercise;
+  final LoggedSet set;
+
+  /// Metres to run (null = until ■).
+  final double? target;
+  final DateTime startedAt;
+  final _tracker = DistanceTracker();
+
+  double get metres => _tracker.distanceM;
+  Duration get elapsed => DateTime.now().difference(startedAt);
+
+  void add(GeoFix fix) => _tracker.add(fix);
 }

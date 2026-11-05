@@ -46,6 +46,7 @@ class AppServices {
     run = RunSession(runs: runs, hr: hr, location: location, motion: location == null ? MotionSource.create() : null)
       ..voice = RunVoice(hr.beeper.speak)
       ..notifier = restNotifier;
+    session.locationFor = () => run.location;
   }
 
   final RunRepository runs;

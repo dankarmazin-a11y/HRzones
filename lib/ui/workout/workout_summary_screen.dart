@@ -143,7 +143,7 @@ class WorkoutSummaryScreen extends StatelessWidget {
                     for (final (i, set) in e.sets.indexed)
                       Text(
                         '${i + 1}. ${set.subExercise != null ? '${set.subExercise!.name}: ' : ''}'
-                        '${_setText(e.exercise.trackingType, set.type, set.weightKg, set.reps, set.durationS)}'
+                        '${_setText(e.exercise.trackingType, set.type, set.weightKg, set.reps, set.durationS, set.distanceM)}'
                         '${set.rpe != null ? ' @ RPE ${formatKg(set.rpe)}' : ''}'
                         '${set.maxHr != null ? '  ♥ ${set.maxHr}' : ''}',
                       ),
@@ -160,7 +160,7 @@ class WorkoutSummaryScreen extends StatelessWidget {
     );
   }
 
-  static String _setText(TrackingType t, SetType type, double? w, int? reps, int? secs) {
+  static String _setText(TrackingType t, SetType type, double? w, int? reps, int? secs, [double? metres]) {
     final prefix = switch (type) {
       SetType.warmup => 'Warm-up: ',
       SetType.drop => 'Drop: ',
@@ -169,6 +169,9 @@ class WorkoutSummaryScreen extends StatelessWidget {
     };
     if (t == TrackingType.duration) {
       return (w == null || w == 0) ? '$prefix${secs ?? 0} s' : '$prefix${secs ?? 0} s with +${formatKg(w)} kg';
+    }
+    if (t == TrackingType.distance) {
+      return '$prefix${formatKg(metres ?? 0)} m in ${formatDuration(Duration(seconds: secs ?? 0))}';
     }
     if (w == null || w == 0) return '$prefix${reps ?? 0} reps';
     return '$prefix${formatKg(w)} kg × ${reps ?? 0}';

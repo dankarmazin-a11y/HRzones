@@ -7,12 +7,15 @@ import 'database.dart';
 /// One exercise slot in a template (editable, in memory).
 /// A planned set in a template (values are optional targets).
 class TemplateSet {
-  const TemplateSet({this.type = SetType.normal, this.weightKg, this.reps, this.durationS, this.side});
+  const TemplateSet({this.type = SetType.normal, this.weightKg, this.reps, this.durationS, this.side, this.distanceM});
 
   final SetType type;
   final double? weightKg;
   final int? reps;
   final int? durationS;
+
+  /// Target metres (distance sets).
+  final double? distanceM;
 
   /// Left / right for one-sided exercises.
   final Side? side;
@@ -23,6 +26,7 @@ class TemplateSet {
     if (reps != null) 'r': reps,
     if (durationS != null) 's': durationS,
     if (side != null) 'd': side!.index,
+    if (distanceM != null) 'm': distanceM,
   };
 
   factory TemplateSet.fromJson(Map<String, dynamic> j) => TemplateSet(
@@ -31,6 +35,7 @@ class TemplateSet {
     reps: j['r'] as int?,
     durationS: j['s'] as int?,
     side: j['d'] is int ? Side.values[(j['d'] as int).clamp(0, 1)] : null,
+    distanceM: (j['m'] as num?)?.toDouble(),
   );
 
   static String? encode(List<TemplateSet> sets) => sets.isEmpty ? null : jsonEncode([for (final s in sets) s.toJson()]);

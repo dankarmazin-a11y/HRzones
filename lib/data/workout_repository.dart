@@ -82,6 +82,7 @@ class WorkoutRepository {
                 weightKg: Value(s.weightKg),
                 reps: Value(s.reps),
                 durationS: Value(s.durationS),
+                distanceM: Value(s.distanceM),
                 rpe: Value(s.rpe),
                 maxHr: Value(s.maxHr),
                 completedAt: Value(s.completedAt),
@@ -130,6 +131,7 @@ class WorkoutRepository {
         le.sets.add(
           LoggedSet(id: s.id, type: s.setType, weightKg: s.weightKg, reps: s.reps, durationS: s.durationS, rpe: s.rpe)
             ..maxHr = s.maxHr
+            ..distanceM = s.distanceM
             ..completedAt = s.completedAt
             ..subExercise = s.subExerciseId == null ? null : await exercises.byId(s.subExerciseId!)
             ..side = s.side,

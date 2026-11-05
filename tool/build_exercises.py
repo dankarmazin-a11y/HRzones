@@ -298,6 +298,10 @@ HIDDEN = {
 # Exercises held for time.
 DURATION_IDS = {'Plank', 'hz_side_plank', 'hz_wall_sit', 'hz_dead_hang'}
 
+# Logged as metres + time (hybrid / HYROX stations). hz_run can use GPS.
+DISTANCE_IDS = {'hz_run', 'hz_ski_erg', 'Rowing_Stationary', 'Sled_Push', 'hz_sled_pull', 'hz_burpee_broad_jump',
+                'Farmers_Walk', 'hz_sandbag_lunge'}
+
 
 def new(id, name, muscle, equipment, category='strength', secondary=(), images_from=None, mechanic='compound',
         instructions=()):
@@ -307,6 +311,19 @@ def new(id, name, muscle, equipment, category='strength', secondary=(), images_f
 
 
 ADDITIONS = [
+    new('hz_run', 'Run', 'quadriceps', 'body only', category='cardio', secondary=['hamstrings', 'calves', 'glutes'],
+        instructions=['Run a set distance. In a workout, tap ▶ to measure it with GPS – the set ends when you reach the distance.']),
+    new('hz_ski_erg', 'SkiErg', 'lats', 'machine', category='cardio', secondary=['shoulders', 'triceps', 'abdominals'],
+        instructions=['Pull both handles down from overhead, hinging at the hips, and let them return. Log metres and time.']),
+    new('hz_sled_pull', 'Sled Pull', 'hamstrings', 'other', secondary=['lats', 'biceps', 'glutes'],
+        instructions=['Face the sled, lean back and pull it towards you hand over hand with the rope.']),
+    new('hz_burpee_broad_jump', 'Burpee Broad Jump', 'quadriceps', 'body only', category='plyometrics',
+        secondary=['chest', 'glutes'],
+        instructions=['Do a burpee, then jump forward as far as you can with both feet. Repeat for the distance.']),
+    new('hz_sandbag_lunge', 'Sandbag Walking Lunge', 'quadriceps', 'other', secondary=['glutes', 'hamstrings'],
+        instructions=['Hold a sandbag on your shoulders and walk forward in lunges, back knee just above the floor.']),
+    new('hz_wall_ball', 'Wall Ball', 'quadriceps', 'medicine ball', secondary=['shoulders', 'glutes'],
+        instructions=['Squat with a medicine ball at your chest, drive up and throw it to a target on the wall; catch and repeat.']),
     new('hz_bulgarian_split_squat', 'Bulgarian Split Squat', 'quadriceps', 'dumbbell', secondary=['glutes'],
         images_from='Split_Squat_with_Dumbbells',
         instructions=['Stand a stride in front of a bench and rest the top of your back foot on it.',
@@ -416,6 +433,8 @@ def main():
         e.setdefault('level', 'beginner')
     for id in DURATION_IDS:
         by_id[id]['tracking'] = 'duration'
+    for id in DISTANCE_IDS:
+        by_id[id]['tracking'] = 'distance'
     for id, instead in HIDDEN.items():
         assert instead in by_id and instead not in HIDDEN, id
         by_id[id]['hidden'] = True

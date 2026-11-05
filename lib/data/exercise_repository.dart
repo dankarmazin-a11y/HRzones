@@ -44,7 +44,7 @@ const equipmentTypes = [
 const exerciseImageBase = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
 
 /// Bump when assets/exercises.json changes so existing installs re-seed.
-const exerciseSeedVersion = '5';
+const exerciseSeedVersion = '6';
 
 /// How many popular exercises are listed before the A–Z list.
 const popularCount = 5;
@@ -122,6 +122,7 @@ class ExerciseRepository {
     final images = (e['images'] as List?)?.cast<String>() ?? const [];
     final tracking = switch (category) {
       _ when e['tracking'] == 'duration' => TrackingType.duration,
+      _ when e['tracking'] == 'distance' => TrackingType.distance,
       'stretching' || 'cardio' => TrackingType.duration,
       _ when equipment == 'body only' || equipment == null => TrackingType.bodyweightReps,
       _ => TrackingType.weightReps,

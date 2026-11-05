@@ -55,7 +55,20 @@ Future<Uint8List> exportWorkbook(AppDatabase db) async {
   ];
 
   final setRows = <List<Object?>>[
-    ['Date', 'Workout', 'Exercise', 'Stretch', 'Set', 'Set type', 'Weight (kg)', 'Reps', 'Seconds', 'RPE', 'Max HR'],
+    [
+      'Date',
+      'Workout',
+      'Exercise',
+      'Stretch',
+      'Set',
+      'Set type',
+      'Weight (kg)',
+      'Reps',
+      'Seconds',
+      'Metres',
+      'RPE',
+      'Max HR',
+    ],
     for (final s in sets)
       if (byId[s.workoutId] case final w?)
         [
@@ -68,6 +81,7 @@ Future<Uint8List> exportWorkbook(AppDatabase db) async {
           s.weightKg,
           s.reps,
           s.durationS,
+          s.distanceM,
           s.rpe,
           s.maxHr,
         ],

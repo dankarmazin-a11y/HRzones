@@ -27,8 +27,22 @@ TemplateSlot _asLogged(TemplateSlot a, TemplateSlot logged) {
   final planned = a.sets.isEmpty ? [for (var i = 0; i < a.targetSets; i++) const TemplateSet()] : a.sets;
   final pairs = [
     for (final s in planned) ...[
-      TemplateSet(type: s.type, weightKg: s.weightKg, reps: s.reps, durationS: s.durationS, side: Side.left),
-      TemplateSet(type: s.type, weightKg: s.weightKg, reps: s.reps, durationS: s.durationS, side: Side.right),
+      TemplateSet(
+        type: s.type,
+        weightKg: s.weightKg,
+        reps: s.reps,
+        durationS: s.durationS,
+        distanceM: s.distanceM,
+        side: Side.left,
+      ),
+      TemplateSet(
+        type: s.type,
+        weightKg: s.weightKg,
+        reps: s.reps,
+        durationS: s.durationS,
+        distanceM: s.distanceM,
+        side: Side.right,
+      ),
     ],
   ];
   return TemplateSlot(
@@ -59,13 +73,16 @@ TemplateChange compareToTemplate(TemplateWithSlots t, ActiveWorkout w) {
     if (aCount != b.targetSets) return TemplateChange.structure;
     if (a.sets.isEmpty) {
       // Old template without targets: any logged value is new.
-      if (b.sets.any((s) => s.weightKg != null || s.reps != null || s.durationS != null)) values = true;
+      if (b.sets.any((s) => s.weightKg != null || s.reps != null || s.durationS != null || s.distanceM != null)) {
+        values = true;
+      }
       continue;
     }
     for (var j = 0; j < a.sets.length && j < b.sets.length; j++) {
       final x = a.sets[j], y = b.sets[j];
       if (_setKey(x.type, x.weightKg, x.reps, x.durationS, x.side) !=
-          _setKey(y.type, y.weightKg, y.reps, y.durationS, y.side)) {
+              _setKey(y.type, y.weightKg, y.reps, y.durationS, y.side) ||
+          x.distanceM != y.distanceM) {
         values = true;
       }
     }
