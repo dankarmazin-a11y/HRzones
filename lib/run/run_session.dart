@@ -245,7 +245,18 @@ class RunSession extends ChangeNotifier {
 
   /// Starts recording. Asks for location permission first; returns what the
   /// phone answered (only [LocationAccess.granted] starts a run).
-  Future<LocationAccess> start({HrPreset? preset, bool treadmill = false, String? shoeId}) async {
+  /// An earlier run on the same route to race against (null = none).
+  GhostRun? ghost;
+
+  /// Seconds behind (+) or ahead (−) of [ghost] at the current distance.
+  double? get ghostDelta {
+    final g = ghost;
+    if (g == null || distanceM < 50) return null;
+    final t = g.timeAt(distanceM);
+    return t == null ? null : moving.inMilliseconds / 1000 - t;
+  }
+
+  Future<LocationAccess> start({HrPreset? preset, bool treadmill = false, String? shoeId, GhostRun? ghost}) async {
     if (active) return LocationAccess.granted;
     final access = treadmill ? LocationAccess.granted : await location.ensureAccess();
     if (access != LocationAccess.granted) return access;
@@ -254,6 +265,7 @@ class RunSession extends ChangeNotifier {
     _startedAt = now();
     _treadmill = treadmill;
     _shoeId = shoeId;
+    this.ghost = treadmill ? null : ghost;
     _lastMoveAt = _startedAt;
     _presetId = preset?.id;
     hr.resetSession();
@@ -518,7 +530,14 @@ class RunSession extends ChangeNotifier {
     }
     ticks.value++;
     final pace = currentPace;
-    voice?.progress(distanceM, moving, bpm: hr.running ? hr.bpm : null, currentPace: pace, cadence: cadence);
+    voice?.progress(
+      distanceM,
+      moving,
+      bpm: hr.running ? hr.bpm : null,
+      currentPace: pace,
+      cadence: cadence,
+      ghostDelta: ghostDelta,
+    );
     _checkPace(pace);
     if (!wasGood) notifyListeners();
   }
@@ -580,6 +599,7 @@ class RunSession extends ChangeNotifier {
     _pausedMs = 0;
     _presetId = null;
     _shoeId = null;
+    ghost = null;
     _stepsBefore = 0;
     _steps = 0;
     _counting = false;

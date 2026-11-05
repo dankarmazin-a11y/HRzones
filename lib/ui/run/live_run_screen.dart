@@ -167,6 +167,7 @@ class _Numbers extends StatelessWidget {
                 stat(formatPace(run.avgPace), 'Avg pace', key: const Key('runAvgPace')),
               ],
             ),
+            _GhostChip(run: run),
             const SizedBox(height: 24),
             const _HeartRate(),
             _Cadence(run: run),
@@ -563,6 +564,36 @@ class _Cadence extends StatelessWidget {
         'Cadence ${c.round()} spm',
         key: const Key('runCadence'),
         style: const TextStyle(color: Colors.white70, fontSize: 18, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+}
+
+/// Racing an earlier run: "Ahead 0:12" (green) / "Behind 0:08" (orange).
+class _GhostChip extends StatelessWidget {
+  const _GhostChip({required this.run});
+
+  final RunSession run;
+
+  @override
+  Widget build(BuildContext context) {
+    final d = run.ghostDelta;
+    if (d == null) return const SizedBox.shrink();
+    final ahead = d < 0;
+    final secs = d.abs().round();
+    final color = ahead ? TimerStyle.workAccent : Colors.orangeAccent;
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Container(
+        key: const Key('ghostDelta'),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(color: color.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
+        child: Text(
+          secs < 2
+              ? 'Level with last time'
+              : '${ahead ? 'Ahead' : 'Behind'} ${formatDuration(Duration(seconds: secs))}',
+          style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w800),
+        ),
       ),
     );
   }

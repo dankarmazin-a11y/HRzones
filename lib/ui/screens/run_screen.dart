@@ -5,6 +5,7 @@ import '../../data/database.dart';
 import '../../run/geo.dart';
 import '../../workout/stats.dart';
 import '../run/edit_run_screen.dart';
+import '../run/run_progress.dart';
 import '../run/run_records.dart';
 import '../run/shoes.dart';
 import '../run/run_start.dart';
@@ -69,6 +70,17 @@ class RunScreen extends StatelessWidget {
                 _Totals(runs: runs),
                 const SizedBox(height: 8),
                 RunRecordsCard(runs: runs),
+                Card(
+                  child: ListTile(
+                    key: const Key('runProgress'),
+                    leading: const Icon(Icons.show_chart),
+                    title: const Text('Progress'),
+                    subtitle: const Text('Km per week, pace and fitness charts'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () =>
+                        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RunProgressScreen())),
+                  ),
+                ),
                 const SizedBox(height: 16),
                 Text('Your runs', style: text.titleMedium),
                 for (final r in runs) RunTile(run: r),

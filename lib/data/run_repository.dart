@@ -56,6 +56,51 @@ class RunRepository {
 
   Stream<Run?> watch(String id) => (db.select(db.runs)..where((r) => r.id.equals(id))).watchSingleOrNull();
 
+  /// The most recent earlier run on the same route: starts and ends within
+  /// 150 m of this one's and its distance is within 15 %. Null if none.
+  Future<Run?> sameRoute(Run run) async {
+    if (run.kind != RunKind.outdoor || run.distanceM < 300) return null;
+    final mine = await points(run.id);
+    if (mine.length < 2) return null;
+    final candidates =
+        await (db.select(db.runs)
+              ..where(
+                (r) =>
+                    r.endedAt.isNotNull() &
+                    r.id.equals(run.id).not() &
+                    r.startedAt.isSmallerThanValue(run.startedAt) &
+                    r.kind.equals(RunKind.outdoor.index) &
+                    r.distanceM.isBetweenValues(run.distanceM * 0.85, run.distanceM * 1.15),
+              )
+              ..orderBy([(r) => OrderingTerm.desc(r.startedAt)])
+              ..limit(30))
+            .get();
+    bool near(RunPoint a, RunPoint b) => geoDistanceM(a.lat, a.lon, b.lat, b.lon) <= 150;
+    for (final c in candidates) {
+      final first =
+          await (db.select(db.runPoints)
+                ..where((p) => p.runId.equals(c.id))
+                ..orderBy([(p) => OrderingTerm.asc(p.time)])
+                ..limit(1))
+              .getSingleOrNull();
+      final last =
+          await (db.select(db.runPoints)
+                ..where((p) => p.runId.equals(c.id))
+                ..orderBy([(p) => OrderingTerm.desc(p.time)])
+                ..limit(1))
+              .getSingleOrNull();
+      if (first != null && last != null && near(first, mine.first) && near(last, mine.last)) return c;
+    }
+    return null;
+  }
+
+  /// [run] as a "ghost" to race against.
+  Future<GhostRun> ghostOf(Run run) async => GhostRun.fromPoints(
+    run.id,
+    run.startedAt,
+    (await points(run.id)).map((p) => (time: p.time, lat: p.lat, lon: p.lon, accuracy: p.accuracy, segment: p.segment)),
+  );
+
   /// Drops the route after [endAt] (a forgotten run that kept recording).
   Future<void> deletePointsAfter(String runId, DateTime endAt) =>
       (db.delete(db.runPoints)..where((p) => p.runId.equals(runId) & p.time.isBiggerThanValue(endAt))).go();

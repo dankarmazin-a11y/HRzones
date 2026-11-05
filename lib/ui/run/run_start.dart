@@ -16,12 +16,13 @@ import '../zone_colors.dart';
 import '../screens/settings_screen.dart';
 import '../screens/workouts_screen.dart';
 import 'live_run_screen.dart';
+import 'run_summary_screen.dart' show runTitle;
 import 'pace_alert.dart';
 import '../../data/shoe_repository.dart';
 
 /// Start a run: the "Ready to run" sheet (heart-rate zone), location
 /// permission, a vibration, then the live run screen.
-Future<void> startRun(BuildContext context) async {
+Future<void> startRun(BuildContext context, {Run? ghostOf}) async {
   final s = Services.of(context);
   if (s.run.active) return openLiveRun(context);
   if (s.session.active != null) {
@@ -42,7 +43,7 @@ Future<void> startRun(BuildContext context) async {
   final choice = await showModalBottomSheet<RunSetup>(
     context: context,
     isScrollControlled: true,
-    builder: (_) => const ReadyToRunSheet(),
+    builder: (_) => ReadyToRunSheet(ghostOf: ghostOf),
   );
   if (choice == null || !context.mounted) return;
   await s.db.setSetting('runPresetId', choice.preset?.id ?? '');
@@ -55,7 +56,12 @@ Future<void> startRun(BuildContext context) async {
     final preset = s.zonesEnabled.value ? choice.preset : null;
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => RunCountdownScreen(preset: preset, treadmill: choice.treadmill, shoeId: choice.shoeId),
+        builder: (_) => RunCountdownScreen(
+          preset: preset,
+          treadmill: choice.treadmill,
+          shoeId: choice.shoeId,
+          ghostOf: choice.treadmill ? null : ghostOf,
+        ),
         fullscreenDialog: true,
       ),
     );
@@ -124,11 +130,14 @@ int runCountdownSeconds = 3;
 /// the run starts with a vibration and the live screen takes over. Tap ✕ to
 /// cancel, or "Start now" to skip the countdown.
 class RunCountdownScreen extends StatefulWidget {
-  const RunCountdownScreen({super.key, this.preset, this.treadmill = false, this.shoeId});
+  const RunCountdownScreen({super.key, this.preset, this.treadmill = false, this.shoeId, this.ghostOf});
 
   final HrPreset? preset;
   final bool treadmill;
   final String? shoeId;
+
+  /// Race against this earlier run.
+  final Run? ghostOf;
 
   @override
   State<RunCountdownScreen> createState() => _RunCountdownScreenState();
@@ -175,7 +184,14 @@ class _RunCountdownScreenState extends State<RunCountdownScreen> {
     final s = Services.of(context);
     final nav = Navigator.of(context);
     s.hr.beeper.play(SoundEvent.intervalWork);
-    final access = await s.run.start(preset: widget.preset, treadmill: widget.treadmill, shoeId: widget.shoeId);
+    final g = widget.ghostOf;
+    final ghost = g == null ? null : await s.runs.ghostOf(g);
+    final access = await s.run.start(
+      preset: widget.preset,
+      treadmill: widget.treadmill,
+      shoeId: widget.shoeId,
+      ghost: ghost,
+    );
     if (!mounted) return;
     if (access != LocationAccess.granted) {
       nav.pop();
@@ -255,7 +271,10 @@ class RunSetup {
 /// Start. The last choices are remembered (settings `runPresetId`,
 /// `runTreadmill`). Returns null if closed.
 class ReadyToRunSheet extends StatefulWidget {
-  const ReadyToRunSheet({super.key});
+  const ReadyToRunSheet({super.key, this.ghostOf});
+
+  /// "Run this route again": the run to race against.
+  final Run? ghostOf;
 
   @override
   State<ReadyToRunSheet> createState() => _ReadyToRunSheetState();
@@ -320,6 +339,15 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text('Ready to run', style: text.headlineSmall),
+              if (widget.ghostOf != null && !_treadmill)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    'Racing your run of ${runTitle(widget.ghostOf!)} – you\'ll see and hear if you\'re ahead or behind.',
+                    key: const Key('ghostInfo'),
+                    style: text.bodyMedium,
+                  ),
+                ),
               const SizedBox(height: 8),
               SegmentedButton<bool>(
                 key: const Key('runKind'),

@@ -11,6 +11,7 @@ import 'run_map.dart';
 import 'edit_run_screen.dart';
 import 'run_feel.dart';
 import 'run_records.dart';
+import 'run_start.dart';
 import 'shoes.dart';
 
 import 'package:fl_chart/fl_chart.dart';
@@ -149,6 +150,7 @@ class _Body extends StatelessWidget {
         const SizedBox(height: 8),
         RunShoeRow(runId: run.id, shoeId: run.shoeId),
         RunFeelCard(key: ValueKey('feel_${run.id}'), run: run),
+        RunCompareCard(key: ValueKey('compare_${run.id}'), run: run),
         RunBestsCard(run: run),
         _SplitsSection(run: run),
       ],
@@ -609,6 +611,78 @@ class _ElevationChart extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Same route as an earlier run: time and pace then and now; and "Run this
+/// route again" to race this run.
+class RunCompareCard extends StatefulWidget {
+  const RunCompareCard({super.key, required this.run});
+
+  final Run run;
+
+  @override
+  State<RunCompareCard> createState() => _RunCompareCardState();
+}
+
+class _RunCompareCardState extends State<RunCompareCard> {
+  Future<Run?>? _same;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _same ??= Services.of(context).runs.sameRoute(widget.run);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final run = widget.run;
+    if (run.kind != RunKind.outdoor || run.distanceM < 300) return const SizedBox.shrink();
+    final text = Theme.of(context).textTheme;
+    return FutureBuilder<Run?>(
+      future: _same,
+      builder: (context, snap) {
+        final old = snap.data;
+        final pace = paceSecPerKm(run.distanceM, run.durationS.toDouble());
+        final oldPace = old == null ? null : paceSecPerKm(old.distanceM, old.durationS.toDouble());
+        String diff(double a, double b) {
+          final d = (a - b).round();
+          if (d.abs() < 2) return 'same';
+          return '${d < 0 ? '−' : '+'}${formatDuration(Duration(seconds: d.abs()))}';
+        }
+
+        return Card(
+          key: const Key('runCompare'),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (old != null) ...[
+                  Text('Same route as ${runTitle(old)}', style: text.titleMedium),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Time ${formatDuration(Duration(seconds: old.durationS))} → '
+                    '${formatDuration(Duration(seconds: run.durationS))} '
+                    '(${diff(run.durationS.toDouble(), old.durationS.toDouble())})',
+                    key: const Key('compareTime'),
+                  ),
+                  if (pace != null && oldPace != null)
+                    Text('Pace ${formatPace(oldPace)} → ${formatPace(pace)} /km (${diff(pace, oldPace)})'),
+                  const SizedBox(height: 4),
+                ],
+                TextButton.icon(
+                  key: const Key('raceThisRun'),
+                  icon: const Icon(Icons.replay),
+                  label: const Text('Run this route again'),
+                  onPressed: () => startRun(context, ghostOf: run),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
