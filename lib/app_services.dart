@@ -40,7 +40,9 @@ class AppServices {
       ..restNotifier = restNotifier
       ..intervals = intervals;
     goals = GoalRepository(db, workouts, exercises, body, runs);
-    run = RunSession(runs: runs, hr: hr, location: location)..voice = RunVoice(hr.beeper.speak);
+    run = RunSession(runs: runs, hr: hr, location: location)
+      ..voice = RunVoice(hr.beeper.speak)
+      ..notifier = restNotifier;
   }
 
   final RunRepository runs;

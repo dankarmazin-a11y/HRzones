@@ -17,6 +17,7 @@ import 'package:hrzones/run/route_zones.dart';
 import 'package:hrzones/run/run_voice.dart';
 import 'package:hrzones/run/splits.dart';
 import 'package:hrzones/ui/run/run_map.dart';
+import 'package:hrzones/ui/run/run_summary_screen.dart';
 import 'package:hrzones/ui/screens/home_screen.dart';
 import 'package:hrzones/ui/screens/run_screen.dart';
 
@@ -53,6 +54,9 @@ class FakeLocation extends LocationSource {
 }
 
 final t0 = DateTime(2026, 11, 5, 7);
+
+/// The run summary's main list (it also holds a notes text field).
+Finder summaryList() => find.descendant(of: find.byType(RunSummaryScreen), matching: find.byType(Scrollable)).first;
 
 /// Lets the 3-2-1 countdown before a run run out.
 Future<void> countdown(WidgetTester tester) async {
@@ -269,7 +273,7 @@ void main() {
     await settle(tester);
     expect(find.byKey(const Key('summaryDistance')), findsOneWidget);
     expect(find.text('1.20'), findsOneWidget);
-    await tester.scrollUntilVisible(find.byKey(const Key('split_2')), 200);
+    await tester.scrollUntilVisible(find.byKey(const Key('split_2')), 200, scrollable: summaryList());
     expect(find.byKey(const Key('split_1')), findsOneWidget);
     expect(find.text('0.20'), findsOneWidget, reason: 'last partial km');
 
@@ -733,6 +737,7 @@ void main() {
     await tester.tap(find.text('Save'));
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
     await settle(tester);
+    await tester.scrollUntilVisible(find.byKey(const Key('runBests')), 200, scrollable: summaryList());
     expect(find.byKey(const Key('runBests')), findsOneWidget, reason: 'best 1 km of this run');
     await tester.pageBack();
     await settle(tester);

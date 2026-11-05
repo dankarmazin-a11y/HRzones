@@ -64,6 +64,7 @@ const _v6Columns = [
 const _v7Changes = ['DROP TABLE run_points', 'DROP TABLE runs'];
 const _v8Columns = ['runs DROP COLUMN bests_json'];
 const _v9Columns = ['goals DROP COLUMN distance_m'];
+const _v10Columns = ['runs DROP COLUMN kind', 'runs DROP COLUMN effort', 'runs DROP COLUMN weather'];
 const _v4Changes = [
   'exercises DROP COLUMN hidden',
   'template_exercises DROP COLUMN sets_json',
@@ -83,9 +84,10 @@ void main() {
     ('v4 database is upgraded', 4, [..._v5Changes, ..._v6Columns, ..._v7Changes, ..._v9Columns]),
     ('v5 database is upgraded', 5, [..._v6Columns, ..._v7Changes, ..._v9Columns]),
     ('v6 database is upgraded', 6, [..._v7Changes, ..._v9Columns]),
-    ('v7 database is upgraded', 7, [..._v8Columns, ..._v9Columns]),
-    ('v8 database is upgraded', 8, _v9Columns),
-    ('missing column/table is repaired', 9, [..._v2Columns, 'DROP TABLE goals']),
+    ('v7 database is upgraded', 7, [..._v8Columns, ..._v9Columns, ..._v10Columns]),
+    ('v8 database is upgraded', 8, [..._v9Columns, ..._v10Columns]),
+    ('v9 database is upgraded', 9, _v10Columns),
+    ('missing column/table is repaired', 10, [..._v2Columns, 'DROP TABLE goals']),
   ];
   for (final (label, version, drop) in cases) {
     test(label, () async {
@@ -111,7 +113,10 @@ void main() {
       expect(await cols('interval_presets'), contains('segments_json'));
       expect(await cols('exercises'), containsAll(['unilateral', 'note', 'note_at']));
       expect(await cols('workout_sets'), contains('side'));
-      expect(await cols('runs'), containsAll(['distance_m', 'paused_s', 'duration_s', 'bests_json']));
+      expect(
+        await cols('runs'),
+        containsAll(['distance_m', 'paused_s', 'duration_s', 'bests_json', 'kind', 'effort', 'weather']),
+      );
       expect(await cols('run_points'), containsAll(['run_id', 'lat', 'lon', 'segment', 'hr']));
       if (version < 6) {
         // Existing installs get the common one-sided exercises marked.

@@ -38,20 +38,26 @@ Future<void> startRun(BuildContext context) async {
     if (open == true && context.mounted) await openActiveWorkout(context);
     return;
   }
-  final choice = await showModalBottomSheet<PresetChoice>(
+  final choice = await showModalBottomSheet<RunSetup>(
     context: context,
     isScrollControlled: true,
     builder: (_) => const ReadyToRunSheet(),
   );
   if (choice == null || !context.mounted) return;
   await s.db.setSetting('runPresetId', choice.preset?.id ?? '');
+  await s.db.setSetting('runTreadmill', choice.treadmill ? '1' : '0');
   // Permission first, so the iPhone question doesn't interrupt the countdown.
-  final access = await s.run.location.ensureAccess();
+  // (A treadmill run doesn't use GPS.)
+  final access = choice.treadmill ? LocationAccess.granted : await s.run.location.ensureAccess();
   if (!context.mounted) return;
   if (access == LocationAccess.granted) {
     final preset = s.zonesEnabled.value ? choice.preset : null;
-    await Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => RunCountdownScreen(preset: preset), fullscreenDialog: true));
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => RunCountdownScreen(preset: preset, treadmill: choice.treadmill),
+        fullscreenDialog: true,
+      ),
+    );
     return;
   }
   await showDialog<void>(
@@ -117,9 +123,10 @@ int runCountdownSeconds = 3;
 /// the run starts with a vibration and the live screen takes over. Tap ✕ to
 /// cancel, or "Start now" to skip the countdown.
 class RunCountdownScreen extends StatefulWidget {
-  const RunCountdownScreen({super.key, this.preset});
+  const RunCountdownScreen({super.key, this.preset, this.treadmill = false});
 
   final HrPreset? preset;
+  final bool treadmill;
 
   @override
   State<RunCountdownScreen> createState() => _RunCountdownScreenState();
@@ -166,7 +173,7 @@ class _RunCountdownScreenState extends State<RunCountdownScreen> {
     final s = Services.of(context);
     final nav = Navigator.of(context);
     s.hr.beeper.play(SoundEvent.intervalWork);
-    final access = await s.run.start(preset: widget.preset);
+    final access = await s.run.start(preset: widget.preset, treadmill: widget.treadmill);
     if (!mounted) return;
     if (access != LocationAccess.granted) {
       nav.pop();
@@ -233,8 +240,17 @@ class _RunCountdownScreenState extends State<RunCountdownScreen> {
   }
 }
 
-/// Before a run: pick the heart-rate zone (or none), then Start. The last
-/// choice is remembered (setting `runPresetId`). Returns null if closed.
+/// What the "Ready to run" sheet returns.
+class RunSetup {
+  const RunSetup({this.preset, this.treadmill = false});
+
+  final HrPreset? preset;
+  final bool treadmill;
+}
+
+/// Before a run: outdoor or treadmill, the heart-rate zone (or none), then
+/// Start. The last choices are remembered (settings `runPresetId`,
+/// `runTreadmill`). Returns null if closed.
 class ReadyToRunSheet extends StatefulWidget {
   const ReadyToRunSheet({super.key});
 
@@ -246,6 +262,7 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
   List<HrPreset> _presets = const [];
   String? _selected;
   bool _loaded = false;
+  bool _treadmill = false;
 
   @override
   void didChangeDependencies() {
@@ -260,6 +277,7 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
     final s = Services.of(context);
     final presets = await s.presets.forUse(PresetUse.run);
     final last = initial ? await s.db.getSetting('runPresetId') : _selected;
+    if (initial) _treadmill = await s.db.getSetting('runTreadmill') == '1';
     if (!mounted) return;
     setState(() {
       _presets = presets;
@@ -295,6 +313,21 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
             children: [
               Text('Ready to run', style: text.headlineSmall),
               const SizedBox(height: 8),
+              SegmentedButton<bool>(
+                key: const Key('runKind'),
+                segments: const [
+                  ButtonSegment(value: false, label: Text('Outdoor'), icon: Icon(Icons.landscape_outlined)),
+                  ButtonSegment(value: true, label: Text('Treadmill'), icon: Icon(Icons.home_outlined)),
+                ],
+                selected: {_treadmill},
+                onSelectionChanged: (v) => setState(() => _treadmill = v.first),
+              ),
+              if (_treadmill)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text('No GPS: time and heart rate; you type the distance at the end.', style: text.bodySmall),
+                ),
+              const SizedBox(height: 4),
               SwitchListTile(
                 key: const Key('runZonesSwitch'),
                 contentPadding: EdgeInsets.zero,
@@ -340,7 +373,7 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
                     ),
                   ),
               ],
-              const PaceAlertRow(),
+              if (!_treadmill) const PaceAlertRow(),
               const RunVoiceSettings(compact: true),
               const SizedBox(height: 12),
               SizedBox(
@@ -351,7 +384,10 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
                   label: const Text('Start', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
                   onPressed: () => Navigator.pop(
                     context,
-                    PresetChoice(on ? _presets.where((p) => p.id == _selected).firstOrNull : null),
+                    RunSetup(
+                      preset: on ? _presets.where((p) => p.id == _selected).firstOrNull : null,
+                      treadmill: _treadmill,
+                    ),
                   ),
                 ),
               ),

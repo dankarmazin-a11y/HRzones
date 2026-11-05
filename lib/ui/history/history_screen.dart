@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app_services.dart';
 import '../../data/database.dart';
 import '../../data/workout_repository.dart';
+import '../run/edit_run_screen.dart';
 import '../screens/run_screen.dart';
 import '../../workout/stats.dart';
 import '../../workout/workout_session.dart';
@@ -30,7 +31,34 @@ class _HistoryScreenState extends State<HistoryScreen> {
       floatingActionButton: FloatingActionButton.extended(
         icon: const Icon(Icons.edit_calendar),
         label: const Text('Log past workout'),
-        onPressed: () => logPastWorkout(context),
+        onPressed: () async {
+          final kind = await showModalBottomSheet<String>(
+            context: context,
+            builder: (c) => SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.fitness_center),
+                    title: const Text('Strength workout'),
+                    onTap: () => Navigator.pop(c, 'strength'),
+                  ),
+                  ListTile(
+                    key: const Key('logPastRun'),
+                    leading: const Icon(Icons.directions_run),
+                    title: const Text('Run'),
+                    onTap: () => Navigator.pop(c, 'run'),
+                  ),
+                ],
+              ),
+            ),
+          );
+          if (!context.mounted) return;
+          if (kind == 'strength') return logPastWorkout(context);
+          if (kind == 'run') {
+            await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EditRunScreen()));
+          }
+        },
       ),
       body: StreamBuilder<List<WorkoutListItem>>(
         stream: s.workouts.watchFinished(),

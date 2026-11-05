@@ -9,6 +9,7 @@ import '../hr/hr_monitor.dart';
 import '../beep/sounds.dart';
 import '../hr/zone_alert_engine.dart';
 import '../hr/zones.dart';
+import '../notify/rest_notifier.dart';
 import 'best_efforts.dart';
 import 'geo.dart';
 import 'location_source.dart';
@@ -64,6 +65,15 @@ class RunSession extends ChangeNotifier {
   /// Spoken updates (set by AppServices; none in some tests).
   RunVoice? voice;
 
+  /// "Still running?" notification (set by AppServices).
+  RestNotifier? notifier;
+
+  /// No movement for this long while recording → "Still running?".
+  static const idleAfter = Duration(minutes: 20);
+
+  /// Paused this long → "Still running?".
+  static const pausedIdleAfter = Duration(minutes: 30);
+
   /// Changes every second while recording and on every GPS fix: the live
   /// numbers listen to this, the rest of the screen to the session itself.
   final ticks = ValueNotifier<int>(0);
@@ -71,6 +81,7 @@ class RunSession extends ChangeNotifier {
   String? _id;
   DateTime? _startedAt;
   DateTime? _pausedAt;
+  DateTime? _endOverride;
   int _pausedMs = 0;
   String? _presetId;
   int _segment = 0;
@@ -105,6 +116,38 @@ class RunSession extends ChangeNotifier {
   /// How far back the current pace looks.
   static const paceWindow = Duration(seconds: 30);
 
+  bool _treadmill = false;
+  DateTime? _lastMoveAt;
+  double _moveMark = 0;
+  DateTime? _idleScheduledAt;
+
+  /// "Keep going" during a long pause: count the pause from then.
+  DateTime? _snoozedAt;
+
+  /// When the current pause started (null when not paused).
+  DateTime? get lastPausedAt => _pausedAt;
+
+  /// Treadmill run: no GPS; the distance is typed in at the end.
+  bool get treadmill => _treadmill;
+
+  /// When the runner last moved (30 m or more); the start for a treadmill.
+  DateTime? get lastMoveAt => _lastMoveAt;
+
+  /// How long the run looks forgotten: paused for a long time, or recording
+  /// outdoors without moving. Zero while all is fine.
+  Duration get idleFor {
+    if (!active) return Duration.zero;
+    final p = _pausedAt;
+    if (p != null) {
+      final d = now().difference(_snoozedAt ?? p);
+      return d >= pausedIdleAfter ? d : Duration.zero;
+    }
+    final m = _lastMoveAt;
+    if (_treadmill || m == null) return Duration.zero;
+    final d = now().difference(m);
+    return d >= idleAfter ? d : Duration.zero;
+  }
+
   bool get active => _id != null;
   bool get paused => _pausedAt != null;
   String? get runId => _id;
@@ -116,7 +159,7 @@ class RunSession extends ChangeNotifier {
   Duration get moving {
     final s = _startedAt;
     if (s == null) return Duration.zero;
-    final ms = (_pausedAt ?? now()).difference(s).inMilliseconds - _pausedMs;
+    final ms = (_endOverride ?? _pausedAt ?? now()).difference(s).inMilliseconds - _pausedMs;
     return Duration(milliseconds: ms < 0 ? 0 : ms);
   }
 
@@ -136,7 +179,7 @@ class RunSession extends ChangeNotifier {
   }
 
   GpsStatus get gps {
-    if (!active || paused) return GpsStatus.off;
+    if (!active || paused || _treadmill) return GpsStatus.off;
     final last = _lastGoodAt;
     if (last == null) return GpsStatus.searching;
     return now().difference(last) > const Duration(seconds: 10) ? GpsStatus.weak : GpsStatus.good;
@@ -144,13 +187,15 @@ class RunSession extends ChangeNotifier {
 
   /// Starts recording. Asks for location permission first; returns what the
   /// phone answered (only [LocationAccess.granted] starts a run).
-  Future<LocationAccess> start({HrPreset? preset}) async {
+  Future<LocationAccess> start({HrPreset? preset, bool treadmill = false}) async {
     if (active) return LocationAccess.granted;
-    final access = await location.ensureAccess();
+    final access = treadmill ? LocationAccess.granted : await location.ensureAccess();
     if (access != LocationAccess.granted) return access;
     _reset();
     _id = newId();
     _startedAt = now();
+    _treadmill = treadmill;
+    _lastMoveAt = _startedAt;
     _presetId = preset?.id;
     hr.resetSession();
     if (preset != null) {
@@ -186,6 +231,8 @@ class RunSession extends ChangeNotifier {
     _pausedMs += now().difference(p).inMilliseconds;
     _pausedAt = null;
     _lastGoodAt = null;
+    _lastMoveAt = now();
+    _snoozedAt = null;
     voice?.resumed();
     await flush();
     _listen();
@@ -193,17 +240,30 @@ class RunSession extends ChangeNotifier {
   }
 
   /// Ends the run and saves it; returns its id (null if no run).
-  Future<String?> finish() async {
+  /// [endAt]: a forgotten run ends at that time (route after it is dropped).
+  /// [distanceM]: the treadmill's distance.
+  Future<String?> finish({DateTime? endAt, double? distanceM}) async {
     final id = _id;
     if (id == null || _finishing) return null;
     _finishing = true;
     try {
       await _stopGps();
-      final end = _pausedAt ?? now();
+      if (endAt != null) {
+        final p = _pausedAt;
+        _endOverride = p != null && p.isBefore(endAt) ? p : endAt;
+        _route.removeWhere((x) => x.time.isAfter(endAt));
+        await runs.deletePointsAfter(id, endAt);
+        _saved = _saved.clamp(0, _route.length);
+        _replayDistance();
+      }
+      if (distanceM != null) _tracker.distanceM = distanceM;
+      final end = _endOverride ?? _pausedAt ?? now();
       await _savePoints();
-      final bests = bestEfforts(
-        _route.map((p) => (time: p.time, lat: p.lat, lon: p.lon, accuracy: p.accuracy, segment: p.segment)),
-      );
+      final bests = _treadmill
+          ? <int, double>{}
+          : bestEfforts(
+              _route.map((p) => (time: p.time, lat: p.lat, lon: p.lon, accuracy: p.accuracy, segment: p.segment)),
+            );
       // Faster than every earlier run (the first run at a distance isn't a record).
       final before = await runs.records(before: _startedAt, excludeId: id);
       final newRecords = <int, double>{
@@ -211,9 +271,10 @@ class RunSession extends ChangeNotifier {
           if (before.fastest[e.key] != null && e.value < before.fastest[e.key]!.value) e.key: e.value,
       };
       await _saveRun(endedAt: end, avgHr: hr.sessionAvg, maxHr: hr.sessionMax, bests: bests);
-      voice?.finished(distanceM, moving, newRecords: newRecords);
+      voice?.finished(this.distanceM, moving, newRecords: newRecords);
       if (_hrStartedByRun) await hr.stop();
       hr.onAlert = null;
+      await notifier?.cancelRunIdle();
       _reset();
       notifyListeners();
       return id;
@@ -229,6 +290,7 @@ class RunSession extends ChangeNotifier {
     await _stopGps();
     if (_hrStartedByRun) await hr.stop();
     hr.onAlert = null;
+    await notifier?.cancelRunIdle();
     await runs.delete(id);
     _reset();
     notifyListeners();
@@ -244,6 +306,7 @@ class RunSession extends ChangeNotifier {
     _pausedAt = row.pausedAt;
     _pausedMs = row.pausedS * 1000;
     _presetId = row.hrPresetId;
+    _treadmill = row.kind == RunKind.treadmill;
     var segment = -1;
     for (final p in await runs.points(row.id)) {
       if (p.segment != segment) _tracker.newSegment();
@@ -265,6 +328,8 @@ class RunSession extends ChangeNotifier {
     // The app was closed: don't draw a line across the gap.
     _segment = segment + 1;
     _tracker.newSegment();
+    _lastMoveAt = _route.isEmpty ? row.startedAt : _route.last.time;
+    _moveMark = distanceM;
     voice?.restored(distanceM, moving);
     _hookAlerts();
     if (!paused) _listen();
@@ -276,6 +341,7 @@ class RunSession extends ChangeNotifier {
   Future<void> flush() async {
     if (!active) return;
     _sinceSave = 0;
+    _scheduleIdleReminder();
     await _savePoints();
     await _saveRun();
   }
@@ -298,9 +364,49 @@ class RunSession extends ChangeNotifier {
     voice?.paceAlert(tooFast: !tooSlow, pace: pace);
   }
 
+  /// Moves the "Still running?" notification to 20 min after the last
+  /// movement (30 min after a pause). Called on every save.
+  void _scheduleIdleReminder() {
+    final n = notifier;
+    if (n == null || !active) return;
+    final from = _pausedAt == null ? _lastMoveAt : (_snoozedAt ?? _pausedAt);
+    if (from == null || (_treadmill && _pausedAt == null)) return;
+    final at = from.add(_pausedAt != null ? pausedIdleAfter : idleAfter);
+    if (at == _idleScheduledAt) return;
+    _idleScheduledAt = at;
+    final after = at.difference(now());
+    n.scheduleRunIdle(after.isNegative ? const Duration(seconds: 5) : after, paused: _pausedAt != null);
+  }
+
+  /// "Keep going" on the reminder: count from now.
+  Future<void> keepGoing() async {
+    if (!active) return;
+    if (_pausedAt == null) {
+      _lastMoveAt = now();
+    } else {
+      _snoozedAt = now();
+    }
+    _idleScheduledAt = null;
+    _scheduleIdleReminder();
+    notifyListeners();
+  }
+
+  /// Distance again from the route in memory (after dropping its end).
+  void _replayDistance() {
+    _tracker
+      ..distanceM = 0
+      ..newSegment();
+    int? seg;
+    for (final p in _route) {
+      if (p.segment != seg) _tracker.newSegment();
+      seg = p.segment;
+      _tracker.add(GeoFix(time: p.time, lat: p.lat, lon: p.lon, accuracy: p.accuracy));
+    }
+  }
+
   void _listen() {
     _gps?.cancel();
-    _gps = location.start().listen(_onFix);
+    if (!_treadmill) _gps = location.start().listen(_onFix);
     _ticker?.cancel();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       ticks.value++;
@@ -314,7 +420,7 @@ class RunSession extends ChangeNotifier {
     _ticker = null;
     await _gps?.cancel();
     _gps = null;
-    await location.stop();
+    if (!_treadmill) await location.stop();
   }
 
   void _onFix(GeoFix fix) {
@@ -334,6 +440,10 @@ class RunSession extends ChangeNotifier {
         hr: hr.running ? hr.bpm : null,
       ),
     );
+    if (_tracker.distanceM - _moveMark >= 30) {
+      _moveMark = _tracker.distanceM;
+      _lastMoveAt = now();
+    }
     _recent.add((fix.time, _tracker.distanceM));
     while (_recent.length > 2 && fix.time.difference(_recent.first.$1) > paceWindow) {
       _recent.removeAt(0);
@@ -381,6 +491,7 @@ class RunSession extends ChangeNotifier {
         avgHr: Value(avgHr),
         maxHr: Value(maxHr),
         bestsJson: Value(bests == null ? null : encodeBests(bests)),
+        kind: Value(_treadmill ? RunKind.treadmill : RunKind.outdoor),
         updatedAt: Value(now()),
       ),
     );
@@ -402,6 +513,12 @@ class RunSession extends ChangeNotifier {
     _lastGoodAt = null;
     _hrStartedByRun = false;
     _sinceSave = 0;
+    _treadmill = false;
+    _lastMoveAt = null;
+    _moveMark = 0;
+    _idleScheduledAt = null;
+    _snoozedAt = null;
+    _endOverride = null;
   }
 
   @override

@@ -5389,6 +5389,33 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
     requiredDuringInsert: false,
   );
   @override
+  late final GeneratedColumnWithTypeConverter<RunKind, int> kind = GeneratedColumn<int>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  ).withConverter<RunKind>($RunsTable.$converterkind);
+  static const VerificationMeta _effortMeta = const VerificationMeta('effort');
+  @override
+  late final GeneratedColumn<int> effort = GeneratedColumn<int>(
+    'effort',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _weatherMeta = const VerificationMeta('weather');
+  @override
+  late final GeneratedColumn<String> weather = GeneratedColumn<String>(
+    'weather',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
   List<GeneratedColumn> get $columns => [
     id,
     updatedAt,
@@ -5404,6 +5431,9 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
     maxHr,
     notes,
     bestsJson,
+    kind,
+    effort,
+    weather,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -5458,6 +5488,12 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
     if (data.containsKey('bests_json')) {
       context.handle(_bestsJsonMeta, bestsJson.isAcceptableOrUnknown(data['bests_json']!, _bestsJsonMeta));
     }
+    if (data.containsKey('effort')) {
+      context.handle(_effortMeta, effort.isAcceptableOrUnknown(data['effort']!, _effortMeta));
+    }
+    if (data.containsKey('weather')) {
+      context.handle(_weatherMeta, weather.isAcceptableOrUnknown(data['weather']!, _weatherMeta));
+    }
     return context;
   }
 
@@ -5481,6 +5517,11 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
       maxHr: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}max_hr']),
       notes: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}notes'])!,
       bestsJson: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}bests_json']),
+      kind: $RunsTable.$converterkind.fromSql(
+        attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}kind'])!,
+      ),
+      effort: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}effort']),
+      weather: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}weather']),
     );
   }
 
@@ -5488,6 +5529,8 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
   $RunsTable createAlias(String alias) {
     return $RunsTable(attachedDatabase, alias);
   }
+
+  static JsonTypeConverter2<RunKind, int, int> $converterkind = const EnumIndexConverter<RunKind>(RunKind.values);
 }
 
 class Run extends DataClass implements Insertable<Run> {
@@ -5516,6 +5559,15 @@ class Run extends DataClass implements Insertable<Run> {
   /// Fastest time per record distance inside this run, JSON {"1000": 251.3,
   /// "5000": …} (seconds). Null = not worked out yet (computed on demand).
   final String? bestsJson;
+
+  /// Outdoor (GPS) or treadmill (distance typed in at the end).
+  final RunKind kind;
+
+  /// How hard it felt, 1–10 (null = not rated).
+  final int? effort;
+
+  /// Weather tags, comma-separated ("sunny,windy").
+  final String? weather;
   const Run({
     required this.id,
     required this.updatedAt,
@@ -5531,6 +5583,9 @@ class Run extends DataClass implements Insertable<Run> {
     this.maxHr,
     required this.notes,
     this.bestsJson,
+    required this.kind,
+    this.effort,
+    this.weather,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -5561,6 +5616,15 @@ class Run extends DataClass implements Insertable<Run> {
     if (!nullToAbsent || bestsJson != null) {
       map['bests_json'] = Variable<String>(bestsJson);
     }
+    {
+      map['kind'] = Variable<int>($RunsTable.$converterkind.toSql(kind));
+    }
+    if (!nullToAbsent || effort != null) {
+      map['effort'] = Variable<int>(effort);
+    }
+    if (!nullToAbsent || weather != null) {
+      map['weather'] = Variable<String>(weather);
+    }
     return map;
   }
 
@@ -5580,6 +5644,9 @@ class Run extends DataClass implements Insertable<Run> {
       maxHr: maxHr == null && nullToAbsent ? const Value.absent() : Value(maxHr),
       notes: Value(notes),
       bestsJson: bestsJson == null && nullToAbsent ? const Value.absent() : Value(bestsJson),
+      kind: Value(kind),
+      effort: effort == null && nullToAbsent ? const Value.absent() : Value(effort),
+      weather: weather == null && nullToAbsent ? const Value.absent() : Value(weather),
     );
   }
 
@@ -5600,6 +5667,9 @@ class Run extends DataClass implements Insertable<Run> {
       maxHr: serializer.fromJson<int?>(json['maxHr']),
       notes: serializer.fromJson<String>(json['notes']),
       bestsJson: serializer.fromJson<String?>(json['bestsJson']),
+      kind: $RunsTable.$converterkind.fromJson(serializer.fromJson<int>(json['kind'])),
+      effort: serializer.fromJson<int?>(json['effort']),
+      weather: serializer.fromJson<String?>(json['weather']),
     );
   }
   @override
@@ -5620,6 +5690,9 @@ class Run extends DataClass implements Insertable<Run> {
       'maxHr': serializer.toJson<int?>(maxHr),
       'notes': serializer.toJson<String>(notes),
       'bestsJson': serializer.toJson<String?>(bestsJson),
+      'kind': serializer.toJson<int>($RunsTable.$converterkind.toJson(kind)),
+      'effort': serializer.toJson<int?>(effort),
+      'weather': serializer.toJson<String?>(weather),
     };
   }
 
@@ -5638,6 +5711,9 @@ class Run extends DataClass implements Insertable<Run> {
     Value<int?> maxHr = const Value.absent(),
     String? notes,
     Value<String?> bestsJson = const Value.absent(),
+    RunKind? kind,
+    Value<int?> effort = const Value.absent(),
+    Value<String?> weather = const Value.absent(),
   }) => Run(
     id: id ?? this.id,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -5653,6 +5729,9 @@ class Run extends DataClass implements Insertable<Run> {
     maxHr: maxHr.present ? maxHr.value : this.maxHr,
     notes: notes ?? this.notes,
     bestsJson: bestsJson.present ? bestsJson.value : this.bestsJson,
+    kind: kind ?? this.kind,
+    effort: effort.present ? effort.value : this.effort,
+    weather: weather.present ? weather.value : this.weather,
   );
   Run copyWithCompanion(RunsCompanion data) {
     return Run(
@@ -5670,6 +5749,9 @@ class Run extends DataClass implements Insertable<Run> {
       maxHr: data.maxHr.present ? data.maxHr.value : this.maxHr,
       notes: data.notes.present ? data.notes.value : this.notes,
       bestsJson: data.bestsJson.present ? data.bestsJson.value : this.bestsJson,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      effort: data.effort.present ? data.effort.value : this.effort,
+      weather: data.weather.present ? data.weather.value : this.weather,
     );
   }
 
@@ -5689,7 +5771,10 @@ class Run extends DataClass implements Insertable<Run> {
           ..write('avgHr: $avgHr, ')
           ..write('maxHr: $maxHr, ')
           ..write('notes: $notes, ')
-          ..write('bestsJson: $bestsJson')
+          ..write('bestsJson: $bestsJson, ')
+          ..write('kind: $kind, ')
+          ..write('effort: $effort, ')
+          ..write('weather: $weather')
           ..write(')'))
         .toString();
   }
@@ -5710,6 +5795,9 @@ class Run extends DataClass implements Insertable<Run> {
     maxHr,
     notes,
     bestsJson,
+    kind,
+    effort,
+    weather,
   );
   @override
   bool operator ==(Object other) =>
@@ -5728,7 +5816,10 @@ class Run extends DataClass implements Insertable<Run> {
           other.avgHr == this.avgHr &&
           other.maxHr == this.maxHr &&
           other.notes == this.notes &&
-          other.bestsJson == this.bestsJson);
+          other.bestsJson == this.bestsJson &&
+          other.kind == this.kind &&
+          other.effort == this.effort &&
+          other.weather == this.weather);
 }
 
 class RunsCompanion extends UpdateCompanion<Run> {
@@ -5746,6 +5837,9 @@ class RunsCompanion extends UpdateCompanion<Run> {
   final Value<int?> maxHr;
   final Value<String> notes;
   final Value<String?> bestsJson;
+  final Value<RunKind> kind;
+  final Value<int?> effort;
+  final Value<String?> weather;
   final Value<int> rowid;
   const RunsCompanion({
     this.id = const Value.absent(),
@@ -5762,6 +5856,9 @@ class RunsCompanion extends UpdateCompanion<Run> {
     this.maxHr = const Value.absent(),
     this.notes = const Value.absent(),
     this.bestsJson = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.effort = const Value.absent(),
+    this.weather = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RunsCompanion.insert({
@@ -5779,6 +5876,9 @@ class RunsCompanion extends UpdateCompanion<Run> {
     this.maxHr = const Value.absent(),
     this.notes = const Value.absent(),
     this.bestsJson = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.effort = const Value.absent(),
+    this.weather = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : startedAt = Value(startedAt);
   static Insertable<Run> custom({
@@ -5796,6 +5896,9 @@ class RunsCompanion extends UpdateCompanion<Run> {
     Expression<int>? maxHr,
     Expression<String>? notes,
     Expression<String>? bestsJson,
+    Expression<int>? kind,
+    Expression<int>? effort,
+    Expression<String>? weather,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -5813,6 +5916,9 @@ class RunsCompanion extends UpdateCompanion<Run> {
       if (maxHr != null) 'max_hr': maxHr,
       if (notes != null) 'notes': notes,
       if (bestsJson != null) 'bests_json': bestsJson,
+      if (kind != null) 'kind': kind,
+      if (effort != null) 'effort': effort,
+      if (weather != null) 'weather': weather,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -5832,6 +5938,9 @@ class RunsCompanion extends UpdateCompanion<Run> {
     Value<int?>? maxHr,
     Value<String>? notes,
     Value<String?>? bestsJson,
+    Value<RunKind>? kind,
+    Value<int?>? effort,
+    Value<String?>? weather,
     Value<int>? rowid,
   }) {
     return RunsCompanion(
@@ -5849,6 +5958,9 @@ class RunsCompanion extends UpdateCompanion<Run> {
       maxHr: maxHr ?? this.maxHr,
       notes: notes ?? this.notes,
       bestsJson: bestsJson ?? this.bestsJson,
+      kind: kind ?? this.kind,
+      effort: effort ?? this.effort,
+      weather: weather ?? this.weather,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -5898,6 +6010,15 @@ class RunsCompanion extends UpdateCompanion<Run> {
     if (bestsJson.present) {
       map['bests_json'] = Variable<String>(bestsJson.value);
     }
+    if (kind.present) {
+      map['kind'] = Variable<int>($RunsTable.$converterkind.toSql(kind.value));
+    }
+    if (effort.present) {
+      map['effort'] = Variable<int>(effort.value);
+    }
+    if (weather.present) {
+      map['weather'] = Variable<String>(weather.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -5921,6 +6042,9 @@ class RunsCompanion extends UpdateCompanion<Run> {
           ..write('maxHr: $maxHr, ')
           ..write('notes: $notes, ')
           ..write('bestsJson: $bestsJson, ')
+          ..write('kind: $kind, ')
+          ..write('effort: $effort, ')
+          ..write('weather: $weather, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -9976,6 +10100,9 @@ typedef $$RunsTableCreateCompanionBuilder = RunsCompanion Function({
   Value<int?> maxHr,
   Value<String> notes,
   Value<String?> bestsJson,
+  Value<RunKind> kind,
+  Value<int?> effort,
+  Value<String?> weather,
   Value<int> rowid,
 });
 typedef $$RunsTableUpdateCompanionBuilder = RunsCompanion Function({
@@ -9993,6 +10120,9 @@ typedef $$RunsTableUpdateCompanionBuilder = RunsCompanion Function({
   Value<int?> maxHr,
   Value<String> notes,
   Value<String?> bestsJson,
+  Value<RunKind> kind,
+  Value<int?> effort,
+  Value<String?> weather,
   Value<int> rowid,
 });
 
@@ -10058,6 +10188,15 @@ class $$RunsTableFilterComposer extends Composer<_$AppDatabase, $RunsTable> {
 
   ColumnFilters<String> get bestsJson =>
       $composableBuilder(column: $table.bestsJson, builder: (column) => ColumnFilters(column));
+
+  ColumnWithTypeConverterFilters<RunKind, RunKind, int> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => ColumnWithTypeConverterFilters(column));
+
+  ColumnFilters<int> get effort =>
+      $composableBuilder(column: $table.effort, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get weather =>
+      $composableBuilder(column: $table.weather, builder: (column) => ColumnFilters(column));
 
   Expression<bool> runPointsRefs(Expression<bool> Function($$RunPointsTableFilterComposer f) f) {
     final $$RunPointsTableFilterComposer composer = $composerBuilder(
@@ -10126,6 +10265,15 @@ class $$RunsTableOrderingComposer extends Composer<_$AppDatabase, $RunsTable> {
 
   ColumnOrderings<String> get bestsJson =>
       $composableBuilder(column: $table.bestsJson, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get effort =>
+      $composableBuilder(column: $table.effort, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get weather =>
+      $composableBuilder(column: $table.weather, builder: (column) => ColumnOrderings(column));
 }
 
 class $$RunsTableAnnotationComposer extends Composer<_$AppDatabase, $RunsTable> {
@@ -10163,6 +10311,13 @@ class $$RunsTableAnnotationComposer extends Composer<_$AppDatabase, $RunsTable> 
   GeneratedColumn<String> get notes => $composableBuilder(column: $table.notes, builder: (column) => column);
 
   GeneratedColumn<String> get bestsJson => $composableBuilder(column: $table.bestsJson, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<RunKind, int> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<int> get effort => $composableBuilder(column: $table.effort, builder: (column) => column);
+
+  GeneratedColumn<String> get weather => $composableBuilder(column: $table.weather, builder: (column) => column);
 
   Expression<T> runPointsRefs<T extends Object>(Expression<T> Function($$RunPointsTableAnnotationComposer a) f) {
     final $$RunPointsTableAnnotationComposer composer = $composerBuilder(
@@ -10222,6 +10377,9 @@ class $$RunsTableTableManager
                 Value<int?> maxHr = const Value.absent(),
                 Value<String> notes = const Value.absent(),
                 Value<String?> bestsJson = const Value.absent(),
+                Value<RunKind> kind = const Value.absent(),
+                Value<int?> effort = const Value.absent(),
+                Value<String?> weather = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RunsCompanion(
                 id: id,
@@ -10238,6 +10396,9 @@ class $$RunsTableTableManager
                 maxHr: maxHr,
                 notes: notes,
                 bestsJson: bestsJson,
+                kind: kind,
+                effort: effort,
+                weather: weather,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -10256,6 +10417,9 @@ class $$RunsTableTableManager
                 Value<int?> maxHr = const Value.absent(),
                 Value<String> notes = const Value.absent(),
                 Value<String?> bestsJson = const Value.absent(),
+                Value<RunKind> kind = const Value.absent(),
+                Value<int?> effort = const Value.absent(),
+                Value<String?> weather = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RunsCompanion.insert(
                 id: id,
@@ -10272,6 +10436,9 @@ class $$RunsTableTableManager
                 maxHr: maxHr,
                 notes: notes,
                 bestsJson: bestsJson,
+                kind: kind,
+                effort: effort,
+                weather: weather,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) =>

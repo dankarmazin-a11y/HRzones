@@ -244,6 +244,9 @@ class IntervalPresets extends Table with SyncColumns {
   Set<Column> get primaryKey => {id};
 }
 
+/// Stored by index – only add at the end.
+enum RunKind { outdoor, treadmill }
+
 /// A GPS run. While it is being recorded `endedAt` is null; the moving time
 /// is (pausedAt ?? now) − startedAt − pausedS.
 class Runs extends Table with SyncColumns {
@@ -270,6 +273,15 @@ class Runs extends Table with SyncColumns {
   /// Fastest time per record distance inside this run, JSON {"1000": 251.3,
   /// "5000": …} (seconds). Null = not worked out yet (computed on demand).
   TextColumn get bestsJson => text().nullable()();
+
+  /// Outdoor (GPS) or treadmill (distance typed in at the end).
+  IntColumn get kind => intEnum<RunKind>().withDefault(const Constant(0))();
+
+  /// How hard it felt, 1–10 (null = not rated).
+  IntColumn get effort => integer().nullable()();
+
+  /// Weather tags, comma-separated ("sunny,windy").
+  TextColumn get weather => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -351,7 +363,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -395,6 +407,11 @@ class AppDatabase extends _$AppDatabase {
       if (from == 7) await m.addColumn(runs, runs.bestsJson);
       // Before v4 the goals table is created above, already with this column.
       if (from >= 4 && from < 9) await m.addColumn(goals, goals.distanceM);
+      if (from >= 7 && from < 10) {
+        await m.addColumn(runs, runs.kind);
+        await m.addColumn(runs, runs.effort);
+        await m.addColumn(runs, runs.weather);
+      }
     },
     beforeOpen: (details) async {
       await _addMissingColumns();

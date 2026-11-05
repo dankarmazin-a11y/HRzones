@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 
 import '../run/best_efforts.dart';
+import '../run/geo.dart';
 
 import 'database.dart';
 
@@ -54,6 +55,104 @@ class RunRepository {
   }
 
   Stream<Run?> watch(String id) => (db.select(db.runs)..where((r) => r.id.equals(id))).watchSingleOrNull();
+
+  /// Drops the route after [endAt] (a forgotten run that kept recording).
+  Future<void> deletePointsAfter(String runId, DateTime endAt) =>
+      (db.delete(db.runPoints)..where((p) => p.runId.equals(runId) & p.time.isBiggerThanValue(endAt))).go();
+
+  /// A run logged by hand (treadmill, or the phone stayed at home): no
+  /// route, no records.
+  Future<String> logRun({
+    required DateTime startedAt,
+    required int durationS,
+    required double distanceM,
+    RunKind kind = RunKind.outdoor,
+    int? avgHr,
+    int? effort,
+    String notes = '',
+  }) async {
+    final id = newId();
+    await saveRun(
+      RunsCompanion.insert(
+        id: Value(id),
+        startedAt: startedAt,
+        endedAt: Value(startedAt.add(Duration(seconds: durationS))),
+        durationS: Value(durationS),
+        distanceM: Value(distanceM),
+        kind: Value(kind),
+        avgHr: Value(avgHr),
+        effort: Value(effort),
+        notes: Value(notes),
+        bestsJson: const Value('{}'),
+      ),
+    );
+    return id;
+  }
+
+  /// Changes a finished run's start, time, distance, kind or average HR.
+  Future<void> updateRun(
+    Run run, {
+    DateTime? startedAt,
+    int? durationS,
+    double? distanceM,
+    RunKind? kind,
+    int? avgHr,
+  }) async {
+    final start = startedAt ?? run.startedAt;
+    final secs = durationS ?? run.durationS;
+    final moved = start != run.startedAt || secs != run.durationS;
+    await (db.update(db.runs)..where((r) => r.id.equals(run.id))).write(
+      RunsCompanion(
+        startedAt: Value(start),
+        durationS: Value(secs),
+        endedAt: moved ? Value(start.add(Duration(seconds: secs + run.pausedS))) : const Value.absent(),
+        distanceM: distanceM == null ? const Value.absent() : Value(distanceM),
+        kind: kind == null ? const Value.absent() : Value(kind),
+        avgHr: avgHr == null ? const Value.absent() : Value(avgHr),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
+  /// A run that kept recording after you stopped: drops the route after
+  /// [endAt] and works out the distance and moving time again.
+  Future<void> trimEnd(Run run, DateTime endAt) async {
+    await deletePointsAfter(run.id, endAt);
+    final pts = await points(run.id);
+    final tracker = DistanceTracker();
+    var moving = 0.0;
+    RunPoint? prev;
+    for (final p in pts) {
+      if (prev == null || prev.segment != p.segment) {
+        tracker.newSegment();
+      } else {
+        final dt = p.time.difference(prev.time).inMilliseconds / 1000;
+        if (dt > 0 && dt <= 60) moving += dt;
+      }
+      tracker.add(GeoFix(time: p.time, lat: p.lat, lon: p.lon, accuracy: p.accuracy));
+      prev = p;
+    }
+    await (db.update(db.runs)..where((r) => r.id.equals(run.id))).write(
+      RunsCompanion(
+        endedAt: Value(endAt),
+        distanceM: Value(tracker.distanceM),
+        durationS: Value(moving.round()),
+        bestsJson: const Value(null), // worked out again on demand
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
+  /// How it felt: effort 1–10, weather tags, notes.
+  Future<void> updateNotes(String id, {int? effort, String? weather, String? notes, bool clearEffort = false}) =>
+      (db.update(db.runs)..where((r) => r.id.equals(id))).write(
+        RunsCompanion(
+          effort: clearEffort ? const Value(null) : (effort == null ? const Value.absent() : Value(effort)),
+          weather: weather == null ? const Value.absent() : Value(weather.isEmpty ? null : weather),
+          notes: notes == null ? const Value.absent() : Value(notes),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
 
   Future<void> delete(String id) => (db.delete(db.runs)..where((r) => r.id.equals(id))).go();
 
