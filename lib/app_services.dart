@@ -19,6 +19,7 @@ import 'data/workout_repository.dart';
 import 'hr/ble_hr_source.dart';
 import 'hr/hr_monitor.dart';
 import 'hr/zones.dart';
+import 'live/live_activity.dart';
 import 'notify/rest_notifier.dart';
 import 'run/location_source.dart';
 import 'run/motion_source.dart';
@@ -50,7 +51,12 @@ class AppServices {
       ..notifier = restNotifier
       ..plans = runPlans.byId;
     session.locationFor = () => run.location;
+    session.live = live;
+    run.live = live;
   }
+
+  /// The workout card on the lock screen / Dynamic Island (strength or run).
+  final LiveActivity live = LiveActivity.create();
 
   final RunRepository runs;
   final ShoeRepository shoes;

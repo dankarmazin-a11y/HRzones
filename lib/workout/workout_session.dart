@@ -11,6 +11,7 @@ import '../data/exercise_repository.dart';
 import '../hr/hr_monitor.dart';
 import '../data/preset_repository.dart';
 import '../hr/zones.dart';
+import '../live/live_activity.dart';
 import '../notify/rest_notifier.dart';
 import '../run/geo.dart';
 import '../run/location_source.dart';
@@ -1207,8 +1208,98 @@ class WorkoutSession extends ChangeNotifier {
     }
   }
 
+  // ── Lock screen / Dynamic Island card ──────────────────────────────────
+  /// The workout's card on the lock screen (set by AppServices; live
+  /// workouts only, not templates or edits).
+  LiveActivity? live;
+  bool _liveUp = false;
+
+  @override
+  void notifyListeners() {
+    super.notifyListeners();
+    _syncLive();
+  }
+
+  void _syncLive({bool now = true}) {
+    final l = live;
+    if (l == null || editMode) return;
+    final w = _active;
+    if (w == null) {
+      if (_liveUp) {
+        _liveUp = false;
+        hr.removeListener(_onHrForLive);
+        l.end(kind: 'strength');
+      }
+      return;
+    }
+    if (!_liveUp) {
+      _liveUp = true;
+      hr.addListener(_onHrForLive);
+      l.start('strength', w.name, liveCard);
+    } else {
+      l.update(liveCard, now: now);
+    }
+  }
+
+  /// Heart rate changes: at most every few seconds.
+  void _onHrForLive() => _syncLive(now: false);
+
+  /// What the lock-screen card shows right now.
+  LiveCard get liveCard {
+    final w = _active;
+    if (w == null) return const LiveCard(title: '');
+    final all = w.exercises.expand((e) => e.sets).toList();
+    final done = all.where((s) => s.done).length;
+    final t = _timer;
+    // The set being timed, or the first set not done yet.
+    (LoggedExercise, LoggedSet)? current = t?.kind == TimerKind.setTimer && t?.exercise != null && t?.set != null
+        ? (t!.exercise!, t.set!)
+        : null;
+    current ??= [
+      for (final e in w.exercises)
+        for (final s in e.sets)
+          if (!s.done) (e, s),
+    ].firstOrNull;
+    final progress = '$done/${all.length} sets done';
+    String title, detail;
+    if (current == null) {
+      title = all.isEmpty ? w.name : 'All sets done';
+      detail = all.isEmpty ? 'Add an exercise' : progress;
+    } else {
+      final (e, s) = current;
+      final same = e.sets.where((x) => x.side == s.side).toList();
+      final side = s.side == null ? '' : (s.side == Side.left ? 'L' : 'R');
+      title = (s.subExercise ?? e.exercise).name;
+      detail = 'Set ${same.indexOf(s) + 1}$side of ${same.length}${_setTarget(s)} · $progress';
+    }
+    final countdownEnd = t != null && t.countsDown
+        ? t.startedAt.add(Duration(seconds: t.total)) // + pauses: none for workout timers
+        : null;
+    return LiveCard(
+      title: title,
+      detail: detail,
+      heartRate: hr.running ? hr.bpm : null,
+      clockStart: w.startedAt,
+      elapsed: DateTime.now().difference(w.startedAt),
+      countdownEnd: countdownEnd,
+      countdownLabel: t == null ? null : (t.kind == TimerKind.setTimer ? 'Hold' : t.label),
+    );
+  }
+
+  /// " · 60 kg × 8" – the planned/typed values of a set, if any.
+  static String _setTarget(LoggedSet s) {
+    final parts = [
+      if (s.weightKg != null && s.weightKg! > 0) '${formatKg(s.weightKg!)} kg',
+      if (s.reps != null) '${s.reps}',
+      if (s.durationS != null && s.reps == null) '${s.durationS} s',
+      if (s.distanceM != null) '${s.distanceM!.round()} m',
+    ];
+    return parts.isEmpty ? '' : ' · ${parts.join(' × ')}';
+  }
+
   @override
   void dispose() {
+    if (_liveUp) hr.removeListener(_onHrForLive);
     _setRunTicker?.cancel();
     _setRunSub?.cancel();
     ticks.dispose();
