@@ -61,6 +61,9 @@ class HrMonitor extends ChangeNotifier {
   int? _sessionMax;
   int? _intervalMax;
 
+  /// Called after each beep alert (a run also says it out loud).
+  void Function(ZoneAlert alert, int bpm)? onAlert;
+
   /// Called when a user-facing setting changes (to persist it).
   VoidCallback? onSettingsChanged;
 
@@ -118,6 +121,7 @@ class HrMonitor extends ChangeNotifier {
       _lastAlert = alert;
       _lastAlertAt = r.time;
       beeper.alert(alert);
+      onAlert?.call(alert, r.bpm);
     }
     notifyListeners();
   }

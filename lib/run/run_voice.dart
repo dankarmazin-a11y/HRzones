@@ -3,10 +3,32 @@ import 'geo.dart';
 /// Spoken updates during a run: every km (or ½ / 2 km) the distance, time,
 /// average pace, the last km's pace and the heart rate; plus start, pause,
 /// resume and finish. Speaks through the beeper (music is turned down).
+/// What the regular updates say (besides the distance).
+enum VoiceItem {
+  time('Time'),
+  avgPace('Average pace'),
+  lastSplit('Last km pace'),
+  currentPace('Current pace'),
+  heartRate('Heart rate');
+
+  const VoiceItem(this.label);
+  final String label;
+}
+
 class RunVoice {
   RunVoice(this._speak);
 
-  final Future<void> Function(String text) _speak;
+  final Future<void> Function(String text, {String voice}) _speak;
+
+  /// Setting `runVoiceItems` (names, comma-separated).
+  Set<VoiceItem> items = {VoiceItem.time, VoiceItem.avgPace, VoiceItem.lastSplit, VoiceItem.heartRate};
+
+  /// Setting `runVoiceKind`: "default", "female" or "male".
+  String kind = 'default';
+
+  /// Setting `spokenAlerts` (default on): heart-rate and pace alerts are
+  /// also said ("Heart rate 168. Slow down.").
+  bool spokenAlerts = true;
 
   /// Setting `runVoice` (default on).
   bool enabled = true;
@@ -20,10 +42,24 @@ class RunVoice {
   /// Everything said (for tests / debugging).
   final said = <String>[];
 
-  void _say(String text) {
-    if (!enabled) return;
+  void _say(String text, {bool force = false}) {
+    if (!enabled && !force) return;
     said.add(text);
-    _speak(text);
+    _speak(text, voice: kind);
+  }
+
+  /// "Test voice" in Settings (also when updates are off).
+  void test() =>
+      _say('2 kilometres. Time 11 minutes 40 seconds. Average pace 5 minutes 50 per kilometre.', force: true);
+
+  /// Heart rate out of the zone during a run.
+  void heartRateAlert({required bool high, required int bpm}) {
+    if (spokenAlerts) _say('Heart rate $bpm. ${high ? 'Slow down' : 'Speed up'}.', force: true);
+  }
+
+  /// Pace out of the target range ([tooFast] = faster than the range).
+  void paceAlert({required bool tooFast, required double pace}) {
+    if (spokenAlerts) _say('Pace ${spokenPace(pace)}. ${tooFast ? 'Slow down' : 'Speed up'}.', force: true);
   }
 
   void started() {
@@ -57,7 +93,7 @@ class RunVoice {
   }
 
   /// Called on every GPS fix.
-  void progress(double distanceM, Duration moving, {int? bpm}) {
+  void progress(double distanceM, Duration moving, {int? bpm, double? currentPace}) {
     if (distanceM < _next) return;
     // Interpolating isn't worth it: a fix comes every second.
     final mark = _next;
@@ -70,15 +106,16 @@ class RunVoice {
     _say(
       [
         '${spokenKm(mark)}.',
-        'Time ${spokenDuration(moving)}.',
-        if (avg != null) 'Average pace ${spokenPace(avg)}.',
-        if (lastPart != null && mark > everyM)
+        if (items.contains(VoiceItem.time)) 'Time ${spokenDuration(moving)}.',
+        if (avg != null && items.contains(VoiceItem.avgPace)) 'Average pace ${spokenPace(avg)}.',
+        if (currentPace != null && items.contains(VoiceItem.currentPace)) 'Current pace ${spokenPace(currentPace)}.',
+        if (lastPart != null && mark > everyM && items.contains(VoiceItem.lastSplit))
           'Last ${switch (everyM) {
             500 => 'half kilometre',
             1000 => 'kilometre',
             _ => spokenKm(everyM.toDouble()),
           }} ${spokenPace(lastPart)}.',
-        if (bpm != null) 'Heart rate $bpm.',
+        if (bpm != null && items.contains(VoiceItem.heartRate)) 'Heart rate $bpm.',
       ].join(' '),
     );
   }

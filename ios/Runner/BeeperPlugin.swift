@@ -101,7 +101,7 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
         try play(repeated(makeSound(name), count: count))
         result(nil)
       case "speak":
-        try speak(args?["text"] as? String ?? "")
+        try speak(args?["text"] as? String ?? "", voice: args?["voice"] as? String ?? "default")
         result(nil)
       case "setVolume":
         volume = Float((args?["volume"] as? NSNumber)?.doubleValue ?? 0.7)
@@ -133,13 +133,30 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
 
   /// Speaks [text] over the user's music, which is turned down (ducked)
   /// while talking and back up afterwards. Works with the screen locked.
-  private func speak(_ text: String) throws {
+  /// An English voice: "female" / "male" picks one of that gender (best
+  /// quality installed), "default" the system's en-US voice.
+  private func englishVoice(_ kind: String) -> AVSpeechSynthesisVoice? {
+    let fallback = AVSpeechSynthesisVoice(language: "en-US")
+    guard kind == "female" || kind == "male" else { return fallback }
+    let wanted: AVSpeechSynthesisVoiceGender = kind == "female" ? .female : .male
+    let voices = AVSpeechSynthesisVoice.speechVoices()
+      .filter { $0.language.hasPrefix("en") && $0.gender == wanted }
+      .sorted { a, b in
+        // US English first, then the better quality.
+        let au = a.language == "en-US" ? 1 : 0, bu = b.language == "en-US" ? 1 : 0
+        if au != bu { return au > bu }
+        return a.quality.rawValue > b.quality.rawValue
+      }
+    return voices.first ?? fallback
+  }
+
+  private func speak(_ text: String, voice: String) throws {
     guard !text.isEmpty else { return }
     let session = AVAudioSession.sharedInstance()
     try session.setCategory(.playback, mode: .voicePrompt, options: [.mixWithOthers, .duckOthers])
     try session.setActive(true)
     let utterance = AVSpeechUtterance(string: text)
-    utterance.voice = AVSpeechSynthesisVoice(language: "en-US")
+    utterance.voice = englishVoice(voice)
     utterance.volume = 1.0
     speech.speak(utterance)
   }

@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 import '../data/database.dart';
 import '../data/run_repository.dart';
 import '../hr/hr_monitor.dart';
+import '../beep/sounds.dart';
+import '../hr/zone_alert_engine.dart';
 import '../hr/zones.dart';
 import 'best_efforts.dart';
 import 'geo.dart';
@@ -80,6 +82,17 @@ class RunSession extends ChangeNotifier {
   final _recent = <(DateTime, double)>[];
   DateTime? _lastGoodAt;
   bool _hrStartedByRun = false;
+
+  /// Target pace range for beeps (setting `runPaceAlert`); null = off.
+  /// [HrRange] holds seconds per km: min = fastest, max = slowest.
+  HrRange? paceAlert;
+
+  /// The same alert logic as for heart rate (grace, cooldown), fed with
+  /// the current pace. GPS pace is jumpy: a longer grace.
+  final _paceEngine = ZoneAlertEngine(
+    range: const HrRange(min: 300, max: 360),
+    settings: const AlertSettings(grace: Duration(seconds: 10), cooldown: Duration(seconds: 30), hysteresisBpm: 3),
+  );
   StreamSubscription<GeoFix>? _gps;
   Timer? _ticker;
   int _sinceSave = 0;
@@ -149,6 +162,7 @@ class RunSession extends ChangeNotifier {
     }
     await _saveRun();
     _listen();
+    _hookAlerts();
     voice?.started();
     notifyListeners();
     return access;
@@ -199,6 +213,7 @@ class RunSession extends ChangeNotifier {
       await _saveRun(endedAt: end, avgHr: hr.sessionAvg, maxHr: hr.sessionMax, bests: bests);
       voice?.finished(distanceM, moving, newRecords: newRecords);
       if (_hrStartedByRun) await hr.stop();
+      hr.onAlert = null;
       _reset();
       notifyListeners();
       return id;
@@ -213,6 +228,7 @@ class RunSession extends ChangeNotifier {
     if (id == null) return;
     await _stopGps();
     if (_hrStartedByRun) await hr.stop();
+    hr.onAlert = null;
     await runs.delete(id);
     _reset();
     notifyListeners();
@@ -250,6 +266,7 @@ class RunSession extends ChangeNotifier {
     _segment = segment + 1;
     _tracker.newSegment();
     voice?.restored(distanceM, moving);
+    _hookAlerts();
     if (!paused) _listen();
     notifyListeners();
   }
@@ -263,12 +280,31 @@ class RunSession extends ChangeNotifier {
     await _saveRun();
   }
 
+  /// Heart-rate beeps during a run are also said out loud.
+  void _hookAlerts() {
+    _paceEngine.reset();
+    hr.onAlert = (alert, bpm) => voice?.heartRateAlert(high: alert == ZoneAlert.high, bpm: bpm);
+  }
+
+  void _checkPace(double? pace) {
+    final range = paceAlert;
+    if (range == null || pace == null || paused) return;
+    _paceEngine.range = range;
+    final alert = _paceEngine.onReading(pace.round(), now());
+    if (alert == null) return;
+    // More seconds per km = slower.
+    final tooSlow = alert == ZoneAlert.high;
+    hr.beeper.play(tooSlow ? SoundEvent.paceSlow : SoundEvent.paceFast);
+    voice?.paceAlert(tooFast: !tooSlow, pace: pace);
+  }
+
   void _listen() {
     _gps?.cancel();
     _gps = location.start().listen(_onFix);
     _ticker?.cancel();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       ticks.value++;
+      _paceEngine.tick(now());
       if (++_sinceSave >= saveEvery) flush();
     });
   }
@@ -303,7 +339,9 @@ class RunSession extends ChangeNotifier {
       _recent.removeAt(0);
     }
     ticks.value++;
-    voice?.progress(distanceM, moving, bpm: hr.running ? hr.bpm : null);
+    final pace = currentPace;
+    voice?.progress(distanceM, moving, bpm: hr.running ? hr.bpm : null, currentPace: pace);
+    _checkPace(pace);
     if (!wasGood) notifyListeners();
   }
 
