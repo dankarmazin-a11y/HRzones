@@ -5424,6 +5424,24 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _stepsMeta = const VerificationMeta('steps');
+  @override
+  late final GeneratedColumn<int> steps = GeneratedColumn<int>(
+    'steps',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _avgCadenceMeta = const VerificationMeta('avgCadence');
+  @override
+  late final GeneratedColumn<int> avgCadence = GeneratedColumn<int>(
+    'avg_cadence',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -5444,6 +5462,8 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
     effort,
     weather,
     shoeId,
+    steps,
+    avgCadence,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -5507,6 +5527,12 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
     if (data.containsKey('shoe_id')) {
       context.handle(_shoeIdMeta, shoeId.isAcceptableOrUnknown(data['shoe_id']!, _shoeIdMeta));
     }
+    if (data.containsKey('steps')) {
+      context.handle(_stepsMeta, steps.isAcceptableOrUnknown(data['steps']!, _stepsMeta));
+    }
+    if (data.containsKey('avg_cadence')) {
+      context.handle(_avgCadenceMeta, avgCadence.isAcceptableOrUnknown(data['avg_cadence']!, _avgCadenceMeta));
+    }
     return context;
   }
 
@@ -5536,6 +5562,8 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
       effort: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}effort']),
       weather: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}weather']),
       shoeId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}shoe_id']),
+      steps: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}steps']),
+      avgCadence: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}avg_cadence']),
     );
   }
 
@@ -5585,6 +5613,12 @@ class Run extends DataClass implements Insertable<Run> {
 
   /// The shoes worn (null = not set).
   final String? shoeId;
+
+  /// Steps counted by the phone (null = not available).
+  final int? steps;
+
+  /// Average cadence, steps per minute of moving time.
+  final int? avgCadence;
   const Run({
     required this.id,
     required this.updatedAt,
@@ -5604,6 +5638,8 @@ class Run extends DataClass implements Insertable<Run> {
     this.effort,
     this.weather,
     this.shoeId,
+    this.steps,
+    this.avgCadence,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -5646,6 +5682,12 @@ class Run extends DataClass implements Insertable<Run> {
     if (!nullToAbsent || shoeId != null) {
       map['shoe_id'] = Variable<String>(shoeId);
     }
+    if (!nullToAbsent || steps != null) {
+      map['steps'] = Variable<int>(steps);
+    }
+    if (!nullToAbsent || avgCadence != null) {
+      map['avg_cadence'] = Variable<int>(avgCadence);
+    }
     return map;
   }
 
@@ -5669,6 +5711,8 @@ class Run extends DataClass implements Insertable<Run> {
       effort: effort == null && nullToAbsent ? const Value.absent() : Value(effort),
       weather: weather == null && nullToAbsent ? const Value.absent() : Value(weather),
       shoeId: shoeId == null && nullToAbsent ? const Value.absent() : Value(shoeId),
+      steps: steps == null && nullToAbsent ? const Value.absent() : Value(steps),
+      avgCadence: avgCadence == null && nullToAbsent ? const Value.absent() : Value(avgCadence),
     );
   }
 
@@ -5693,6 +5737,8 @@ class Run extends DataClass implements Insertable<Run> {
       effort: serializer.fromJson<int?>(json['effort']),
       weather: serializer.fromJson<String?>(json['weather']),
       shoeId: serializer.fromJson<String?>(json['shoeId']),
+      steps: serializer.fromJson<int?>(json['steps']),
+      avgCadence: serializer.fromJson<int?>(json['avgCadence']),
     );
   }
   @override
@@ -5717,6 +5763,8 @@ class Run extends DataClass implements Insertable<Run> {
       'effort': serializer.toJson<int?>(effort),
       'weather': serializer.toJson<String?>(weather),
       'shoeId': serializer.toJson<String?>(shoeId),
+      'steps': serializer.toJson<int?>(steps),
+      'avgCadence': serializer.toJson<int?>(avgCadence),
     };
   }
 
@@ -5739,6 +5787,8 @@ class Run extends DataClass implements Insertable<Run> {
     Value<int?> effort = const Value.absent(),
     Value<String?> weather = const Value.absent(),
     Value<String?> shoeId = const Value.absent(),
+    Value<int?> steps = const Value.absent(),
+    Value<int?> avgCadence = const Value.absent(),
   }) => Run(
     id: id ?? this.id,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -5758,6 +5808,8 @@ class Run extends DataClass implements Insertable<Run> {
     effort: effort.present ? effort.value : this.effort,
     weather: weather.present ? weather.value : this.weather,
     shoeId: shoeId.present ? shoeId.value : this.shoeId,
+    steps: steps.present ? steps.value : this.steps,
+    avgCadence: avgCadence.present ? avgCadence.value : this.avgCadence,
   );
   Run copyWithCompanion(RunsCompanion data) {
     return Run(
@@ -5779,6 +5831,8 @@ class Run extends DataClass implements Insertable<Run> {
       effort: data.effort.present ? data.effort.value : this.effort,
       weather: data.weather.present ? data.weather.value : this.weather,
       shoeId: data.shoeId.present ? data.shoeId.value : this.shoeId,
+      steps: data.steps.present ? data.steps.value : this.steps,
+      avgCadence: data.avgCadence.present ? data.avgCadence.value : this.avgCadence,
     );
   }
 
@@ -5802,7 +5856,9 @@ class Run extends DataClass implements Insertable<Run> {
           ..write('kind: $kind, ')
           ..write('effort: $effort, ')
           ..write('weather: $weather, ')
-          ..write('shoeId: $shoeId')
+          ..write('shoeId: $shoeId, ')
+          ..write('steps: $steps, ')
+          ..write('avgCadence: $avgCadence')
           ..write(')'))
         .toString();
   }
@@ -5827,6 +5883,8 @@ class Run extends DataClass implements Insertable<Run> {
     effort,
     weather,
     shoeId,
+    steps,
+    avgCadence,
   );
   @override
   bool operator ==(Object other) =>
@@ -5849,7 +5907,9 @@ class Run extends DataClass implements Insertable<Run> {
           other.kind == this.kind &&
           other.effort == this.effort &&
           other.weather == this.weather &&
-          other.shoeId == this.shoeId);
+          other.shoeId == this.shoeId &&
+          other.steps == this.steps &&
+          other.avgCadence == this.avgCadence);
 }
 
 class RunsCompanion extends UpdateCompanion<Run> {
@@ -5871,6 +5931,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
   final Value<int?> effort;
   final Value<String?> weather;
   final Value<String?> shoeId;
+  final Value<int?> steps;
+  final Value<int?> avgCadence;
   final Value<int> rowid;
   const RunsCompanion({
     this.id = const Value.absent(),
@@ -5891,6 +5953,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
     this.effort = const Value.absent(),
     this.weather = const Value.absent(),
     this.shoeId = const Value.absent(),
+    this.steps = const Value.absent(),
+    this.avgCadence = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RunsCompanion.insert({
@@ -5912,6 +5976,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
     this.effort = const Value.absent(),
     this.weather = const Value.absent(),
     this.shoeId = const Value.absent(),
+    this.steps = const Value.absent(),
+    this.avgCadence = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : startedAt = Value(startedAt);
   static Insertable<Run> custom({
@@ -5933,6 +5999,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
     Expression<int>? effort,
     Expression<String>? weather,
     Expression<String>? shoeId,
+    Expression<int>? steps,
+    Expression<int>? avgCadence,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -5954,6 +6022,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
       if (effort != null) 'effort': effort,
       if (weather != null) 'weather': weather,
       if (shoeId != null) 'shoe_id': shoeId,
+      if (steps != null) 'steps': steps,
+      if (avgCadence != null) 'avg_cadence': avgCadence,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -5977,6 +6047,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
     Value<int?>? effort,
     Value<String?>? weather,
     Value<String?>? shoeId,
+    Value<int?>? steps,
+    Value<int?>? avgCadence,
     Value<int>? rowid,
   }) {
     return RunsCompanion(
@@ -5998,6 +6070,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
       effort: effort ?? this.effort,
       weather: weather ?? this.weather,
       shoeId: shoeId ?? this.shoeId,
+      steps: steps ?? this.steps,
+      avgCadence: avgCadence ?? this.avgCadence,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -6059,6 +6133,12 @@ class RunsCompanion extends UpdateCompanion<Run> {
     if (shoeId.present) {
       map['shoe_id'] = Variable<String>(shoeId.value);
     }
+    if (steps.present) {
+      map['steps'] = Variable<int>(steps.value);
+    }
+    if (avgCadence.present) {
+      map['avg_cadence'] = Variable<int>(avgCadence.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -6086,6 +6166,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
           ..write('effort: $effort, ')
           ..write('weather: $weather, ')
           ..write('shoeId: $shoeId, ')
+          ..write('steps: $steps, ')
+          ..write('avgCadence: $avgCadence, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -10533,6 +10615,8 @@ typedef $$RunsTableCreateCompanionBuilder = RunsCompanion Function({
   Value<int?> effort,
   Value<String?> weather,
   Value<String?> shoeId,
+  Value<int?> steps,
+  Value<int?> avgCadence,
   Value<int> rowid,
 });
 typedef $$RunsTableUpdateCompanionBuilder = RunsCompanion Function({
@@ -10554,6 +10638,8 @@ typedef $$RunsTableUpdateCompanionBuilder = RunsCompanion Function({
   Value<int?> effort,
   Value<String?> weather,
   Value<String?> shoeId,
+  Value<int?> steps,
+  Value<int?> avgCadence,
   Value<int> rowid,
 });
 
@@ -10631,6 +10717,11 @@ class $$RunsTableFilterComposer extends Composer<_$AppDatabase, $RunsTable> {
 
   ColumnFilters<String> get shoeId =>
       $composableBuilder(column: $table.shoeId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get steps => $composableBuilder(column: $table.steps, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get avgCadence =>
+      $composableBuilder(column: $table.avgCadence, builder: (column) => ColumnFilters(column));
 
   Expression<bool> runPointsRefs(Expression<bool> Function($$RunPointsTableFilterComposer f) f) {
     final $$RunPointsTableFilterComposer composer = $composerBuilder(
@@ -10711,6 +10802,12 @@ class $$RunsTableOrderingComposer extends Composer<_$AppDatabase, $RunsTable> {
 
   ColumnOrderings<String> get shoeId =>
       $composableBuilder(column: $table.shoeId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get steps =>
+      $composableBuilder(column: $table.steps, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get avgCadence =>
+      $composableBuilder(column: $table.avgCadence, builder: (column) => ColumnOrderings(column));
 }
 
 class $$RunsTableAnnotationComposer extends Composer<_$AppDatabase, $RunsTable> {
@@ -10757,6 +10854,10 @@ class $$RunsTableAnnotationComposer extends Composer<_$AppDatabase, $RunsTable> 
   GeneratedColumn<String> get weather => $composableBuilder(column: $table.weather, builder: (column) => column);
 
   GeneratedColumn<String> get shoeId => $composableBuilder(column: $table.shoeId, builder: (column) => column);
+
+  GeneratedColumn<int> get steps => $composableBuilder(column: $table.steps, builder: (column) => column);
+
+  GeneratedColumn<int> get avgCadence => $composableBuilder(column: $table.avgCadence, builder: (column) => column);
 
   Expression<T> runPointsRefs<T extends Object>(Expression<T> Function($$RunPointsTableAnnotationComposer a) f) {
     final $$RunPointsTableAnnotationComposer composer = $composerBuilder(
@@ -10820,6 +10921,8 @@ class $$RunsTableTableManager
                 Value<int?> effort = const Value.absent(),
                 Value<String?> weather = const Value.absent(),
                 Value<String?> shoeId = const Value.absent(),
+                Value<int?> steps = const Value.absent(),
+                Value<int?> avgCadence = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RunsCompanion(
                 id: id,
@@ -10840,6 +10943,8 @@ class $$RunsTableTableManager
                 effort: effort,
                 weather: weather,
                 shoeId: shoeId,
+                steps: steps,
+                avgCadence: avgCadence,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -10862,6 +10967,8 @@ class $$RunsTableTableManager
                 Value<int?> effort = const Value.absent(),
                 Value<String?> weather = const Value.absent(),
                 Value<String?> shoeId = const Value.absent(),
+                Value<int?> steps = const Value.absent(),
+                Value<int?> avgCadence = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RunsCompanion.insert(
                 id: id,
@@ -10882,6 +10989,8 @@ class $$RunsTableTableManager
                 effort: effort,
                 weather: weather,
                 shoeId: shoeId,
+                steps: steps,
+                avgCadence: avgCadence,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) =>

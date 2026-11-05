@@ -286,6 +286,12 @@ class Runs extends Table with SyncColumns {
   /// The shoes worn (null = not set).
   TextColumn get shoeId => text().nullable()();
 
+  /// Steps counted by the phone (null = not available).
+  IntColumn get steps => integer().nullable()();
+
+  /// Average cadence, steps per minute of moving time.
+  IntColumn get avgCadence => integer().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -385,7 +391,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -437,6 +443,10 @@ class AppDatabase extends _$AppDatabase {
       if (from < 11) {
         if (from >= 7) await m.addColumn(runs, runs.shoeId);
         await m.createTable(shoes);
+      }
+      if (from >= 7 && from < 12) {
+        await m.addColumn(runs, runs.steps);
+        await m.addColumn(runs, runs.avgCadence);
       }
     },
     beforeOpen: (details) async {

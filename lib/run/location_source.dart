@@ -117,7 +117,14 @@ class SimulatedLocationSource extends LocationSource {
   GeoFix _fix() {
     final dLat = _radiusM * math.sin(_angle) / 111320;
     final dLon = _radiusM * (math.cos(_angle) - 1) / (111320 * math.cos(startLat * math.pi / 180));
-    return GeoFix(time: DateTime.now(), lat: startLat + dLat, lon: startLon + dLon, accuracy: 5);
+    // A gentle hill on the loop (shows climb and the height profile).
+    return GeoFix(
+      time: DateTime.now(),
+      lat: startLat + dLat,
+      lon: startLon + dLon,
+      accuracy: 5,
+      altitude: 20 + 12 * math.sin(_angle),
+    );
   }
 
   @override

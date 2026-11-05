@@ -145,6 +145,7 @@ class _Numbers extends StatelessWidget {
             Text('Time', style: label),
             const SizedBox(height: 32),
             const _HeartRate(),
+            _Cadence(run: run),
           ],
         )
       : Column(
@@ -168,6 +169,7 @@ class _Numbers extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             const _HeartRate(),
+            _Cadence(run: run),
           ],
         );
 }
@@ -540,6 +542,27 @@ class _Strip extends StatelessWidget {
           stat(formatDuration(run.moving), 'Time', const Key('runTime')),
           stat(formatPace(run.currentPace), 'Pace /km', const Key('runPace')),
         ],
+      ),
+    );
+  }
+}
+
+/// Steps per minute from the phone's motion chip (hidden when unknown).
+class _Cadence extends StatelessWidget {
+  const _Cadence({required this.run});
+
+  final RunSession run;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = run.cadence;
+    if (c == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Text(
+        'Cadence ${c.round()} spm',
+        key: const Key('runCadence'),
+        style: const TextStyle(color: Colors.white70, fontSize: 18, fontWeight: FontWeight.w600),
       ),
     );
   }

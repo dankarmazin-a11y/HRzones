@@ -13,6 +13,7 @@ import '../notify/rest_notifier.dart';
 import 'best_efforts.dart';
 import 'geo.dart';
 import 'location_source.dart';
+import 'motion_source.dart';
 import 'run_voice.dart';
 
 /// GPS signal as shown on the run screen.
@@ -53,9 +54,62 @@ class RoutePoint {
 /// Keeps working with the screen locked (iOS background location). GPS only
 /// runs while recording – it is switched off when paused or finished.
 class RunSession extends ChangeNotifier {
-  RunSession({required this.runs, required this.hr, LocationSource? location, DateTime Function()? clock})
-    : location = location ?? LocationSource.create(),
-      now = clock ?? DateTime.now;
+  RunSession({
+    required this.runs,
+    required this.hr,
+    LocationSource? location,
+    MotionSource? motion,
+    DateTime Function()? clock,
+  }) : location = location ?? LocationSource.create(),
+       motion = motion ?? NoMotionSource(),
+       now = clock ?? DateTime.now;
+
+  /// Step counter for cadence (the phone's motion chip).
+  MotionSource motion;
+  int _stepsBefore = 0, _steps = 0;
+  bool _counting = false;
+  double? _cadence;
+  final _stepSamples = <(DateTime, int)>[];
+
+  /// Steps so far (null when the phone can't count them).
+  int? get steps => _counting || _steps > 0 ? _stepsBefore + _steps : (_stepsBefore > 0 ? _stepsBefore : null);
+
+  /// Current cadence in steps per minute (null when paused or unknown).
+  double? get cadence => paused ? null : _cadence;
+
+  Future<void> _startSteps() async {
+    _steps = 0;
+    _stepSamples.clear();
+    _counting = await motion.start();
+  }
+
+  /// Reads the step counter (every few seconds and before saving).
+  Future<void> _readSteps() async {
+    if (!_counting) return;
+    final r = await motion.read();
+    if (r == null) return;
+    _steps = r.steps;
+    final t = now();
+    _stepSamples.add((t, r.steps));
+    _stepSamples.removeWhere((x) => t.difference(x.$1) > const Duration(seconds: 30));
+    if (r.cadence != null) {
+      _cadence = r.cadence;
+    } else if (_stepSamples.length >= 2) {
+      final a = _stepSamples.first, b = _stepSamples.last;
+      final secs = b.$1.difference(a.$1).inMilliseconds / 1000;
+      _cadence = secs >= 8 ? (b.$2 - a.$2) / secs * 60 : null;
+    }
+  }
+
+  Future<void> _stopSteps() async {
+    if (!_counting) return;
+    await _readSteps();
+    await motion.stop();
+    _stepsBefore += _steps;
+    _steps = 0;
+    _counting = false;
+    _cadence = null;
+  }
 
   final RunRepository runs;
   final HrMonitor hr;
@@ -210,6 +264,7 @@ class RunSession extends ChangeNotifier {
         _hrStartedByRun = true;
       }
     }
+    await _startSteps();
     await _saveRun();
     _listen();
     _hookAlerts();
@@ -222,6 +277,7 @@ class RunSession extends ChangeNotifier {
     if (!active || paused) return;
     _pausedAt = now();
     await _stopGps();
+    await _stopSteps();
     _tracker.newSegment();
     _recent.clear();
     _segment++;
@@ -239,6 +295,7 @@ class RunSession extends ChangeNotifier {
     _lastMoveAt = now();
     _snoozedAt = null;
     voice?.resumed();
+    await _startSteps();
     await flush();
     _listen();
     notifyListeners();
@@ -253,6 +310,7 @@ class RunSession extends ChangeNotifier {
     _finishing = true;
     try {
       await _stopGps();
+      await _stopSteps();
       if (endAt != null) {
         final p = _pausedAt;
         _endOverride = p != null && p.isBefore(endAt) ? p : endAt;
@@ -293,6 +351,7 @@ class RunSession extends ChangeNotifier {
     final id = _id;
     if (id == null) return;
     await _stopGps();
+    await _stopSteps();
     if (_hrStartedByRun) await hr.stop();
     hr.onAlert = null;
     await notifier?.cancelRunIdle();
@@ -313,6 +372,7 @@ class RunSession extends ChangeNotifier {
     _presetId = row.hrPresetId;
     _treadmill = row.kind == RunKind.treadmill;
     _shoeId = row.shoeId;
+    _stepsBefore = row.steps ?? 0;
     var segment = -1;
     for (final p in await runs.points(row.id)) {
       if (p.segment != segment) _tracker.newSegment();
@@ -338,6 +398,7 @@ class RunSession extends ChangeNotifier {
     _moveMark = distanceM;
     voice?.restored(distanceM, moving);
     _hookAlerts();
+    if (!paused) await _startSteps();
     if (!paused) _listen();
     notifyListeners();
   }
@@ -417,6 +478,7 @@ class RunSession extends ChangeNotifier {
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       ticks.value++;
       _paceEngine.tick(now());
+      if (ticks.value % 5 == 0) _readSteps();
       if (++_sinceSave >= saveEvery) flush();
     });
   }
@@ -456,7 +518,7 @@ class RunSession extends ChangeNotifier {
     }
     ticks.value++;
     final pace = currentPace;
-    voice?.progress(distanceM, moving, bpm: hr.running ? hr.bpm : null, currentPace: pace);
+    voice?.progress(distanceM, moving, bpm: hr.running ? hr.bpm : null, currentPace: pace, cadence: cadence);
     _checkPace(pace);
     if (!wasGood) notifyListeners();
   }
@@ -499,9 +561,16 @@ class RunSession extends ChangeNotifier {
         bestsJson: Value(bests == null ? null : encodeBests(bests)),
         kind: Value(_treadmill ? RunKind.treadmill : RunKind.outdoor),
         shoeId: Value(_shoeId),
+        steps: Value(steps),
+        avgCadence: Value(_avgCadence()),
         updatedAt: Value(now()),
       ),
     );
+  }
+
+  int? _avgCadence() {
+    final st = steps, mins = moving.inMilliseconds / 60000;
+    return st == null || st == 0 || mins < 0.5 ? null : (st / mins).round();
   }
 
   void _reset() {
@@ -511,6 +580,11 @@ class RunSession extends ChangeNotifier {
     _pausedMs = 0;
     _presetId = null;
     _shoeId = null;
+    _stepsBefore = 0;
+    _steps = 0;
+    _counting = false;
+    _cadence = null;
+    _stepSamples.clear();
     _segment = 0;
     _tracker
       ..distanceM = 0

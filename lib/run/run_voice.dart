@@ -9,7 +9,8 @@ enum VoiceItem {
   avgPace('Average pace'),
   lastSplit('Last km pace'),
   currentPace('Current pace'),
-  heartRate('Heart rate');
+  heartRate('Heart rate'),
+  cadence('Cadence');
 
   const VoiceItem(this.label);
   final String label;
@@ -93,7 +94,7 @@ class RunVoice {
   }
 
   /// Called on every GPS fix.
-  void progress(double distanceM, Duration moving, {int? bpm, double? currentPace}) {
+  void progress(double distanceM, Duration moving, {int? bpm, double? currentPace, double? cadence}) {
     if (distanceM < _next) return;
     // Interpolating isn't worth it: a fix comes every second.
     final mark = _next;
@@ -116,6 +117,7 @@ class RunVoice {
             _ => spokenKm(everyM.toDouble()),
           }} ${spokenPace(lastPart)}.',
         if (bpm != null && items.contains(VoiceItem.heartRate)) 'Heart rate $bpm.',
+        if (cadence != null && items.contains(VoiceItem.cadence)) 'Cadence ${cadence.round()}.',
       ].join(' '),
     );
   }
