@@ -9,6 +9,7 @@ import '../backup_section.dart';
 import '../goals_section.dart';
 import '../history/history_screen.dart';
 import '../streak_card.dart';
+import '../run/run_start.dart';
 import 'workouts_screen.dart';
 
 /// Dashboard: streak, quick start (strength / run / zones), goals, this week.
@@ -43,7 +44,12 @@ class HomeScreen extends StatelessWidget {
                 onTap: () => startEmptyWorkout(context),
               ),
               const SizedBox(width: 8),
-              _StartTile(icon: Icons.directions_run, label: 'Run', badge: 'soon', onTap: () => shell.goTo(AppTab.run)),
+              _StartTile(
+                key: const Key('startRunHome'),
+                icon: Icons.directions_run,
+                label: 'Run',
+                onTap: () => startRun(context),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -57,11 +63,10 @@ class HomeScreen extends StatelessWidget {
 }
 
 class _StartTile extends StatelessWidget {
-  const _StartTile({super.key, required this.icon, required this.label, required this.onTap, this.badge});
+  const _StartTile({super.key, required this.icon, required this.label, required this.onTap});
 
   final IconData icon;
   final String label;
-  final String? badge;
   final VoidCallback onTap;
 
   @override
@@ -82,7 +87,6 @@ class _StartTile extends StatelessWidget {
                 Icon(icon, size: 32),
                 const SizedBox(height: 6),
                 Text(label, style: Theme.of(context).textTheme.titleSmall),
-                if (badge != null) Text(badge!, style: Theme.of(context).textTheme.labelSmall),
               ],
             ),
           ),

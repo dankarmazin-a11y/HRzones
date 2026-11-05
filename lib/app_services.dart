@@ -8,6 +8,7 @@ import 'data/body_repository.dart';
 import 'data/database.dart';
 import 'data/goal_repository.dart';
 import 'data/preset_repository.dart';
+import 'data/run_repository.dart';
 import 'workout/training_level.dart';
 import 'workout/training_place.dart';
 import 'data/exercise_repository.dart';
@@ -17,13 +18,16 @@ import 'hr/ble_hr_source.dart';
 import 'hr/hr_monitor.dart';
 import 'hr/zones.dart';
 import 'notify/rest_notifier.dart';
+import 'run/location_source.dart';
+import 'run/run_session.dart';
 import 'workout/workout_session.dart';
 
 /// Everything the screens need: database repositories, HR monitor and the
 /// current workout session.
 class AppServices {
-  AppServices._(this.db, this.hr, this._loadExercises, this.restNotifier)
+  AppServices._(this.db, this.hr, this._loadExercises, this.restNotifier, LocationSource? location)
     : exercises = ExerciseRepository(db),
+      runs = RunRepository(db),
       templates = TemplateRepository(db),
       body = BodyRepository(db),
       presets = HrPresetRepository(db),
@@ -35,7 +39,13 @@ class AppServices {
       ..restNotifier = restNotifier
       ..intervals = intervals;
     goals = GoalRepository(db, workouts, exercises, body);
+    run = RunSession(runs: runs, hr: hr, location: location);
   }
+
+  final RunRepository runs;
+
+  /// The run being recorded (GPS).
+  late final RunSession run;
 
   final AppDatabase db;
   final HrMonitor hr;
@@ -151,6 +161,7 @@ class AppServices {
     await _loadSettings();
     session.zonesEnabled = zonesEnabled.value;
     await session.restore();
+    await run.restore();
   }
 
   /// Workouts per week for the streak (setting `weeklyTarget`, default 3).
@@ -171,12 +182,14 @@ class AppServices {
     HrMonitor? hr,
     ValueChanged<String>? onStep,
     RestNotifier? restNotifier,
+    LocationSource? location,
   }) async {
     final s = AppServices._(
       db ?? AppDatabase(),
       hr ?? HrMonitor(),
       loadExercises,
       restNotifier ?? (db == null ? RestNotifier.create() : SilentRestNotifier()),
+      location ?? (db == null ? null : SimulatedLocationSource()),
     );
     // Each step is reported so a stuck start-up shows where it hangs.
     onStep?.call('Opening the database');
@@ -191,6 +204,7 @@ class AppServices {
     s.session.zonesEnabled = s.zonesEnabled.value;
     onStep?.call('Restoring your workout');
     await s.session.restore();
+    await s.run.restore();
     return s;
   }
 
@@ -250,6 +264,7 @@ class AppServices {
   Future<void> close() async {
     _settingsTimer?.cancel();
     session.dispose();
+    run.dispose();
     hr.dispose();
     await db.close();
   }
