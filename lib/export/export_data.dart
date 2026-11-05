@@ -4,6 +4,7 @@ import '../data/body_repository.dart';
 import '../data/database.dart';
 import '../data/run_repository.dart';
 import '../run/best_efforts.dart';
+import '../run/elevation.dart';
 import '../run/geo.dart';
 import '../run/splits.dart';
 import 'xlsx_writer.dart';
@@ -101,6 +102,10 @@ Future<Uint8List> exportWorkbook(AppDatabase db) async {
       'Effort (1–10)',
       'Weather',
       'Shoes',
+      'Climb (m)',
+      'Descent (m)',
+      'Cadence (spm)',
+      'Steps',
       'Notes',
     ],
   ];
@@ -109,6 +114,9 @@ Future<Uint8List> exportWorkbook(AppDatabase db) async {
   ];
   for (final r in runs) {
     final bests = await runRepo.bestsFor(r);
+    final points = await runRepo.points(r.id);
+    final alts = [for (final p in points) ?p.altitude];
+    final climb = alts.length < 10 ? null : elevationGainLoss(alts);
     runRows.add([
       r.startedAt,
       double.parse((r.distanceM / 1000).toStringAsFixed(2)),
@@ -122,9 +130,12 @@ Future<Uint8List> exportWorkbook(AppDatabase db) async {
       r.effort,
       r.weather,
       shoes[r.shoeId]?.name,
+      climb?.climb.round(),
+      climb?.descent.round(),
+      r.avgCadence,
+      r.steps,
       r.notes.isEmpty ? null : r.notes,
     ]);
-    final points = await runRepo.points(r.id);
     for (final sp in computeSplits(
       points.map((p) => (time: p.time, lat: p.lat, lon: p.lon, accuracy: p.accuracy, segment: p.segment, hr: p.hr)),
     )) {

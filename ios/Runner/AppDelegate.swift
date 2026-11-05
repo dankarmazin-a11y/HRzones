@@ -15,5 +15,8 @@ import UIKit
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "BeeperPlugin") {
       BeeperPlugin.register(with: registrar)
     }
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "MotionPlugin") {
+      MotionPlugin.register(with: registrar)
+    }
   }
 }

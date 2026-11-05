@@ -9,7 +9,8 @@ enum VoiceItem {
   avgPace('Average pace'),
   lastSplit('Last km pace'),
   currentPace('Current pace'),
-  heartRate('Heart rate');
+  heartRate('Heart rate'),
+  cadence('Cadence');
 
   const VoiceItem(this.label);
   final String label;
@@ -93,7 +94,14 @@ class RunVoice {
   }
 
   /// Called on every GPS fix.
-  void progress(double distanceM, Duration moving, {int? bpm, double? currentPace}) {
+  void progress(
+    double distanceM,
+    Duration moving, {
+    int? bpm,
+    double? currentPace,
+    double? cadence,
+    double? ghostDelta,
+  }) {
     if (distanceM < _next) return;
     // Interpolating isn't worth it: a fix comes every second.
     final mark = _next;
@@ -116,6 +124,8 @@ class RunVoice {
             _ => spokenKm(everyM.toDouble()),
           }} ${spokenPace(lastPart)}.',
         if (bpm != null && items.contains(VoiceItem.heartRate)) 'Heart rate $bpm.',
+        if (cadence != null && items.contains(VoiceItem.cadence)) 'Cadence ${cadence.round()}.',
+        if (ghostDelta != null) spokenGhost(ghostDelta),
       ].join(' '),
     );
   }
@@ -143,4 +153,11 @@ String spokenPace(double secPerKm) {
   final s = secPerKm.round();
   final m = s ~/ 60, rest = s % 60;
   return '$m ${m == 1 ? 'minute' : 'minutes'}${rest == 0 ? '' : ' $rest'} per kilometre';
+}
+
+/// "12 seconds ahead of last time." / "1 minute 5 seconds behind last time."
+String spokenGhost(double delta) {
+  final secs = delta.abs().round();
+  if (secs < 2) return 'Level with last time.';
+  return '${spokenDuration(Duration(seconds: secs))} ${delta < 0 ? 'ahead of' : 'behind'} last time.';
 }

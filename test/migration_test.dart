@@ -67,6 +67,7 @@ const _v9Columns = ['goals DROP COLUMN distance_m'];
 const _v10Columns = ['runs DROP COLUMN kind', 'runs DROP COLUMN effort', 'runs DROP COLUMN weather'];
 const _v11Changes = ['runs DROP COLUMN shoe_id', 'DROP TABLE shoes'];
 const _shoes = ['DROP TABLE shoes'];
+const _v12Columns = ['runs DROP COLUMN steps', 'runs DROP COLUMN avg_cadence'];
 const _v4Changes = [
   'exercises DROP COLUMN hidden',
   'template_exercises DROP COLUMN sets_json',
@@ -90,11 +91,12 @@ void main() {
     ('v4 database is upgraded', 4, [..._v5Changes, ..._v6Columns, ..._v7Changes, ..._v9Columns, ..._shoes]),
     ('v5 database is upgraded', 5, [..._v6Columns, ..._v7Changes, ..._v9Columns, ..._shoes]),
     ('v6 database is upgraded', 6, [..._v7Changes, ..._v9Columns, ..._shoes]),
-    ('v7 database is upgraded', 7, [..._v8Columns, ..._v9Columns, ..._v10Columns, ..._v11Changes]),
-    ('v8 database is upgraded', 8, [..._v9Columns, ..._v10Columns, ..._v11Changes]),
-    ('v9 database is upgraded', 9, [..._v10Columns, ..._v11Changes]),
-    ('v10 database is upgraded', 10, _v11Changes),
-    ('missing column/table is repaired', 11, [..._v2Columns, 'DROP TABLE goals']),
+    ('v7 database is upgraded', 7, [..._v8Columns, ..._v9Columns, ..._v10Columns, ..._v11Changes, ..._v12Columns]),
+    ('v8 database is upgraded', 8, [..._v9Columns, ..._v10Columns, ..._v11Changes, ..._v12Columns]),
+    ('v9 database is upgraded', 9, [..._v10Columns, ..._v11Changes, ..._v12Columns]),
+    ('v10 database is upgraded', 10, [..._v11Changes, ..._v12Columns]),
+    ('v11 database is upgraded', 11, _v12Columns),
+    ('missing column/table is repaired', 12, [..._v2Columns, 'DROP TABLE goals']),
   ];
   for (final (label, version, drop) in cases) {
     test(label, () async {
@@ -122,8 +124,20 @@ void main() {
       expect(await cols('workout_sets'), contains('side'));
       expect(
         await cols('runs'),
-        containsAll(['distance_m', 'paused_s', 'duration_s', 'bests_json', 'kind', 'effort', 'weather']),
+        containsAll([
+          'distance_m',
+          'paused_s',
+          'duration_s',
+          'bests_json',
+          'kind',
+          'effort',
+          'weather',
+          'shoe_id',
+          'steps',
+          'avg_cadence',
+        ]),
       );
+      expect(await cols('shoes'), containsAll(['name', 'start_km', 'limit_km', 'retired', 'is_default']));
       expect(await cols('run_points'), containsAll(['run_id', 'lat', 'lon', 'segment', 'hr']));
       if (version < 6) {
         // Existing installs get the common one-sided exercises marked.

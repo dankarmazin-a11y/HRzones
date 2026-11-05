@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app_services.dart';
 import '../../data/database.dart';
 import '../../run/geo.dart';
+import '../../run/elevation.dart';
 import '../../run/splits.dart';
 import '../../workout/stats.dart';
 import '../hr_presets.dart';
@@ -10,8 +11,10 @@ import 'run_map.dart';
 import 'edit_run_screen.dart';
 import 'run_feel.dart';
 import 'run_records.dart';
+import 'run_start.dart';
 import 'shoes.dart';
 
+import 'package:fl_chart/fl_chart.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../hr/hr_monitor.dart';
@@ -125,6 +128,7 @@ class _Body extends StatelessWidget {
               tile(run.maxHr == null ? '–' : '${run.maxHr}', 'Max HR'),
             ],
           ),
+        _ClimbAndCadence(run: run, tile: tile),
         if (run.hrPresetId != null)
           FutureBuilder<HrPreset?>(
             future: Services.of(context).presets.byId(run.hrPresetId),
@@ -146,6 +150,7 @@ class _Body extends StatelessWidget {
         const SizedBox(height: 8),
         RunShoeRow(runId: run.id, shoeId: run.shoeId),
         RunFeelCard(key: ValueKey('feel_${run.id}'), run: run),
+        RunCompareCard(key: ValueKey('compare_${run.id}'), run: run),
         RunBestsCard(run: run),
         _SplitsSection(run: run),
       ],
@@ -472,6 +477,212 @@ class _SplitsSectionState extends State<_SplitsSection> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Climb / descent (from the GPS altitude) and cadence; plus the height
+/// profile along the route.
+class _ClimbAndCadence extends StatefulWidget {
+  const _ClimbAndCadence({required this.run, required this.tile});
+
+  final Run run;
+  final Widget Function(String value, String label) tile;
+
+  @override
+  State<_ClimbAndCadence> createState() => _ClimbAndCadenceState();
+}
+
+class _ClimbAndCadenceState extends State<_ClimbAndCadence> {
+  ({double climb, double descent})? _elevation;
+  List<(double, double)> _profile = const []; // (km, metres)
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_elevation == null) _load();
+  }
+
+  Future<void> _load() async {
+    final pts = await Services.of(context).runs.points(widget.run.id);
+    final withAlt = pts
+        .where(
+          (p) =>
+              p.altitude != null &&
+              DistanceTracker.usable(GeoFix(time: p.time, lat: p.lat, lon: p.lon, accuracy: p.accuracy)),
+        )
+        .toList();
+    // Distance along the route for the profile.
+    final tracker = DistanceTracker();
+    final profile = <(double, double)>[];
+    int? seg;
+    for (final p in withAlt) {
+      if (p.segment != seg) tracker.newSegment();
+      seg = p.segment;
+      tracker.add(GeoFix(time: p.time, lat: p.lat, lon: p.lon, accuracy: p.accuracy));
+      profile.add((tracker.distanceM / 1000, p.altitude!));
+    }
+    final smooth = smoothAltitudes([for (final x in profile) x.$2]);
+    if (!mounted) return;
+    setState(() {
+      _elevation = elevationGainLoss([for (final p in withAlt) p.altitude!]);
+      _profile = [for (var i = 0; i < profile.length; i++) (profile[i].$1, smooth[i])];
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final e = _elevation;
+    final r = widget.run;
+    final hasClimb = e != null && _profile.length >= 10;
+    final hasCadence = r.avgCadence != null;
+    if (!hasClimb && !hasCadence) return const SizedBox.shrink();
+    return Column(
+      children: [
+        Row(
+          children: [
+            if (hasClimb) widget.tile('↑ ${e.climb.round()} m', 'Climb'),
+            if (hasClimb) widget.tile('↓ ${e.descent.round()} m', 'Descent'),
+            if (hasCadence) widget.tile('${r.avgCadence}', 'Cadence (spm)'),
+          ],
+        ),
+        if (hasClimb && (e.climb >= 5 || e.descent >= 5)) _ElevationChart(profile: _profile),
+      ],
+    );
+  }
+}
+
+class _ElevationChart extends StatelessWidget {
+  const _ElevationChart({required this.profile});
+
+  final List<(double, double)> profile;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    // At most ~200 points (the chart doesn't need every second).
+    final step = (profile.length / 200).ceil().clamp(1, 1 << 30);
+    final spots = [for (var i = 0; i < profile.length; i += step) FlSpot(profile[i].$1, profile[i].$2)];
+    final minY = spots.map((p) => p.y).reduce((a, b) => a < b ? a : b);
+    final maxY = spots.map((p) => p.y).reduce((a, b) => a > b ? a : b);
+    return Card(
+      key: const Key('elevationChart'),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 16, 16, 8),
+        child: SizedBox(
+          height: 140,
+          child: LineChart(
+            LineChartData(
+              minY: (minY - 5).floorToDouble(),
+              maxY: (maxY + 5).ceilToDouble(),
+              gridData: const FlGridData(show: false),
+              borderData: FlBorderData(show: false),
+              lineTouchData: const LineTouchData(enabled: false),
+              titlesData: FlTitlesData(
+                topTitles: const AxisTitles(),
+                rightTitles: const AxisTitles(),
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 40,
+                    getTitlesWidget: (v, meta) => Text('${v.round()} m', style: const TextStyle(fontSize: 10)),
+                  ),
+                ),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 22,
+                    getTitlesWidget: (v, meta) =>
+                        Text('${v.toStringAsFixed(1)} km', style: const TextStyle(fontSize: 10)),
+                  ),
+                ),
+              ),
+              lineBarsData: [
+                LineChartBarData(
+                  spots: spots,
+                  isCurved: false,
+                  dotData: const FlDotData(show: false),
+                  color: scheme.primary,
+                  barWidth: 2,
+                  belowBarData: BarAreaData(show: true, color: scheme.primary.withValues(alpha: 0.15)),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Same route as an earlier run: time and pace then and now; and "Run this
+/// route again" to race this run.
+class RunCompareCard extends StatefulWidget {
+  const RunCompareCard({super.key, required this.run});
+
+  final Run run;
+
+  @override
+  State<RunCompareCard> createState() => _RunCompareCardState();
+}
+
+class _RunCompareCardState extends State<RunCompareCard> {
+  Future<Run?>? _same;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _same ??= Services.of(context).runs.sameRoute(widget.run);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final run = widget.run;
+    if (run.kind != RunKind.outdoor || run.distanceM < 300) return const SizedBox.shrink();
+    final text = Theme.of(context).textTheme;
+    return FutureBuilder<Run?>(
+      future: _same,
+      builder: (context, snap) {
+        final old = snap.data;
+        final pace = paceSecPerKm(run.distanceM, run.durationS.toDouble());
+        final oldPace = old == null ? null : paceSecPerKm(old.distanceM, old.durationS.toDouble());
+        String diff(double a, double b) {
+          final d = (a - b).round();
+          if (d.abs() < 2) return 'same';
+          return '${d < 0 ? '−' : '+'}${formatDuration(Duration(seconds: d.abs()))}';
+        }
+
+        return Card(
+          key: const Key('runCompare'),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (old != null) ...[
+                  Text('Same route as ${runTitle(old)}', style: text.titleMedium),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Time ${formatDuration(Duration(seconds: old.durationS))} → '
+                    '${formatDuration(Duration(seconds: run.durationS))} '
+                    '(${diff(run.durationS.toDouble(), old.durationS.toDouble())})',
+                    key: const Key('compareTime'),
+                  ),
+                  if (pace != null && oldPace != null)
+                    Text('Pace ${formatPace(oldPace)} → ${formatPace(pace)} /km (${diff(pace, oldPace)})'),
+                  const SizedBox(height: 4),
+                ],
+                TextButton.icon(
+                  key: const Key('raceThisRun'),
+                  icon: const Icon(Icons.replay),
+                  label: const Text('Run this route again'),
+                  onPressed: () => startRun(context, ghostOf: run),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

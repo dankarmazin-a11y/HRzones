@@ -20,6 +20,7 @@ import 'hr/hr_monitor.dart';
 import 'hr/zones.dart';
 import 'notify/rest_notifier.dart';
 import 'run/location_source.dart';
+import 'run/motion_source.dart';
 import 'run/run_session.dart';
 import 'run/run_voice.dart';
 import 'workout/workout_session.dart';
@@ -42,7 +43,7 @@ class AppServices {
       ..restNotifier = restNotifier
       ..intervals = intervals;
     goals = GoalRepository(db, workouts, exercises, body, runs);
-    run = RunSession(runs: runs, hr: hr, location: location)
+    run = RunSession(runs: runs, hr: hr, location: location, motion: location == null ? MotionSource.create() : null)
       ..voice = RunVoice(hr.beeper.speak)
       ..notifier = restNotifier;
   }
