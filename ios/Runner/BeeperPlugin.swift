@@ -20,6 +20,9 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
   private var generation = 0
   /// Voice updates during runs ("1 kilometre, 5 minutes 30…").
   private let speech = AVSpeechSynthesizer()
+  /// Between speak() and the end of the last sentence: the session must keep
+  /// ducking the music and must not be switched off (that cuts the voice).
+  private var talking = false
 
   override init() {
     super.init()
@@ -117,9 +120,8 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
   private func start() throws {
     generation += 1
     wanted = true
-    let session = AVAudioSession.sharedInstance()
-    try session.setCategory(.playback, options: [.mixWithOthers])
-    try session.setActive(true)
+    try applyCategory()
+    try AVAudioSession.sharedInstance().setActive(true)
     if !engine.isRunning { try engine.start() }
     if !player.isPlaying { player.play() }
   }
@@ -128,7 +130,22 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
     wanted = false
     player.stop()
     engine.stop()
+    // Still talking ("Run complete…"): unduck() switches the session off
+    // when the sentence is over.
+    if talking { return }
     try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+  }
+
+  /// Music plays on underneath; while a sentence is spoken it is turned
+  /// down. (A beeper restart in the middle of a sentence – AirPods, a call –
+  /// must not undo the ducking.)
+  private func applyCategory() throws {
+    let session = AVAudioSession.sharedInstance()
+    if talking {
+      try session.setCategory(.playback, mode: .voicePrompt, options: [.mixWithOthers, .duckOthers])
+    } else {
+      try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+    }
   }
 
   /// Speaks [text] over the user's music, which is turned down (ducked)
@@ -152,9 +169,14 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
 
   private func speak(_ text: String, voice: String) throws {
     guard !text.isEmpty else { return }
-    let session = AVAudioSession.sharedInstance()
-    try session.setCategory(.playback, mode: .voicePrompt, options: [.mixWithOthers, .duckOthers])
-    try session.setActive(true)
+    talking = true
+    do {
+      try applyCategory()
+      try AVAudioSession.sharedInstance().setActive(true)
+    } catch {
+      talking = false
+      throw error
+    }
     let utterance = AVSpeechUtterance(string: text)
     utterance.voice = englishVoice(voice)
     utterance.volume = 1.0
@@ -165,11 +187,12 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
   /// our session is deactivated; then the beeper is started again if needed.
   private func unduck() {
     guard !speech.isSpeaking else { return }
+    talking = false
     player.stop()
     engine.stop()
     let session = AVAudioSession.sharedInstance()
     try? session.setActive(false, options: .notifyOthersOnDeactivation)
-    try? session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+    try? applyCategory()
     if wanted { try? start() }
   }
 
@@ -182,7 +205,8 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
   /// queue five patterns).
   private func play(_ buffer: AVAudioPCMBuffer) throws {
     if !engine.isRunning {
-      // Started only for this sound (e.g. "Test beep"): don't keep it alive.
+      // Started only for this sound (e.g. "Test beep", a planned-run step):
+      // don't keep it alive.
       let keep = wanted
       try start()
       wanted = keep
@@ -190,6 +214,16 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
     player.stop()  // drops anything still scheduled
     player.scheduleBuffer(buffer, completionHandler: nil)
     player.play()
+    if !wanted {
+      // Nobody holds the audio: switch it off once the sound is over (an
+      // idle running engine costs battery). A newer sound or start() wins.
+      generation += 1
+      let g = generation
+      DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(4)) { [weak self] in
+        guard let self, self.generation == g, !self.wanted else { return }
+        self.stop()
+      }
+    }
   }
 
   /// The sounds the user can pick in Settings › Sounds (all generated).

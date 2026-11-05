@@ -18,5 +18,8 @@ import UIKit
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "MotionPlugin") {
       MotionPlugin.register(with: registrar)
     }
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "LiveActivityPlugin") {
+      LiveActivityPlugin.register(with: registrar)
+    }
   }
 }

@@ -7,17 +7,25 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0551721E29709497ACAA20D4 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 787204EF162D06CA80CCC1F8 /* WidgetKit.framework */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
+		19B961B872060309CCD72766 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5276392CB57C77FFFF1198E6 /* SwiftUI.framework */; };
+		2F1736DE135973FDD776D42B /* WorkoutAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CC895549632026A13D91026 /* WorkoutAttributes.swift */; };
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
+		49CC389825E94AA33AC2EA41 /* WorkoutWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A5586E2E3DC90446158FEE0D /* WorkoutWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		563FB1E31A3475A670528563 /* WorkoutAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CC895549632026A13D91026 /* WorkoutAttributes.swift */; };
+		7032726AF1D6173639DFA785 /* WorkoutLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EB2192DD0A148DA26E92D27 /* WorkoutLiveActivity.swift */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
 		7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */; };
 		7884E86A2EC3CC0700C636F2 /* BeeperPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E8692EC3CC0400C636F2 /* BeeperPlugin.swift */; };
 		7884E86C2EC3CC0700C636F2 /* MotionPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7884E86B2EC3CC0400C636F2 /* MotionPlugin.swift */; };
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
+		8C4F7A5BFB89C210C7138BE1 /* WorkoutWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1826C26CC42FF612F687321 /* WorkoutWidgetBundle.swift */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
+		F607735F32C59B1F7CD7A3A2 /* LiveActivityPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDD1C982943C6476C0BC3686 /* LiveActivityPlugin.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -27,6 +35,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 97C146ED1CF9000F007C117D;
 			remoteInfo = Runner;
+		};
+		DD6CFD183EF14A97991C10CD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C3BF7F27CBC96CAE0C4C43BD;
+			remoteInfo = WorkoutWidget;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -41,16 +56,32 @@
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		BF81A162270AAF269A35E691 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				49CC389825E94AA33AC2EA41 /* WorkoutWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0EB2192DD0A148DA26E92D27 /* WorkoutLiveActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivity.swift; sourceTree = "<group>"; };
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
 		331C807B294A618700263BE5 /* RunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunnerTests.swift; sourceTree = "<group>"; };
 		331C8081294A63A400263BE5 /* RunnerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunnerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = AppFrameworkInfo.plist; path = Flutter/AppFrameworkInfo.plist; sourceTree = "<group>"; };
+		4EF09EDF4B1F9CA7D923E48E /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		5276392CB57C77FFFF1198E6 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		6CC895549632026A13D91026 /* WorkoutAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutAttributes.swift; sourceTree = "<group>"; };
 		74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515810 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		787204EF162D06CA80CCC1F8 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		7884E8692EC3CC0400C636F2 /* BeeperPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BeeperPlugin.swift; sourceTree = "<group>"; };
 		7884E86B2EC3CC0400C636F2 /* MotionPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotionPlugin.swift; sourceTree = "<group>"; };
@@ -63,9 +94,21 @@
 		97C146FD1CF9000F007C117D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A5586E2E3DC90446158FEE0D /* WorkoutWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = WorkoutWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		F1826C26CC42FF612F687321 /* WorkoutWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutWidgetBundle.swift; sourceTree = "<group>"; };
+		FDD1C982943C6476C0BC3686 /* LiveActivityPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LiveActivityPlugin.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		0ADB1BF6EA64B660FDF2E1ED /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0551721E29709497ACAA20D4 /* WidgetKit.framework in Frameworks */,
+				19B961B872060309CCD72766 /* SwiftUI.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		97C146EB1CF9000F007C117D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -77,12 +120,29 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0AEA3B5DF0A086A0DA8670E4 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
 		331C8082294A63A400263BE5 /* RunnerTests */ = {
 			isa = PBXGroup;
 			children = (
 				331C807B294A618700263BE5 /* RunnerTests.swift */,
 			);
 			path = RunnerTests;
+			sourceTree = "<group>";
+		};
+		501E621848DD0C9827316A7E /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				0AEA3B5DF0A086A0DA8670E4 /* iOS */,
+				787204EF162D06CA80CCC1F8 /* WidgetKit.framework */,
+				5276392CB57C77FFFF1198E6 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		9740EEB11CF90186004384FC /* Flutter */ = {
@@ -104,6 +164,8 @@
 				97C146F01CF9000F007C117D /* Runner */,
 				97C146EF1CF9000F007C117D /* Products */,
 				331C8082294A63A400263BE5 /* RunnerTests */,
+				B3975468BED293B5904D124E /* WorkoutWidget */,
+				501E621848DD0C9827316A7E /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -112,6 +174,7 @@
 			children = (
 				97C146EE1CF9000F007C117D /* Runner.app */,
 				331C8081294A63A400263BE5 /* RunnerTests.xctest */,
+				A5586E2E3DC90446158FEE0D /* WorkoutWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -130,8 +193,21 @@
 				7884E8692EC3CC0400C636F2 /* BeeperPlugin.swift */,
 				7884E86B2EC3CC0400C636F2 /* MotionPlugin.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
+				FDD1C982943C6476C0BC3686 /* LiveActivityPlugin.swift */,
 			);
 			path = Runner;
+			sourceTree = "<group>";
+		};
+		B3975468BED293B5904D124E /* WorkoutWidget */ = {
+			isa = PBXGroup;
+			children = (
+				6CC895549632026A13D91026 /* WorkoutAttributes.swift */,
+				F1826C26CC42FF612F687321 /* WorkoutWidgetBundle.swift */,
+				0EB2192DD0A148DA26E92D27 /* WorkoutLiveActivity.swift */,
+				4EF09EDF4B1F9CA7D923E48E /* Info.plist */,
+			);
+			name = WorkoutWidget;
+			path = WorkoutWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -163,11 +239,13 @@
 				97C146EB1CF9000F007C117D /* Frameworks */,
 				97C146EC1CF9000F007C117D /* Resources */,
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
+				BF81A162270AAF269A35E691 /* Embed Foundation Extensions */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				4C1A65114192BDBBE6CE2840 /* PBXTargetDependency */,
 			);
 			name = Runner;
 			packageProductDependencies = (
@@ -176,6 +254,23 @@
 			productName = Runner;
 			productReference = 97C146EE1CF9000F007C117D /* Runner.app */;
 			productType = "com.apple.product-type.application";
+		};
+		C3BF7F27CBC96CAE0C4C43BD /* WorkoutWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D904E4AA24334E151E51D283 /* Build configuration list for PBXNativeTarget "WorkoutWidget" */;
+			buildPhases = (
+				8DDC6CF3CFEEB5CAC6B6FE52 /* Sources */,
+				0ADB1BF6EA64B660FDF2E1ED /* Frameworks */,
+				118D6589BF0BEC5EF9E6EC8B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = WorkoutWidget;
+			productName = WorkoutWidget;
+			productReference = A5586E2E3DC90446158FEE0D /* WorkoutWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -207,7 +302,7 @@
 			);
 			mainGroup = 97C146E51CF9000F007C117D;
 			packageReferences = (
-				781AD8BC2B33823900A9FFBB /* XCLocalSwiftPackageReference "Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage" */,
+				781AD8BC2B33823900A9FFBB /* XCLocalSwiftPackageReference "FlutterGeneratedPluginSwiftPackage" */,
 			);
 			productRefGroup = 97C146EF1CF9000F007C117D /* Products */;
 			projectDirPath = "";
@@ -215,11 +310,19 @@
 			targets = (
 				97C146ED1CF9000F007C117D /* Runner */,
 				331C8080294A63A400263BE5 /* RunnerTests */,
+				C3BF7F27CBC96CAE0C4C43BD /* WorkoutWidget */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		118D6589BF0BEC5EF9E6EC8B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		331C807F294A63A400263BE5 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -283,6 +386,16 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		8DDC6CF3CFEEB5CAC6B6FE52 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2F1736DE135973FDD776D42B /* WorkoutAttributes.swift in Sources */,
+				8C4F7A5BFB89C210C7138BE1 /* WorkoutWidgetBundle.swift in Sources */,
+				7032726AF1D6173639DFA785 /* WorkoutLiveActivity.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		97C146EA1CF9000F007C117D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -292,6 +405,8 @@
 				7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */,
 				7884E86A2EC3CC0700C636F2 /* BeeperPlugin.swift in Sources */,
 				7884E86C2EC3CC0700C636F2 /* MotionPlugin.swift in Sources */,
+				F607735F32C59B1F7CD7A3A2 /* LiveActivityPlugin.swift in Sources */,
+				563FB1E31A3475A670528563 /* WorkoutAttributes.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -302,6 +417,12 @@
 			isa = PBXTargetDependency;
 			target = 97C146ED1CF9000F007C117D /* Runner */;
 			targetProxy = 331C8085294A63A400263BE5 /* PBXContainerItemProxy */;
+		};
+		4C1A65114192BDBBE6CE2840 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = WorkoutWidget;
+			target = C3BF7F27CBC96CAE0C4C43BD /* WorkoutWidget */;
+			targetProxy = DD6CFD183EF14A97991C10CD /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -391,6 +512,11 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-weak_framework",
+					ActivityKit,
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.hrzones.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
@@ -445,6 +571,61 @@
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Runner.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Runner";
 			};
 			name = Profile;
+		};
+		4BE5634E9FCD958AED9A05D3 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7AFA3C8E1D35360C0083082E /* Release.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = WorkoutWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.hrzones.app.WorkoutWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Profile;
+		};
+		84AF12F2C427E87D2BB6A5DA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9740EEB21CF90195004384FC /* Debug.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = WorkoutWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.hrzones.app.WorkoutWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
 		};
 		97C147031CF9000F007C117D /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -572,6 +753,11 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-weak_framework",
+					ActivityKit,
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.hrzones.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
@@ -594,11 +780,44 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-weak_framework",
+					ActivityKit,
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.hrzones.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Release;
+		};
+		B8A932C71A41682A6FD1A222 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7AFA3C8E1D35360C0083082E /* Release.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = WorkoutWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.hrzones.app.WorkoutWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
@@ -635,10 +854,20 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		D904E4AA24334E151E51D283 /* Build configuration list for PBXNativeTarget "WorkoutWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B8A932C71A41682A6FD1A222 /* Release */,
+				84AF12F2C427E87D2BB6A5DA /* Debug */,
+				4BE5634E9FCD958AED9A05D3 /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		781AD8BC2B33823900A9FFBB /* XCLocalSwiftPackageReference "Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage" */ = {
+		781AD8BC2B33823900A9FFBB /* XCLocalSwiftPackageReference "FlutterGeneratedPluginSwiftPackage" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage;
 		};

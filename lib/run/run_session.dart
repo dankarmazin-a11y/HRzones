@@ -10,7 +10,9 @@ import '../hr/hr_monitor.dart';
 import '../beep/sounds.dart';
 import '../hr/zone_alert_engine.dart';
 import '../hr/zones.dart';
+import '../live/live_activity.dart';
 import '../notify/rest_notifier.dart';
+import '../workout/stats.dart' show formatDuration;
 import 'best_efforts.dart';
 import 'geo.dart';
 import 'location_source.dart';
@@ -126,6 +128,59 @@ class RunSession extends ChangeNotifier {
 
   /// "Still running?" notification (set by AppServices).
   RestNotifier? notifier;
+
+  /// The run's card on the lock screen / Dynamic Island (set by AppServices).
+  LiveActivity? live;
+
+  /// Name on the card: the planned run's name, or "Run".
+  String? _planName;
+
+  /// What the lock-screen card shows right now.
+  LiveCard get liveCard {
+    final start = _startedAt ?? now();
+    final clockStart = paused ? null : start.add(Duration(milliseconds: _pausedMs));
+    final p = plan, step = p?.current;
+    final secs = moving.inMilliseconds / 1000;
+    String detail;
+    DateTime? countdownEnd;
+    if (p != null && step != null) {
+      final left = p.left(distanceM, secs);
+      detail = [
+        '${step.label} ${step.amount}',
+        step.byDistance ? '${left.round()} m left' : '${formatDuration(Duration(seconds: left.round()))} left',
+        if (p.repeat != null && p.spec.repeats > 1) '${p.repeat}/${p.spec.repeats}',
+      ].join(' · ');
+      final end = p.stepEndSeconds;
+      if (end != null && clockStart != null) {
+        countdownEnd = clockStart.add(Duration(milliseconds: (end * 1000).round()));
+      }
+    } else if (_treadmill) {
+      detail = 'Treadmill · moving time';
+    } else {
+      final cp = currentPace, ap = avgPace;
+      detail = [if (cp != null) 'Pace ${formatPace(cp)} /km', if (ap != null) 'avg ${formatPace(ap)} /km'].join(' · ');
+      if (detail.isEmpty) detail = gps == GpsStatus.searching ? 'Finding GPS…' : '';
+    }
+    return LiveCard(
+      title: _treadmill ? 'Treadmill run' : '${formatKm(distanceM)} km',
+      detail: paused ? 'Paused' : detail,
+      heartRate: hr.running ? hr.bpm : null,
+      clockStart: clockStart,
+      elapsed: moving,
+      countdownEnd: paused ? null : countdownEnd,
+      countdownLabel: step?.label,
+      paused: paused,
+    );
+  }
+
+  void _liveStart() {
+    if (!active) return;
+    live?.start('run', _planName ?? (_treadmill ? 'Treadmill run' : 'Run'), liveCard);
+  }
+
+  void _pushLive({bool now = false}) {
+    if (active) live?.update(liveCard, now: now);
+  }
 
   /// No movement for this long while recording → "Still running?".
   static const idleAfter = Duration(minutes: 20);
@@ -278,6 +333,7 @@ class RunSession extends ChangeNotifier {
         HapticFeedback.vibrate();
         voice?.planDone();
     }
+    _pushLive(now: true);
     notifyListeners();
   }
 
@@ -306,6 +362,7 @@ class RunSession extends ChangeNotifier {
     _shoeId = shoeId;
     this.ghost = treadmill ? null : ghost;
     _planId = plan?.id;
+    _planName = plan?.name;
     this.plan = plan == null ? null : PlanRunner(PlanSpec.fromJson(plan.specJson));
     _lastMoveAt = _startedAt;
     _presetId = preset?.id;
@@ -324,6 +381,7 @@ class RunSession extends ChangeNotifier {
     voice?.started();
     final first = this.plan?.current;
     if (first != null) voice?.planStep(first, repeat: this.plan!.repeat, repeats: this.plan!.spec.repeats);
+    _liveStart();
     notifyListeners();
     return access;
   }
@@ -337,6 +395,7 @@ class RunSession extends ChangeNotifier {
     _recent.clear();
     _segment++;
     voice?.paused();
+    _pushLive(now: true);
     await flush();
     notifyListeners();
   }
@@ -350,6 +409,7 @@ class RunSession extends ChangeNotifier {
     _lastMoveAt = now();
     _snoozedAt = null;
     voice?.resumed();
+    _pushLive(now: true);
     await _startSteps();
     await flush();
     _listen();
@@ -397,6 +457,7 @@ class RunSession extends ChangeNotifier {
         laps: laps == null || laps.isEmpty ? null : encodeLaps(laps),
       );
       voice?.finished(this.distanceM, moving, newRecords: newRecords);
+      live?.end(kind: 'run');
       if (_hrStartedByRun) await hr.stop();
       hr.onAlert = null;
       await notifier?.cancelRunIdle();
@@ -417,6 +478,7 @@ class RunSession extends ChangeNotifier {
     if (_hrStartedByRun) await hr.stop();
     hr.onAlert = null;
     await notifier?.cancelRunIdle();
+    live?.end(kind: 'run');
     await runs.delete(id);
     _reset();
     notifyListeners();
@@ -472,9 +534,11 @@ class RunSession extends ChangeNotifier {
         runner.update(dist[i], time[i]);
       }
       plan = runner;
+      _planName = planRow.name;
     }
     if (!paused) await _startSteps();
     if (!paused) _listen();
+    _liveStart();
     notifyListeners();
   }
 
@@ -549,12 +613,17 @@ class RunSession extends ChangeNotifier {
   void _listen() {
     _gps?.cancel();
     if (!_treadmill) _gps = location.start().listen(_onFix);
+    // Outdoors GPS keeps the app running with the screen locked; a treadmill
+    // run has no GPS, so it holds the audio session instead (otherwise iOS
+    // would freeze the clock, timed steps and voice updates when locked).
+    if (_treadmill) hr.beeper.start('run');
     _ticker?.cancel();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       ticks.value++;
       _paceEngine.tick(now());
       _advancePlan(); // time-based steps (and treadmill runs)
       if (ticks.value % 5 == 0) _readSteps();
+      _pushLive();
       if (++_sinceSave >= saveEvery) flush();
     });
   }
@@ -565,6 +634,7 @@ class RunSession extends ChangeNotifier {
     await _gps?.cancel();
     _gps = null;
     if (!_treadmill) await location.stop();
+    if (_treadmill) hr.beeper.stop('run', const Duration(seconds: 8)); // let "Run complete…" finish
   }
 
   void _onFix(GeoFix fix) {
@@ -669,6 +739,7 @@ class RunSession extends ChangeNotifier {
     ghost = null;
     plan = null;
     _planId = null;
+    _planName = null;
     _stepsBefore = 0;
     _steps = 0;
     _counting = false;
