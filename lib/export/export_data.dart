@@ -2,9 +2,14 @@ import 'package:drift/drift.dart';
 
 import '../data/body_repository.dart';
 import '../data/database.dart';
+import '../data/run_repository.dart';
+import '../run/best_efforts.dart';
+import '../run/geo.dart';
+import '../run/splits.dart';
 import 'xlsx_writer.dart';
 
-/// All workouts, sets and body measurements as an .xlsx workbook.
+/// All workouts, sets, runs (+ km splits) and body measurements as an .xlsx
+/// workbook.
 Future<Uint8List> exportWorkbook(AppDatabase db) async {
   final exercises = {for (final e in await db.select(db.exercises).get()) e.id: e};
   final presets = {for (final p in await db.select(db.hrPresets).get()) p.id: p};
@@ -73,5 +78,61 @@ Future<Uint8List> exportWorkbook(AppDatabase db) async {
     for (final m in measurements) [m.date, kindOf(m.kind).label, m.value, kindOf(m.kind).unit],
   ];
 
-  return buildXlsx([Sheet('Workouts', workoutRows), Sheet('Sets', setRows), Sheet('Measurements', measureRows)]);
+  // Runs: one row per run, and one row per km split.
+  final runRepo = RunRepository(db);
+  final runs =
+      await (db.select(db.runs)
+            ..where((r) => r.endedAt.isNotNull())
+            ..orderBy([(r) => OrderingTerm.asc(r.startedAt)]))
+          .get();
+  String? paceText(double? secPerKm) => secPerKm == null ? null : formatPace(secPerKm);
+  final runRows = <List<Object?>>[
+    [
+      'Date',
+      'Distance (km)',
+      'Moving time (min)',
+      'Avg pace (min/km)',
+      'Avg HR',
+      'Max HR',
+      'HR zone preset',
+      for (final d in recordDistances.values) 'Best $d (min)',
+    ],
+  ];
+  final splitRows = <List<Object?>>[
+    ['Date', 'Km', 'Distance (km)', 'Time (min)', 'Pace (min/km)', 'Avg HR'],
+  ];
+  for (final r in runs) {
+    final bests = await runRepo.bestsFor(r);
+    runRows.add([
+      r.startedAt,
+      double.parse((r.distanceM / 1000).toStringAsFixed(2)),
+      double.parse((r.durationS / 60).toStringAsFixed(2)),
+      paceText(paceSecPerKm(r.distanceM, r.durationS.toDouble())),
+      r.avgHr,
+      r.maxHr,
+      presets[r.hrPresetId]?.name,
+      for (final d in recordDistances.keys) bests[d] == null ? null : double.parse((bests[d]! / 60).toStringAsFixed(2)),
+    ]);
+    final points = await runRepo.points(r.id);
+    for (final sp in computeSplits(
+      points.map((p) => (time: p.time, lat: p.lat, lon: p.lon, accuracy: p.accuracy, segment: p.segment, hr: p.hr)),
+    )) {
+      splitRows.add([
+        r.startedAt,
+        sp.km,
+        double.parse((sp.distanceM / 1000).toStringAsFixed(2)),
+        double.parse((sp.seconds / 60).toStringAsFixed(2)),
+        paceText(sp.pace),
+        sp.avgHr,
+      ]);
+    }
+  }
+
+  return buildXlsx([
+    Sheet('Workouts', workoutRows),
+    Sheet('Sets', setRows),
+    Sheet('Runs', runRows),
+    Sheet('Run splits', splitRows),
+    Sheet('Measurements', measureRows),
+  ]);
 }

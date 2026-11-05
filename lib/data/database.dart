@@ -195,7 +195,8 @@ class BodyMeasurements extends Table with SyncColumns {
   Set<Column> get primaryKey => {id};
 }
 
-enum GoalType { workoutsPerWeek, liftWeight, measurement }
+/// Stored by index – only ever add at the end.
+enum GoalType { workoutsPerWeek, liftWeight, measurement, runKmPerWeek, runDistance, runTime }
 
 class Goals extends Table with SyncColumns {
   IntColumn get type => intEnum<GoalType>()();
@@ -208,6 +209,9 @@ class Goals extends Table with SyncColumns {
   DateTimeColumn get deadline => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime().clientDefault(DateTime.now)();
   DateTimeColumn get achievedAt => dateTime().nullable()();
+
+  /// Run time goals: the distance in metres ("5 km under 25 min").
+  RealColumn get distanceM => real().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -347,7 +351,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -389,6 +393,8 @@ class AppDatabase extends _$AppDatabase {
       }
       // Before v7 the runs table is created above, already with this column.
       if (from == 7) await m.addColumn(runs, runs.bestsJson);
+      // Before v4 the goals table is created above, already with this column.
+      if (from >= 4 && from < 9) await m.addColumn(goals, goals.distanceM);
     },
     beforeOpen: (details) async {
       await _addMissingColumns();

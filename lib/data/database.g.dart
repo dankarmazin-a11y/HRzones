@@ -4095,6 +4095,15 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _distanceMMeta = const VerificationMeta('distanceM');
+  @override
+  late final GeneratedColumn<double> distanceM = GeneratedColumn<double>(
+    'distance_m',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -4107,6 +4116,7 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
     deadline,
     createdAt,
     achievedAt,
+    distanceM,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4149,6 +4159,9 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
     if (data.containsKey('achieved_at')) {
       context.handle(_achievedAtMeta, achievedAt.isAcceptableOrUnknown(data['achieved_at']!, _achievedAtMeta));
     }
+    if (data.containsKey('distance_m')) {
+      context.handle(_distanceMMeta, distanceM.isAcceptableOrUnknown(data['distance_m']!, _distanceMMeta));
+    }
     return context;
   }
 
@@ -4173,6 +4186,7 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
       deadline: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}deadline']),
       createdAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
       achievedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}achieved_at']),
+      distanceM: attachedDatabase.typeMapping.read(DriftSqlType.double, data['${effectivePrefix}distance_m']),
     );
   }
 
@@ -4197,6 +4211,9 @@ class Goal extends DataClass implements Insertable<Goal> {
   final DateTime? deadline;
   final DateTime createdAt;
   final DateTime? achievedAt;
+
+  /// Run time goals: the distance in metres ("5 km under 25 min").
+  final double? distanceM;
   const Goal({
     required this.id,
     required this.updatedAt,
@@ -4208,6 +4225,7 @@ class Goal extends DataClass implements Insertable<Goal> {
     this.deadline,
     required this.createdAt,
     this.achievedAt,
+    this.distanceM,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4234,6 +4252,9 @@ class Goal extends DataClass implements Insertable<Goal> {
     if (!nullToAbsent || achievedAt != null) {
       map['achieved_at'] = Variable<DateTime>(achievedAt);
     }
+    if (!nullToAbsent || distanceM != null) {
+      map['distance_m'] = Variable<double>(distanceM);
+    }
     return map;
   }
 
@@ -4249,6 +4270,7 @@ class Goal extends DataClass implements Insertable<Goal> {
       deadline: deadline == null && nullToAbsent ? const Value.absent() : Value(deadline),
       createdAt: Value(createdAt),
       achievedAt: achievedAt == null && nullToAbsent ? const Value.absent() : Value(achievedAt),
+      distanceM: distanceM == null && nullToAbsent ? const Value.absent() : Value(distanceM),
     );
   }
 
@@ -4265,6 +4287,7 @@ class Goal extends DataClass implements Insertable<Goal> {
       deadline: serializer.fromJson<DateTime?>(json['deadline']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       achievedAt: serializer.fromJson<DateTime?>(json['achievedAt']),
+      distanceM: serializer.fromJson<double?>(json['distanceM']),
     );
   }
   @override
@@ -4281,6 +4304,7 @@ class Goal extends DataClass implements Insertable<Goal> {
       'deadline': serializer.toJson<DateTime?>(deadline),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'achievedAt': serializer.toJson<DateTime?>(achievedAt),
+      'distanceM': serializer.toJson<double?>(distanceM),
     };
   }
 
@@ -4295,6 +4319,7 @@ class Goal extends DataClass implements Insertable<Goal> {
     Value<DateTime?> deadline = const Value.absent(),
     DateTime? createdAt,
     Value<DateTime?> achievedAt = const Value.absent(),
+    Value<double?> distanceM = const Value.absent(),
   }) => Goal(
     id: id ?? this.id,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -4306,6 +4331,7 @@ class Goal extends DataClass implements Insertable<Goal> {
     deadline: deadline.present ? deadline.value : this.deadline,
     createdAt: createdAt ?? this.createdAt,
     achievedAt: achievedAt.present ? achievedAt.value : this.achievedAt,
+    distanceM: distanceM.present ? distanceM.value : this.distanceM,
   );
   Goal copyWithCompanion(GoalsCompanion data) {
     return Goal(
@@ -4319,6 +4345,7 @@ class Goal extends DataClass implements Insertable<Goal> {
       deadline: data.deadline.present ? data.deadline.value : this.deadline,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       achievedAt: data.achievedAt.present ? data.achievedAt.value : this.achievedAt,
+      distanceM: data.distanceM.present ? data.distanceM.value : this.distanceM,
     );
   }
 
@@ -4334,7 +4361,8 @@ class Goal extends DataClass implements Insertable<Goal> {
           ..write('measurementKind: $measurementKind, ')
           ..write('deadline: $deadline, ')
           ..write('createdAt: $createdAt, ')
-          ..write('achievedAt: $achievedAt')
+          ..write('achievedAt: $achievedAt, ')
+          ..write('distanceM: $distanceM')
           ..write(')'))
         .toString();
   }
@@ -4351,6 +4379,7 @@ class Goal extends DataClass implements Insertable<Goal> {
     deadline,
     createdAt,
     achievedAt,
+    distanceM,
   );
   @override
   bool operator ==(Object other) =>
@@ -4365,7 +4394,8 @@ class Goal extends DataClass implements Insertable<Goal> {
           other.measurementKind == this.measurementKind &&
           other.deadline == this.deadline &&
           other.createdAt == this.createdAt &&
-          other.achievedAt == this.achievedAt);
+          other.achievedAt == this.achievedAt &&
+          other.distanceM == this.distanceM);
 }
 
 class GoalsCompanion extends UpdateCompanion<Goal> {
@@ -4379,6 +4409,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
   final Value<DateTime?> deadline;
   final Value<DateTime> createdAt;
   final Value<DateTime?> achievedAt;
+  final Value<double?> distanceM;
   final Value<int> rowid;
   const GoalsCompanion({
     this.id = const Value.absent(),
@@ -4391,6 +4422,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     this.deadline = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.achievedAt = const Value.absent(),
+    this.distanceM = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   GoalsCompanion.insert({
@@ -4404,6 +4436,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     this.deadline = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.achievedAt = const Value.absent(),
+    this.distanceM = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : type = Value(type),
        target = Value(target);
@@ -4418,6 +4451,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     Expression<DateTime>? deadline,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? achievedAt,
+    Expression<double>? distanceM,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -4431,6 +4465,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
       if (deadline != null) 'deadline': deadline,
       if (createdAt != null) 'created_at': createdAt,
       if (achievedAt != null) 'achieved_at': achievedAt,
+      if (distanceM != null) 'distance_m': distanceM,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -4446,6 +4481,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     Value<DateTime?>? deadline,
     Value<DateTime>? createdAt,
     Value<DateTime?>? achievedAt,
+    Value<double?>? distanceM,
     Value<int>? rowid,
   }) {
     return GoalsCompanion(
@@ -4459,6 +4495,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
       deadline: deadline ?? this.deadline,
       createdAt: createdAt ?? this.createdAt,
       achievedAt: achievedAt ?? this.achievedAt,
+      distanceM: distanceM ?? this.distanceM,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -4496,6 +4533,9 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     if (achievedAt.present) {
       map['achieved_at'] = Variable<DateTime>(achievedAt.value);
     }
+    if (distanceM.present) {
+      map['distance_m'] = Variable<double>(distanceM.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -4515,6 +4555,7 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
           ..write('deadline: $deadline, ')
           ..write('createdAt: $createdAt, ')
           ..write('achievedAt: $achievedAt, ')
+          ..write('distanceM: $distanceM, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -9325,6 +9366,7 @@ typedef $$GoalsTableCreateCompanionBuilder = GoalsCompanion Function({
   Value<DateTime?> deadline,
   Value<DateTime> createdAt,
   Value<DateTime?> achievedAt,
+  Value<double?> distanceM,
   Value<int> rowid,
 });
 typedef $$GoalsTableUpdateCompanionBuilder = GoalsCompanion Function({
@@ -9338,6 +9380,7 @@ typedef $$GoalsTableUpdateCompanionBuilder = GoalsCompanion Function({
   Value<DateTime?> deadline,
   Value<DateTime> createdAt,
   Value<DateTime?> achievedAt,
+  Value<double?> distanceM,
   Value<int> rowid,
 });
 
@@ -9377,6 +9420,9 @@ class $$GoalsTableFilterComposer extends Composer<_$AppDatabase, $GoalsTable> {
 
   ColumnFilters<DateTime> get achievedAt =>
       $composableBuilder(column: $table.achievedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get distanceM =>
+      $composableBuilder(column: $table.distanceM, builder: (column) => ColumnFilters(column));
 }
 
 class $$GoalsTableOrderingComposer extends Composer<_$AppDatabase, $GoalsTable> {
@@ -9415,6 +9461,9 @@ class $$GoalsTableOrderingComposer extends Composer<_$AppDatabase, $GoalsTable> 
 
   ColumnOrderings<DateTime> get achievedAt =>
       $composableBuilder(column: $table.achievedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get distanceM =>
+      $composableBuilder(column: $table.distanceM, builder: (column) => ColumnOrderings(column));
 }
 
 class $$GoalsTableAnnotationComposer extends Composer<_$AppDatabase, $GoalsTable> {
@@ -9447,6 +9496,8 @@ class $$GoalsTableAnnotationComposer extends Composer<_$AppDatabase, $GoalsTable
 
   GeneratedColumn<DateTime> get achievedAt =>
       $composableBuilder(column: $table.achievedAt, builder: (column) => column);
+
+  GeneratedColumn<double> get distanceM => $composableBuilder(column: $table.distanceM, builder: (column) => column);
 }
 
 class $$GoalsTableTableManager
@@ -9484,6 +9535,7 @@ class $$GoalsTableTableManager
                 Value<DateTime?> deadline = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> achievedAt = const Value.absent(),
+                Value<double?> distanceM = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => GoalsCompanion(
                 id: id,
@@ -9496,6 +9548,7 @@ class $$GoalsTableTableManager
                 deadline: deadline,
                 createdAt: createdAt,
                 achievedAt: achievedAt,
+                distanceM: distanceM,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -9510,6 +9563,7 @@ class $$GoalsTableTableManager
                 Value<DateTime?> deadline = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime?> achievedAt = const Value.absent(),
+                Value<double?> distanceM = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => GoalsCompanion.insert(
                 id: id,
@@ -9522,6 +9576,7 @@ class $$GoalsTableTableManager
                 deadline: deadline,
                 createdAt: createdAt,
                 achievedAt: achievedAt,
+                distanceM: distanceM,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

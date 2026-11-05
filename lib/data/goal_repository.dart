@@ -3,6 +3,9 @@ import 'package:drift/drift.dart';
 import 'body_repository.dart';
 import 'database.dart';
 import 'exercise_repository.dart';
+import 'run_repository.dart';
+import '../run/best_efforts.dart';
+import '../workout/streak.dart';
 import 'workout_repository.dart';
 
 /// A goal with its current value and progress (0–1).
@@ -35,12 +38,13 @@ double progressBetween(double start, double target, double current) {
 }
 
 class GoalRepository {
-  GoalRepository(this.db, this.workouts, this.exercises, this.body);
+  GoalRepository(this.db, this.workouts, this.exercises, this.body, this.runs);
 
   final AppDatabase db;
   final WorkoutRepository workouts;
   final ExerciseRepository exercises;
   final BodyRepository body;
+  final RunRepository runs;
 
   Stream<List<Goal>> watchAll() => (db.select(db.goals)..orderBy([(g) => OrderingTerm.asc(g.createdAt)])).watch();
 
@@ -72,6 +76,38 @@ class GoalRepository {
             deadline: Value(deadline),
           ),
         );
+  }
+
+  /// Running goals: km per week ([GoalType.runKmPerWeek], target km), one
+  /// long run ([GoalType.runDistance], target km), or a time at a distance
+  /// ([GoalType.runTime], target minutes, [distanceM]).
+  Future<void> addRun(GoalType type, double target, {double? distanceM, DateTime? deadline}) async {
+    double? start;
+    if (type == GoalType.runDistance) start = ((await runs.records()).longest?.value ?? 0) / 1000;
+    if (type == GoalType.runTime) {
+      final best = (await runs.records()).fastest[distanceM?.round()]?.value;
+      start = best == null ? null : best / 60;
+    }
+    await db
+        .into(db.goals)
+        .insert(
+          GoalsCompanion.insert(
+            type: type,
+            target: target,
+            startValue: Value(start),
+            distanceM: Value(distanceM),
+            deadline: Value(deadline),
+          ),
+        );
+  }
+
+  /// Km run since Monday.
+  Future<double> kmThisWeek() async {
+    final monday = weekStart(DateTime.now());
+    final list = await (db.select(
+      db.runs,
+    )..where((r) => r.endedAt.isNotNull() & r.startedAt.isBiggerOrEqualValue(monday))).get();
+    return list.fold<double>(0, (a, r) => a + r.distanceM) / 1000;
   }
 
   /// Changes a goal's target and deadline.
@@ -118,10 +154,49 @@ class GoalRepository {
           progress: current == null ? 0 : progressBetween(start, g.target, current),
           unit: kind.unit,
         );
+      case GoalType.runKmPerWeek:
+        final km = await kmThisWeek();
+        return GoalProgress(
+          goal: g,
+          title: 'Run ${_n(g.target)} km a week',
+          current: km,
+          progress: g.target <= 0 ? 0 : (km / g.target).clamp(0.0, 1.0),
+          unit: 'km',
+        );
+      case GoalType.runDistance:
+        final longest = ((await runs.records()).longest?.value ?? 0) / 1000;
+        return GoalProgress(
+          goal: g,
+          title: 'Run ${_n(g.target)} km in one go',
+          current: longest,
+          progress: progressBetween(g.startValue ?? 0, g.target, longest),
+          unit: 'km',
+        );
+      case GoalType.runTime:
+        final d = (g.distanceM ?? 5000).round();
+        final best = (await runs.records()).fastest[d]?.value;
+        final current = best == null ? null : best / 60;
+        // No time yet: count from 30% slower than the target.
+        final start = g.startValue ?? g.target * 1.3;
+        return GoalProgress(
+          goal: g,
+          title: '${recordDistances[d] ?? '${_n(d / 1000)} km'} under ${minutesText(g.target)}',
+          current: current,
+          progress: current == null ? 0 : progressBetween(start, g.target, current),
+          unit: 'min',
+        );
       case GoalType.workoutsPerWeek:
         return GoalProgress(goal: g, title: '${_n(g.target)} workouts a week', current: null, progress: 0, unit: '');
     }
   }
 
   static String _n(double v) => v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toStringAsFixed(1);
+}
+
+/// 24.5 minutes → "24:30".
+String minutesText(double minutes) {
+  final s = (minutes * 60).round();
+  final h = s ~/ 3600, m = (s % 3600) ~/ 60, sec = s % 60;
+  String two(int n) => n.toString().padLeft(2, '0');
+  return h > 0 ? '$h:${two(m)}:${two(sec)}' : '$m:${two(sec)}';
 }
