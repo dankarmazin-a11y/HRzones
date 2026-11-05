@@ -8,6 +8,13 @@ import '../../workout/stats.dart';
 import '../hr_presets.dart';
 import 'run_map.dart';
 
+import 'package:latlong2/latlong.dart';
+
+import '../../hr/hr_monitor.dart';
+import '../../hr/zones.dart';
+import '../../run/route_zones.dart';
+import '../zone_colors.dart';
+
 /// A finished run: distance, time, pace, heart rate.
 class RunSummaryScreen extends StatelessWidget {
   const RunSummaryScreen({super.key, required this.runId});
@@ -148,7 +155,8 @@ String runTitle(Run r) {
   return '${_weekdays[d.weekday - 1]} ${d.day} ${_months[d.month - 1]} · $part run';
 }
 
-/// The route on a small map; tap for the full-screen map.
+/// The route on a small map (plain or coloured by heart-rate zone), the
+/// time in each zone below it; tap the map for full screen.
 class _RouteCard extends StatefulWidget {
   const _RouteCard({required this.run});
 
@@ -160,6 +168,10 @@ class _RouteCard extends StatefulWidget {
 
 class _RouteCardState extends State<_RouteCard> {
   RouteSegments? _segments;
+  List<HrPoint> _points = const [];
+  bool _byZone = false;
+
+  bool get _hasHr => _points.any((p) => p.hr != null);
 
   @override
   void didChangeDependencies() {
@@ -168,10 +180,21 @@ class _RouteCardState extends State<_RouteCard> {
   }
 
   Future<void> _load() async {
-    final points = await Services.of(context).runs.points(widget.run.id);
+    final rows = await Services.of(context).runs.points(widget.run.id);
     if (!mounted) return;
-    setState(() => _segments = routeSegments(points.map((p) => (lat: p.lat, lon: p.lon, segment: p.segment))));
+    setState(() {
+      _points = [for (final p in rows) (time: p.time, lat: p.lat, lon: p.lon, segment: p.segment, hr: p.hr)];
+      _segments = routeSegments(rows.map((p) => (lat: p.lat, lon: p.lon, segment: p.segment)));
+      _byZone = _hasHr; // show the zones straight away when there is heart rate
+    });
   }
+
+  List<(List<LatLng>, Color)>? _colored(HrZones zones) => !_byZone
+      ? null
+      : [
+          for (final piece in zonePieces(_points, zones))
+            ([for (final p in piece.points) LatLng(p.lat, p.lon)], zoneColor(piece.zone)),
+        ];
 
   @override
   Widget build(BuildContext context) {
@@ -185,29 +208,137 @@ class _RouteCardState extends State<_RouteCard> {
         ),
       );
     }
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: SizedBox(
-        height: 220,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: RunMap(key: const Key('summaryMap'), segments: segments, interactive: false),
+    final zones = HrScope.of(context).zones;
+    final colored = _colored(zones);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_hasHr)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: SegmentedButton<bool>(
+              key: const Key('routeMode'),
+              segments: const [
+                ButtonSegment(value: false, label: Text('Route'), icon: Icon(Icons.route)),
+                ButtonSegment(value: true, label: Text('Heart-rate zones'), icon: Icon(Icons.favorite_outline)),
+              ],
+              selected: {_byZone},
+              onSelectionChanged: (v) => setState(() => _byZone = v.first),
             ),
-            Positioned.fill(
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  key: const Key('openRunMap'),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => RunMapScreen(segments: segments, title: runTitle(widget.run)),
+          ),
+        Card(
+          clipBehavior: Clip.antiAlias,
+          child: SizedBox(
+            height: 220,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: RunMap(key: const Key('summaryMap'), segments: segments, colored: colored, interactive: false),
+                ),
+                Positioned.fill(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      key: const Key('openRunMap'),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              RunMapScreen(segments: segments, colored: colored, title: runTitle(widget.run)),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
+                const Positioned(right: 8, top: 8, child: Icon(Icons.open_in_full, size: 20)),
+              ],
             ),
-            const Positioned(right: 8, top: 8, child: Icon(Icons.open_in_full, size: 20)),
+          ),
+        ),
+        if (_hasHr) _ZoneTimes(points: _points, zones: zones, presetId: widget.run.hrPresetId),
+      ],
+    );
+  }
+}
+
+/// Time in each heart-rate zone (bars), and in / above / below the preset
+/// range when the run had one.
+class _ZoneTimes extends StatelessWidget {
+  const _ZoneTimes({required this.points, required this.zones, this.presetId});
+
+  final List<HrPoint> points;
+  final HrZones zones;
+  final String? presetId;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final times = timeInZones(points, zones);
+    final total = times.values.fold(0.0, (a, b) => a + b);
+    if (total <= 0) return const SizedBox.shrink();
+    String mins(double s) => formatDuration(Duration(seconds: s.round()));
+    return Card(
+      key: const Key('zoneTimes'),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Time in heart-rate zones', style: text.titleMedium),
+            const SizedBox(height: 8),
+            for (final z in zones.zones.reversed)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(
+                  children: [
+                    SizedBox(width: 92, child: Text('Z${z.number} ${z.name}', style: text.bodySmall)),
+                    Expanded(
+                      child: LayoutBuilder(
+                        builder: (context, box) => Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            height: 12,
+                            width: box.maxWidth * ((times[z.number] ?? 0) / total),
+                            decoration: BoxDecoration(
+                              color: zoneColor(z.number),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 56,
+                      child: Text(
+                        mins(times[z.number] ?? 0),
+                        key: Key('zoneTime_${z.number}'),
+                        textAlign: TextAlign.end,
+                        style: text.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (presetId != null)
+              FutureBuilder<HrPreset?>(
+                future: Services.of(context).presets.byId(presetId),
+                builder: (context, snap) {
+                  final p = snap.data;
+                  if (p == null) return const SizedBox.shrink();
+                  final r = timeVsRange(points, HrRange(min: p.minBpm, max: p.maxBpm));
+                  final all = r.below + r.inside + r.above;
+                  if (all <= 0) return const SizedBox.shrink();
+                  int pct(double v) => (v / all * 100).round();
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'In your zone (${p.minBpm}–${p.maxBpm}) ${pct(r.inside)}% · '
+                      'above ${pct(r.above)}% · below ${pct(r.below)}%',
+                      key: const Key('inRange'),
+                      style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  );
+                },
+              ),
           ],
         ),
       ),

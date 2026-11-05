@@ -34,7 +34,11 @@ class RunMap extends StatelessWidget {
     this.fitRoute = true,
     this.onUserMove,
     this.onReady,
+    this.colored,
   });
+
+  /// Drawn instead of the plain route (e.g. coloured by heart-rate zone).
+  final List<(List<LatLng>, Color)>? colored;
 
   final RouteSegments segments;
   final MapController? controller;
@@ -96,15 +100,9 @@ class RunMap extends StatelessWidget {
           const ColoredBox(color: Color(0xFFE8E4DA), child: SizedBox.expand()),
         PolylineLayer(
           polylines: [
-            for (final s in segments)
+            for (final (s, color) in colored ?? [for (final s in segments) (s, routeColor)])
               if (s.length >= 2)
-                Polyline(
-                  points: s,
-                  strokeWidth: 5,
-                  color: routeColor,
-                  borderStrokeWidth: 1.5,
-                  borderColor: Colors.white,
-                ),
+                Polyline(points: s, strokeWidth: 5, color: color, borderStrokeWidth: 1.5, borderColor: Colors.white),
           ],
         ),
         MarkerLayer(
@@ -137,14 +135,15 @@ class RunMap extends StatelessWidget {
 
 /// The route of a finished run in full screen (pinch to zoom, drag).
 class RunMapScreen extends StatelessWidget {
-  const RunMapScreen({super.key, required this.segments, required this.title});
+  const RunMapScreen({super.key, required this.segments, required this.title, this.colored});
 
   final RouteSegments segments;
   final String title;
+  final List<(List<LatLng>, Color)>? colored;
 
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: Text(title)),
-    body: RunMap(segments: segments),
+    body: RunMap(segments: segments, colored: colored),
   );
 }

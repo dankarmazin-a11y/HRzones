@@ -8,9 +8,11 @@ import 'package:hrzones/data/database.dart';
 import 'package:hrzones/data/exercise_repository.dart';
 import 'package:hrzones/data/run_repository.dart';
 import 'package:hrzones/hr/hr_monitor.dart';
+import 'package:hrzones/hr/zones.dart';
 import 'package:hrzones/run/geo.dart';
 import 'package:hrzones/run/location_source.dart';
 import 'package:hrzones/run/run_session.dart';
+import 'package:hrzones/run/route_zones.dart';
 import 'package:hrzones/run/run_voice.dart';
 import 'package:hrzones/run/splits.dart';
 import 'package:hrzones/ui/run/run_map.dart';
@@ -569,6 +571,75 @@ void main() {
     await settle(tester);
     expect(s.run.voice!.enabled, isFalse);
     expect(await tester.runAsync(() => s.db.getSetting('runVoice')), '0');
+    await tearDownApp(tester, s);
+  });
+
+  group('zones on the route', () {
+    final zones = HrZones(190); // Z1 95–113, Z2 114–132, Z3 133–151, Z4 152–170, Z5 171+
+    HrPoint hp(int s, int? hr, {int segment = 0}) {
+      final f = north(s * 3.0, s);
+      return (time: f.time, lat: f.lat, lon: f.lon, segment: segment, hr: hr);
+    }
+
+    test('the route is split where the zone changes, joined at the change', () {
+      final pieces = zonePieces([hp(0, 120), hp(1, 125), hp(2, 140), hp(3, 145), hp(4, null)], zones);
+      expect(pieces.map((p) => p.zone), [2, 3, null]);
+      expect(pieces[0].points.length, 3, reason: 'ends where zone 3 starts');
+      expect(pieces[0].points.last, pieces[1].points.first);
+    });
+
+    test('a pause starts a new piece', () {
+      final pieces = zonePieces([hp(0, 120), hp(1, 120), hp(100, 120, segment: 1), hp(101, 120, segment: 1)], zones);
+      expect(pieces, hasLength(2));
+    });
+
+    test('time in zones and in the target range', () {
+      final pts = [for (var i = 0; i <= 60; i++) hp(i, i < 30 ? 125 : 160)];
+      final t = timeInZones(pts, zones);
+      expect(t[2], 30);
+      expect(t[4], 30);
+      final r = timeVsRange(pts, const HrRange(min: 120, max: 150));
+      expect(r.inside, 30);
+      expect(r.above, 30);
+      expect(r.below, 0);
+    });
+  });
+
+  testWidgets('summary shows the route in zone colours and the time in zones', (tester) async {
+    final s = (await tester.runAsync(testServices))!;
+    final gps = FakeLocation();
+    s.run.location = gps;
+    s.hr.setAge(30); // max 190
+    final presetId = (await tester.runAsync(
+      () => s.presets.save(name: 'Easy', min: 120, max: 150, use: PresetUse.run),
+    ))!;
+    await tester.pumpWidget(HrZonesApp(services: s));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('startRunHome')));
+    await settle(tester);
+    await tester.tap(find.byKey(Key('runZone_$presetId')));
+    await tester.tap(find.byKey(const Key('goRun')));
+    await countdown(tester);
+    expect(s.hr.running, isTrue);
+    s.hr.setSimulatedBpm(140);
+    await tester.pump(const Duration(seconds: 2));
+    gps.emit(north(0, 0));
+    for (var i = 1; i <= 120; i++) {
+      gps.emit(north(i * 3.0, i));
+    }
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('pauseRun')));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('finishRun')));
+    await settle(tester);
+    await tester.tap(find.text('Save'));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+    await settle(tester);
+    expect(find.byKey(const Key('routeMode')), findsOneWidget);
+    expect(find.byKey(const Key('zoneTimes')), findsOneWidget);
+    expect(find.byKey(const Key('zoneTime_3')), findsOneWidget);
+    expect(tester.widget<Text>(find.byKey(const Key('zoneTime_3'))).data, '02:00');
+    expect(find.textContaining('In your zone (120–150) 100%'), findsOneWidget);
     await tearDownApp(tester, s);
   });
 }
