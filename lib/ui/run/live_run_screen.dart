@@ -6,6 +6,7 @@ import '../../app_services.dart';
 import '../../hr/hr_monitor.dart';
 import '../../run/geo.dart';
 import '../../run/location_source.dart';
+import '../../run/route_zones.dart';
 import '../../run/run_session.dart';
 import '../../workout/stats.dart';
 import '../timer_style.dart';
@@ -412,6 +413,19 @@ class _LiveMapState extends State<_LiveMap> {
     if (_follow && _ready && here != null) _map.move(here, _map.camera.zoom);
   }
 
+  /// With heart rate: the line in zone colours (as on the summary).
+  List<(List<LatLng>, Color)>? _zoneColored(BuildContext context) {
+    final hr = HrScope.of(context);
+    final route = widget.run.route;
+    if (!hr.running || !route.any((p) => p.hr != null)) return null;
+    return [
+      for (final piece in zonePieces([
+        for (final p in route) (time: p.time, lat: p.lat, lon: p.lon, segment: p.segment, hr: p.hr),
+      ], hr.zones))
+        ([for (final p in piece.points) LatLng(p.lat, p.lon)], zoneColor(piece.zone)),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_count < 0) {
@@ -424,6 +438,7 @@ class _LiveMapState extends State<_LiveMap> {
           child: RunMap(
             key: const Key('liveMap'),
             segments: _segments,
+            colored: _zoneColored(context),
             controller: _map,
             current: _here ?? RunMap.fallbackCenter,
             fitRoute: false,
