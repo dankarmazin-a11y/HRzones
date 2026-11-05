@@ -302,7 +302,10 @@ class WorkoutSession extends ChangeNotifier {
       // The app was closed mid-workout: turn the workout's heart-rate alerts
       // back on.
       final preset = zonesEnabled ? await presets?.byId(w.hrPresetId) : null;
+      final last = w.lastChangeAt; // turning alerts back on is not a change
       if (preset != null && !hr.running) await applyPreset(preset);
+      w.lastChangeAt = last;
+      _syncIdleNotice();
     }
     notifyListeners();
   }
@@ -372,6 +375,46 @@ class WorkoutSession extends ChangeNotifier {
       n.scheduleRestOver(Duration(milliseconds: t.remaining * 1000));
     } else {
       n.cancel();
+    }
+  }
+
+  /// A workout with no change for this long counts as forgotten: a
+  /// notification ("Still working out?") and, back in the app, a question.
+  static const idleAfter = Duration(minutes: 90);
+
+  /// Setting `idleReminder` (default on).
+  bool idleReminder = true;
+
+  String get idleReminderText => '${idleAfter.inMinutes} minutes';
+
+  /// How long the running workout has had no change (zero while a timer runs).
+  Duration get idleFor {
+    final w = _active;
+    if (w == null || editMode || _timer != null) return Duration.zero;
+    return DateTime.now().difference(w.lastChangeAt);
+  }
+
+  /// "Keep going": the workout counts as active again.
+  Future<void> keepGoing() async {
+    _active?.lastChangeAt = DateTime.now();
+    await _saveNow();
+  }
+
+  /// (Re)schedules the "Still working out?" notification for [idleAfter]
+  /// after the last change.
+  void _syncIdleNotice() {
+    final n = restNotifier;
+    final w = _active;
+    if (n == null || editMode) return;
+    if (w == null || !idleReminder) {
+      n.cancelIdle();
+      return;
+    }
+    final due = w.lastChangeAt.add(idleAfter).difference(DateTime.now());
+    if (due > Duration.zero) {
+      n.scheduleIdle(due, workout: w.name);
+    } else {
+      n.cancelIdle(); // already overdue: the app asks on screen
     }
   }
 
@@ -1036,6 +1079,7 @@ class WorkoutSession extends ChangeNotifier {
     await workouts.save(w, endedAt: end, avgHr: avg, maxHr: max);
     final summary = await WorkoutSummary.build(workouts, w, end, avgHr: avg, maxHr: max);
     _active = null;
+    restNotifier?.cancelIdle();
     _releaseAudio();
     notifyListeners();
     return summary;
@@ -1057,6 +1101,7 @@ class WorkoutSession extends ChangeNotifier {
     _saveTimer?.cancel();
     await workouts.delete(w.id);
     _active = null;
+    restNotifier?.cancelIdle();
     _releaseAudio();
     notifyListeners();
   }
@@ -1067,6 +1112,7 @@ class WorkoutSession extends ChangeNotifier {
       if (notify) notifyListeners();
       return;
     }
+    _active?.lastChangeAt = DateTime.now();
     _saveTimer?.cancel();
     _saveTimer = Timer(const Duration(milliseconds: 400), _saveNow);
     if (notify) notifyListeners();
@@ -1075,6 +1121,7 @@ class WorkoutSession extends ChangeNotifier {
   Future<void> _saveNow() async {
     final w = _active;
     if (w != null) await workouts.save(w);
+    _syncIdleNotice(); // debounced like the save: not on every keystroke
   }
 
   /// Saves pending changes immediately (e.g. in tests or when backgrounding).

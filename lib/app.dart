@@ -9,6 +9,7 @@ import 'ui/screens/run_screen.dart';
 import 'ui/screens/tools_screen.dart';
 import 'ui/screens/workouts_screen.dart';
 import 'ui/tools_icon.dart';
+import 'ui/workout/forgotten_workout.dart';
 import 'ui/workout/running_workout_bar.dart';
 
 class HrZonesApp extends StatelessWidget {
@@ -79,48 +80,50 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
-    return AppShell(
-      goTo: (t) => setState(() => _tab = t),
-      child: Scaffold(
-        body: IndexedStack(
-          index: _tab.index,
-          children: [
-            for (final (i, screen) in _screens.indexed)
-              PrimaryScrollController(
-                controller: _scroll[i],
-                automaticallyInheritForPlatforms: TargetPlatform.values.toSet(),
-                child: screen,
+    return ForgottenWorkoutWatcher(
+      child: AppShell(
+        goTo: (t) => setState(() => _tab = t),
+        child: Scaffold(
+          body: IndexedStack(
+            index: _tab.index,
+            children: [
+              for (final (i, screen) in _screens.indexed)
+                PrimaryScrollController(
+                  controller: _scroll[i],
+                  automaticallyInheritForPlatforms: TargetPlatform.values.toSet(),
+                  child: screen,
+                ),
+            ],
+          ),
+          bottomNavigationBar: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const RunningWorkoutBar(),
+              NavigationBar(
+                selectedIndex: _tab.index,
+                onDestinationSelected: (i) => _select(AppTab.values[i]),
+                destinations: const [
+                  NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
+                  NavigationDestination(
+                    icon: Icon(Icons.fitness_center_outlined),
+                    selectedIcon: Icon(Icons.fitness_center),
+                    label: 'Strength',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.directions_run_outlined),
+                    selectedIcon: Icon(Icons.directions_run),
+                    label: 'Run',
+                  ),
+                  NavigationDestination(icon: ToolsIcon(), selectedIcon: ToolsIcon(selected: true), label: 'Tools'),
+                  NavigationDestination(
+                    icon: Icon(Icons.person_outline),
+                    selectedIcon: Icon(Icons.person),
+                    label: 'Profile',
+                  ),
+                ],
               ),
-          ],
-        ),
-        bottomNavigationBar: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const RunningWorkoutBar(),
-            NavigationBar(
-              selectedIndex: _tab.index,
-              onDestinationSelected: (i) => _select(AppTab.values[i]),
-              destinations: const [
-                NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
-                NavigationDestination(
-                  icon: Icon(Icons.fitness_center_outlined),
-                  selectedIcon: Icon(Icons.fitness_center),
-                  label: 'Strength',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.directions_run_outlined),
-                  selectedIcon: Icon(Icons.directions_run),
-                  label: 'Run',
-                ),
-                NavigationDestination(icon: ToolsIcon(), selectedIcon: ToolsIcon(selected: true), label: 'Tools'),
-                NavigationDestination(
-                  icon: Icon(Icons.person_outline),
-                  selectedIcon: Icon(Icons.person),
-                  label: 'Profile',
-                ),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -362,7 +362,7 @@ class ActiveWorkoutScreen extends StatelessWidget {
   /// After a workout started from a template: if anything changed, ask
   /// whether to update the template – keep it, take the new values only, or
   /// take everything (exercises, sets and values).
-  static Future<void> _offerTemplateUpdate(BuildContext context, ActiveWorkout w) async {
+  static Future<void> offerTemplateUpdate(BuildContext context, ActiveWorkout w) async {
     final id = w.templateId;
     if (id == null) return;
     final repo = Services.of(context).templates;
@@ -483,7 +483,7 @@ class ActiveWorkoutScreen extends StatelessWidget {
     }
     final summary = await session.finish(endedAt: endAt);
     if (summary == null || !context.mounted) return;
-    await _offerTemplateUpdate(context, summary.workout);
+    await offerTemplateUpdate(context, summary.workout);
     if (!context.mounted) return;
     await Navigator.of(context)
         .pushReplacement(MaterialPageRoute(builder: (_) => WorkoutSummaryScreen(summary: summary, justFinished: true)));

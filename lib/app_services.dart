@@ -107,6 +107,23 @@ class AppServices {
     await db.setSetting('restVibrate', on ? '1' : '0');
   }
 
+  /// "Still working out?" reminder for a workout left open (setting
+  /// `idleReminder`, default on).
+  Future<void> setIdleReminder(bool on) async {
+    session.idleReminder = on;
+    if (on) await askNotificationsOnce(force: true);
+    await db.setSetting('idleReminder', on ? '1' : '0');
+    await session.flush(); // (re)schedules or cancels the reminder
+  }
+
+  /// Asks iOS for notification permission the first time a workout starts
+  /// (setting `notifyAsked`), so the forgotten-workout reminder can work.
+  Future<void> askNotificationsOnce({bool force = false}) async {
+    if (!force && (!session.idleReminder || await db.getSetting('notifyAsked') == '1')) return;
+    await db.setSetting('notifyAsked', '1');
+    await restNotifier.requestPermission();
+  }
+
   /// Notification when rest is over while the phone is locked / in another
   /// app (setting `restNotify`, default off). Turning it on asks iOS once.
   /// Returns false if iOS doesn't allow notifications.
@@ -188,6 +205,7 @@ class AppServices {
     lastBackupAt.value = DateTime.tryParse(await db.getSetting('lastBackupAt') ?? '');
     session.vibrateRestOver = await db.getSetting('restVibrate') != '0';
     session.notifyRestOver = await db.getSetting('restNotify') == '1';
+    session.idleReminder = await db.getSetting('idleReminder') != '0';
     hr.beeper.choices.clear();
     try {
       final saved = jsonDecode(await db.getSetting('sounds') ?? '{}') as Map<String, dynamic>;

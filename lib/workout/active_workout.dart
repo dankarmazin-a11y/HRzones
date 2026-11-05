@@ -58,7 +58,11 @@ class ActiveWorkout {
   ActiveWorkout({String? id, required this.name, DateTime? startedAt, this.templateId, List<LoggedExercise>? exercises})
     : id = id ?? newId(),
       startedAt = startedAt ?? DateTime.now(),
+      lastChangeAt = startedAt ?? DateTime.now(),
       exercises = exercises ?? [];
+
+  /// Last time anything was logged or changed (for "Still working out?").
+  DateTime lastChangeAt;
 
   final String id;
   String name;

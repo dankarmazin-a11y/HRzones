@@ -48,7 +48,10 @@ class WorkoutRepository {
               hrPresetId: Value(w.hrPresetId),
               avgHr: Value(avgHr),
               maxHr: Value(maxHr),
-              updatedAt: Value(DateTime.now()),
+              // A running workout keeps the time of its last real change
+              // (saving when the app goes to the background is not a change)
+              // – that is what "Still working out?" is measured from.
+              updatedAt: Value(endedAt == null ? w.lastChangeAt : DateTime.now()),
             ),
           );
       await (db.delete(db.workoutExercises)..where((e) => e.workoutId.equals(w.id))).go();
@@ -116,7 +119,8 @@ class WorkoutRepository {
             .get();
     final w = ActiveWorkout(id: row.id, name: row.name, startedAt: row.startedAt, templateId: row.templateId)
       ..notes = row.notes
-      ..hrPresetId = row.hrPresetId;
+      ..hrPresetId = row.hrPresetId
+      ..lastChangeAt = row.updatedAt;
     for (final we in wes) {
       final ex = await exercises.byId(we.exerciseId);
       if (ex == null) continue;

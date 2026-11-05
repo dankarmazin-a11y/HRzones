@@ -104,6 +104,9 @@ class SettingsScreen extends StatelessWidget {
           Text('When rest is over', style: text.titleMedium),
           const _RestAlerts(),
           const Divider(height: 32),
+          Text('Reminders', style: text.titleMedium),
+          const _IdleReminderSwitch(),
+          const Divider(height: 32),
           Text('Sounds', style: text.titleMedium),
           Text('Pick the sound for each moment. Tap ▷ to hear it.', style: text.bodySmall),
           const SizedBox(height: 4),
@@ -207,6 +210,35 @@ class _SoundRowState extends State<_SoundRow> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _IdleReminderSwitch extends StatefulWidget {
+  const _IdleReminderSwitch();
+
+  @override
+  State<_IdleReminderSwitch> createState() => _IdleReminderSwitchState();
+}
+
+class _IdleReminderSwitchState extends State<_IdleReminderSwitch> {
+  @override
+  Widget build(BuildContext context) {
+    final s = Services.of(context);
+    return SwitchListTile(
+      key: const Key('idleReminder'),
+      contentPadding: EdgeInsets.zero,
+      secondary: const Icon(Icons.alarm_outlined),
+      title: const Text('Forgotten workout'),
+      subtitle: Text(
+        'If nothing changes in a running workout for ${s.session.idleReminderText}, '
+        'a notification asks "Still working out?".',
+      ),
+      value: s.session.idleReminder,
+      onChanged: (v) async {
+        await s.setIdleReminder(v);
+        if (mounted) setState(() {});
+      },
     );
   }
 }
