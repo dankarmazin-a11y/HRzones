@@ -10,6 +10,7 @@ Future<void> wait(int ms) => Future<void>.delayed(Duration(milliseconds: ms));
 void main() {
   test('stretches are grouped into one Stretching card, one row per stretch', () async {
     final s = await testServices();
+    await s.exercises.setUnilateral('Hamstring_Stretch', false); // sides are tested in sides_test.dart
     await s.session.startEmpty();
     final ham = (await s.exercises.byId('Hamstring_Stretch'))!;
     final plank = (await s.exercises.byId('Plank'))!; // stretching category in the test data
@@ -43,6 +44,7 @@ void main() {
 
   test('the stretches run one after another', () async {
     final s = await testServices();
+    await s.exercises.setUnilateral('Hamstring_Stretch', false); // sides are tested in sides_test.dart
     await s.session.startEmpty();
     await s.session.addExercises([(await s.exercises.byId('Hamstring_Stretch'))!, (await s.exercises.byId('Plank'))!]);
     final card = s.session.active!.exercises.single;
@@ -72,6 +74,7 @@ void main() {
 
   test('templates keep a Stretching slot with its stretches', () async {
     final s = await testServices();
+    await s.exercises.setUnilateral('Hamstring_Stretch', false); // sides are tested in sides_test.dart
     await s.templates.save(
       name: 'Mobility',
       slots: [

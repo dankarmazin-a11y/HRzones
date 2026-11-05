@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../workout/interval_runner.dart';
 import '../../workout/stats.dart';
+import '../timer_style.dart';
 
 /// Full-screen interval timer: big digits, green = work, blue = rest.
 class IntervalRunScreen extends StatefulWidget {
@@ -18,10 +19,12 @@ class _IntervalRunScreenState extends State<IntervalRunScreen> {
   void initState() {
     super.initState();
     widget.runner.start();
+    keepScreenOn(true);
   }
 
   @override
   void dispose() {
+    keepScreenOn(false);
     widget.runner.dispose();
     super.dispose();
   }
@@ -33,11 +36,14 @@ class _IntervalRunScreenState extends State<IntervalRunScreen> {
       listenable: r,
       builder: (context, _) {
         final step = r.current;
-        final color = r.finished
-            ? Colors.grey.shade800
+        final color = r.finished || r.gettingReady
+            ? TimerStyle.neutralBackground
+            : (step!.work ? TimerStyle.workBackground : TimerStyle.restBackground);
+        final accent = r.finished
+            ? Colors.white
             : r.gettingReady
-            ? Colors.orange.shade800
-            : (step!.work ? Colors.green.shade700 : Colors.blue.shade700);
+            ? TimerStyle.readyAccent
+            : (step!.work ? TimerStyle.workAccent : TimerStyle.restAccent);
         final label = r.finished ? 'Done 🎉' : (r.gettingReady ? 'Get ready' : step!.label);
         final white = Theme.of(context).textTheme.apply(bodyColor: Colors.white, displayColor: Colors.white);
         return Scaffold(
@@ -64,7 +70,11 @@ class _IntervalRunScreenState extends State<IntervalRunScreen> {
                     ],
                   ),
                   const Spacer(),
-                  Text(label, style: white.displaySmall, textAlign: TextAlign.center),
+                  Text(
+                    label,
+                    style: white.displaySmall?.copyWith(color: accent, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
                   if (step != null && r.rounds > 1)
                     Text('Round ${step.round} of ${r.rounds}', style: white.titleMedium),
                   Expanded(
@@ -72,12 +82,7 @@ class _IntervalRunScreenState extends State<IntervalRunScreen> {
                     child: FittedBox(
                       child: Text(
                         r.finished ? '0:00' : formatDuration(Duration(seconds: r.remaining)),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 200,
-                          fontWeight: FontWeight.bold,
-                          fontFeatures: [FontFeature.tabularFigures()],
-                        ),
+                        style: TimerStyle.digits,
                       ),
                     ),
                   ),
@@ -85,7 +90,7 @@ class _IntervalRunScreenState extends State<IntervalRunScreen> {
                     LinearProgressIndicator(
                       value: r.stepTotal == 0 ? 0 : r.remaining / r.stepTotal,
                       minHeight: 8,
-                      color: Colors.white,
+                      color: accent,
                       backgroundColor: Colors.white24,
                     ),
                   const SizedBox(height: 12),

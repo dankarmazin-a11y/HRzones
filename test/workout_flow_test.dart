@@ -10,7 +10,7 @@ import 'test_helpers.dart';
 void main() {
   test('seeds exercises with tracking types and search filters', () async {
     final s = await testServices();
-    final all = await s.exercises.all();
+    final all = (await s.exercises.all()).where((e) => !e.isInterval); // timers are tested elsewhere
     expect(all.map((e) => e.name), [
       'Barbell Bench Press',
       'Plank',
@@ -29,7 +29,7 @@ void main() {
 
     // Seeding twice does not duplicate.
     await s.exercises.seedIfNeeded(() async => testExercisesJson);
-    expect((await s.exercises.all()).length, 5);
+    expect((await s.exercises.all()).where((e) => !e.isInterval).length, 5);
     await s.close();
   });
 

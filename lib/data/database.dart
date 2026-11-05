@@ -10,8 +10,11 @@ String newId() => _uuid.v4();
 /// How an exercise is logged.
 enum TrackingType { weightReps, bodyweightReps, duration, distance }
 
-/// Warm-up / normal / drop / failure.
+/// Warm-up / normal / drop / failure. (Stored by index – never reorder.)
 enum SetType { warmup, normal, drop, failure }
+
+/// Which side a set of a one-sided ("each side") exercise is for.
+enum Side { left, right }
 
 enum WorkoutType { strength, run, walk, cycle, other }
 
@@ -22,17 +25,29 @@ extension ExerciseKind on Exercise {
   bool get isStretch => category == 'stretching';
   bool get isStretchSession => id == stretchingSessionId;
   bool get isTimed => trackingType == TrackingType.duration;
+  bool get hasNote => (note ?? '').trim().isNotEmpty;
 }
 
 /// Exercise library "type" filter.
-enum ExerciseGroup { strength, stretching, cardio }
+enum ExerciseGroup { strength, stretching, cardio, timers }
+
+/// Interval timers (Tools › Timers) also exist as exercises with this id
+/// prefix + the preset id, category "interval", so they can be added to
+/// workouts and templates like any exercise.
+const intervalExercisePrefix = 'hz_iv_';
 
 extension ExerciseGroupOf on Exercise {
   ExerciseGroup get group => switch (category) {
     'stretching' => ExerciseGroup.stretching,
     'cardio' || 'plyometrics' => ExerciseGroup.cardio,
+    'interval' => ExerciseGroup.timers,
     _ => ExerciseGroup.strength,
   };
+
+  bool get isInterval => category == 'interval';
+
+  /// The interval preset this exercise runs (null for normal exercises).
+  String? get intervalPresetId => isInterval ? id.substring(intervalExercisePrefix.length) : null;
 }
 
 /// Every table has a UUID primary key and updatedAt (for cloud sync later).
@@ -68,6 +83,14 @@ class Exercises extends Table with SyncColumns {
 
   /// "beginner" / "intermediate" / "expert" (from free-exercise-db).
   TextColumn get level => text().nullable()();
+
+  /// Logged per side: every set is a left + right pair (user setting; the
+  /// seed marks common one-sided exercises).
+  BoolColumn get unilateral => boolean().withDefault(const Constant(false))();
+
+  /// The user's permanent note (shown as a sticky note in workouts).
+  TextColumn get note => text().nullable()();
+  DateTimeColumn get noteAt => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -147,6 +170,9 @@ class WorkoutSets extends Table with SyncColumns {
 
   /// In a "Stretching" session: which stretch this row is.
   TextColumn get subExerciseId => text().nullable()();
+
+  /// Left / right for one-sided exercises (null = both sides / not split).
+  IntColumn get side => intEnum<Side>().nullable()();
   IntColumn get maxHr => integer().nullable()();
 
   /// Null = not completed (not counted in stats).
@@ -222,6 +248,32 @@ class Settings extends Table {
   Set<Column> get primaryKey => {key};
 }
 
+/// Exercises done one side at a time, logged as left + right by default.
+const defaultUnilateral = [
+  'hz_bulgarian_split_squat',
+  'One-Arm_Dumbbell_Row',
+  'Dumbbell_Step_Ups',
+  'Single_Leg_Glute_Bridge',
+  'One_Arm_Lat_Pulldown',
+  'Concentration_Curls',
+  'Tricep_Dumbbell_Kickback',
+  'hz_cable_kickback',
+  'Glute_Kickback',
+  'Crossover_Reverse_Lunge',
+  'hz_side_plank',
+  'Hamstring_Stretch',
+  'Quad_Stretch',
+  'Kneeling_Hip_Flexor',
+  'hz_pigeon_pose',
+  'Ankle_On_The_Knee',
+  'Shoulder_Stretch',
+  'Triceps_Stretch',
+  'Side_Neck_Stretch',
+  'Calf_Stretch_Hands_Against_Wall',
+  'Worlds_Greatest_Stretch',
+  'Lying_Crossover',
+];
+
 @DriftDatabase(
   tables: [
     Exercises,
@@ -241,7 +293,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -263,6 +315,19 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(workouts, workouts.hrPresetId);
         await m.createTable(hrPresets);
         await m.createTable(intervalPresets);
+      }
+      if (from < 6) {
+        await m.addColumn(exercises, exercises.unilateral);
+        await m.addColumn(exercises, exercises.note);
+        await m.addColumn(exercises, exercises.noteAt);
+        await m.addColumn(workoutSets, workoutSets.side);
+        // Existing installs: mark the common one-sided exercises (new ones get
+        // it from the seed).
+        await customUpdate(
+          'UPDATE exercises SET unilateral = 1 WHERE id IN (${defaultUnilateral.map((_) => '?').join(',')})',
+          variables: [for (final id in defaultUnilateral) Variable.withString(id)],
+          updates: {exercises},
+        );
       }
     },
     beforeOpen: (details) async {

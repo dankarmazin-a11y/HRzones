@@ -67,7 +67,12 @@ class ExerciseProgressSection extends StatelessWidget {
                 contentPadding: EdgeInsets.zero,
                 dense: true,
                 title: Text(_date(s.workout.startedAt)),
-                subtitle: Text(s.sets.map((x) => _setText(exercise.trackingType, x)).join('   ')),
+                subtitle: Text(
+                  [
+                    s.sets.map((x) => _setText(exercise.trackingType, x)).join('   '),
+                    if (s.notes.isNotEmpty) '📝 ${s.notes}',
+                  ].join('\n'),
+                ),
               ),
           ],
         );

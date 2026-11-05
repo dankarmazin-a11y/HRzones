@@ -7,18 +7,22 @@ import 'database.dart';
 /// One exercise slot in a template (editable, in memory).
 /// A planned set in a template (values are optional targets).
 class TemplateSet {
-  const TemplateSet({this.type = SetType.normal, this.weightKg, this.reps, this.durationS});
+  const TemplateSet({this.type = SetType.normal, this.weightKg, this.reps, this.durationS, this.side});
 
   final SetType type;
   final double? weightKg;
   final int? reps;
   final int? durationS;
 
+  /// Left / right for one-sided exercises.
+  final Side? side;
+
   Map<String, Object?> toJson() => {
     't': type.index,
     if (weightKg != null) 'w': weightKg,
     if (reps != null) 'r': reps,
     if (durationS != null) 's': durationS,
+    if (side != null) 'd': side!.index,
   };
 
   factory TemplateSet.fromJson(Map<String, dynamic> j) => TemplateSet(
@@ -26,6 +30,7 @@ class TemplateSet {
     weightKg: (j['w'] as num?)?.toDouble(),
     reps: j['r'] as int?,
     durationS: j['s'] as int?,
+    side: j['d'] is int ? Side.values[(j['d'] as int).clamp(0, 1)] : null,
   );
 
   static String? encode(List<TemplateSet> sets) => sets.isEmpty ? null : jsonEncode([for (final s in sets) s.toJson()]);
@@ -142,6 +147,9 @@ class TemplateRepository {
       return templateId;
     });
   }
+
+  Future<TemplateWithSlots?> byId(String id) async =>
+      (await watchAll().first).where((t) => t.template.id == id).firstOrNull;
 
   /// Folder names in use, A–Z.
   Future<List<String>> folders() async {

@@ -22,7 +22,7 @@ void main() {
     t.setWeight(bench.sets.single, 60);
     t.setReps(bench.sets.single, 8);
     t.addSet(bench); // 60 × 8 again
-    t.cycleSetType(bench.sets.first); // drop → warm-up? normal → drop
+    t.cycleSetType(bench.sets.first); // normal → F (failure)
     t.startRest(60);
     expect(t.timer, isNull); // no timers while planning
     await t.saveTemplate(s.templates);
@@ -31,7 +31,7 @@ void main() {
     expect(saved.template.name, 'Push A');
     expect(saved.template.folder, 'PPL');
     final slot = saved.slots.firstWhere((x) => x.exerciseId == 'Barbell_Bench_Press');
-    expect(slot.sets.map((x) => '${x.type.name} ${x.weightKg}×${x.reps}'), ['drop 60.0×8', 'normal 60.0×8']);
+    expect(slot.sets.map((x) => '${x.type.name} ${x.weightKg}×${x.reps}'), ['failure 60.0×8', 'normal 60.0×8']);
     expect(saved.slots.firstWhere((x) => x.exerciseId == stretchingSessionId).subExerciseIds, ['Plank']);
 
     // Starting it prefills the planned values (not ticked yet).

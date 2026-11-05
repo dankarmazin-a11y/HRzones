@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import 'beep/sounds.dart';
 import 'data/body_repository.dart';
 import 'data/database.dart';
 import 'data/goal_repository.dart';
@@ -14,19 +16,24 @@ import 'data/workout_repository.dart';
 import 'hr/ble_hr_source.dart';
 import 'hr/hr_monitor.dart';
 import 'hr/zones.dart';
+import 'notify/rest_notifier.dart';
 import 'workout/workout_session.dart';
 
 /// Everything the screens need: database repositories, HR monitor and the
 /// current workout session.
 class AppServices {
-  AppServices._(this.db, this.hr, this._loadExercises)
+  AppServices._(this.db, this.hr, this._loadExercises, this.restNotifier)
     : exercises = ExerciseRepository(db),
       templates = TemplateRepository(db),
       body = BodyRepository(db),
       presets = HrPresetRepository(db),
       intervals = IntervalPresetRepository(db) {
     workouts = WorkoutRepository(db, exercises);
-    session = WorkoutSession(workouts: workouts, exercises: exercises, hr: hr)..presets = presets;
+    intervals.onExercisesChanged = exercises.clearCache;
+    session = WorkoutSession(workouts: workouts, exercises: exercises, hr: hr)
+      ..presets = presets
+      ..restNotifier = restNotifier
+      ..intervals = intervals;
     goals = GoalRepository(db, workouts, exercises, body);
   }
 
@@ -83,6 +90,49 @@ class AppServices {
 
   late final GoalRepository goals;
   final Future<String> Function() _loadExercises;
+  final RestNotifier restNotifier;
+
+  /// Sound per event (setting `sounds`, JSON {event: choice}); kept on the
+  /// beeper so every part of the app uses it.
+  Map<SoundEvent, SoundChoice> get sounds => hr.beeper.choices;
+
+  Future<void> setSound(SoundEvent e, SoundChoice c) async {
+    c == SoundChoice.classic ? hr.beeper.choices.remove(e) : hr.beeper.choices[e] = c;
+    await db.setSetting('sounds', jsonEncode({for (final x in hr.beeper.choices.entries) x.key.name: x.value.name}));
+  }
+
+  /// Light vibration when rest is over (setting `restVibrate`, default on).
+  Future<void> setRestVibrate(bool on) async {
+    session.vibrateRestOver = on;
+    await db.setSetting('restVibrate', on ? '1' : '0');
+  }
+
+  /// "Still working out?" reminder for a workout left open (setting
+  /// `idleReminder`, default on).
+  Future<void> setIdleReminder(bool on) async {
+    session.idleReminder = on;
+    if (on) await askNotificationsOnce(force: true);
+    await db.setSetting('idleReminder', on ? '1' : '0');
+    await session.flush(); // (re)schedules or cancels the reminder
+  }
+
+  /// Asks iOS for notification permission the first time a workout starts
+  /// (setting `notifyAsked`), so the forgotten-workout reminder can work.
+  Future<void> askNotificationsOnce({bool force = false}) async {
+    if (!force && (!session.idleReminder || await db.getSetting('notifyAsked') == '1')) return;
+    await db.setSetting('notifyAsked', '1');
+    await restNotifier.requestPermission();
+  }
+
+  /// Notification when rest is over while the phone is locked / in another
+  /// app (setting `restNotify`, default off). Turning it on asks iOS once.
+  /// Returns false if iOS doesn't allow notifications.
+  Future<bool> setRestNotify(bool on) async {
+    if (on && !await restNotifier.requestPermission()) return false;
+    session.notifyRestOver = on;
+    await db.setSetting('restNotify', on ? '1' : '0');
+    return true;
+  }
 
   /// When the last backup was saved (setting `lastBackupAt`; not part of
   /// backups).
@@ -120,8 +170,14 @@ class AppServices {
     AppDatabase? db,
     HrMonitor? hr,
     ValueChanged<String>? onStep,
+    RestNotifier? restNotifier,
   }) async {
-    final s = AppServices._(db ?? AppDatabase(), hr ?? HrMonitor(), loadExercises);
+    final s = AppServices._(
+      db ?? AppDatabase(),
+      hr ?? HrMonitor(),
+      loadExercises,
+      restNotifier ?? (db == null ? RestNotifier.create() : SilentRestNotifier()),
+    );
     // Each step is reported so a stuck start-up shows where it hangs.
     onStep?.call('Opening the database');
     await s.db.customSelect('SELECT 1').get();
@@ -129,6 +185,7 @@ class AppServices {
     await s.exercises.seedIfNeeded(loadExercises);
     onStep?.call('Loading timers');
     await s.intervals.seedDefaults();
+    await s.intervals.syncExercises(); // interval timers usable as exercises
     onStep?.call('Loading settings');
     await s._loadSettings();
     s.session.zonesEnabled = s.zonesEnabled.value;
@@ -146,6 +203,17 @@ class AppServices {
     place.value = TrainingPlace.values.where((p) => p.name == placeName).firstOrNull ?? TrainingPlace.gym;
     zonesEnabled.value = await db.getSetting('zones') != '0';
     lastBackupAt.value = DateTime.tryParse(await db.getSetting('lastBackupAt') ?? '');
+    session.vibrateRestOver = await db.getSetting('restVibrate') != '0';
+    session.notifyRestOver = await db.getSetting('restNotify') == '1';
+    session.idleReminder = await db.getSetting('idleReminder') != '0';
+    hr.beeper.choices.clear();
+    try {
+      final saved = jsonDecode(await db.getSetting('sounds') ?? '{}') as Map<String, dynamic>;
+      for (final e in SoundEvent.values) {
+        final c = SoundChoice.values.where((c) => c.name == saved[e.name]).firstOrNull;
+        if (c != null) hr.beeper.choices[e] = c;
+      }
+    } catch (_) {}
     final lvl = await db.getSetting('level');
     level.value = TrainingLevel.values.where((l) => l.name == lvl).firstOrNull ?? TrainingLevel.intermediate;
     final age = await getInt('age');

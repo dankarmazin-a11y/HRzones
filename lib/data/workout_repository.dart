@@ -16,10 +16,13 @@ class WorkoutListItem {
 
 /// One workout's sets of a single exercise (for the exercise history).
 class ExerciseSession {
-  ExerciseSession({required this.workout, required this.sets});
+  ExerciseSession({required this.workout, required this.sets, this.notes = ''});
 
   final Workout workout;
   final List<WorkoutSet> sets;
+
+  /// The note written on the exercise in that workout.
+  String notes;
 }
 
 class WorkoutRepository {
@@ -45,7 +48,10 @@ class WorkoutRepository {
               hrPresetId: Value(w.hrPresetId),
               avgHr: Value(avgHr),
               maxHr: Value(maxHr),
-              updatedAt: Value(DateTime.now()),
+              // A running workout keeps the time of its last real change
+              // (saving when the app goes to the background is not a change)
+              // – that is what "Still working out?" is measured from.
+              updatedAt: Value(endedAt == null ? w.lastChangeAt : DateTime.now()),
             ),
           );
       await (db.delete(db.workoutExercises)..where((e) => e.workoutId.equals(w.id))).go();
@@ -80,6 +86,7 @@ class WorkoutRepository {
                 maxHr: Value(s.maxHr),
                 completedAt: Value(s.completedAt),
                 subExerciseId: Value(s.subExercise?.id),
+                side: Value(s.side),
               ),
             );
           }
@@ -112,7 +119,8 @@ class WorkoutRepository {
             .get();
     final w = ActiveWorkout(id: row.id, name: row.name, startedAt: row.startedAt, templateId: row.templateId)
       ..notes = row.notes
-      ..hrPresetId = row.hrPresetId;
+      ..hrPresetId = row.hrPresetId
+      ..lastChangeAt = row.updatedAt;
     for (final we in wes) {
       final ex = await exercises.byId(we.exerciseId);
       if (ex == null) continue;
@@ -123,7 +131,8 @@ class WorkoutRepository {
           LoggedSet(id: s.id, type: s.setType, weightKg: s.weightKg, reps: s.reps, durationS: s.durationS, rpe: s.rpe)
             ..maxHr = s.maxHr
             ..completedAt = s.completedAt
-            ..subExercise = s.subExerciseId == null ? null : await exercises.byId(s.subExerciseId!),
+            ..subExercise = s.subExerciseId == null ? null : await exercises.byId(s.subExerciseId!)
+            ..side = s.side,
         );
       }
       le.previous = await previousSets(ex.id, excludeWorkoutId: row.id);
@@ -253,9 +262,19 @@ class WorkoutRepository {
           )
           ..orderBy([OrderingTerm.desc(db.workouts.startedAt), OrderingTerm.asc(db.workoutSets.setIndex)]);
     final out = <String, ExerciseSession>{};
+    final weIds = <String>{};
     for (final r in await q.get()) {
       final w = r.readTable(db.workouts);
-      out.putIfAbsent(w.id, () => ExerciseSession(workout: w, sets: [])).sets.add(r.readTable(db.workoutSets));
+      final set = r.readTable(db.workoutSets);
+      weIds.add(set.workoutExerciseId);
+      out.putIfAbsent(w.id, () => ExerciseSession(workout: w, sets: [])).sets.add(set);
+    }
+    // Per-workout notes on this exercise.
+    if (weIds.isNotEmpty) {
+      final wes = await (db.select(db.workoutExercises)..where((e) => e.id.isIn(weIds))).get();
+      for (final we in wes) {
+        if (we.notes.isNotEmpty) out[we.workoutId]?.notes = we.notes;
+      }
     }
     return out.values.toList();
   }

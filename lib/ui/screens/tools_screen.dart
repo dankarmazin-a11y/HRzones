@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../app_services.dart';
 import '../../data/exercise_repository.dart';
+import '../plate_calculator.dart';
 import '../timers/timers_screen.dart';
 import 'zones_screen.dart';
 
@@ -37,6 +38,15 @@ class ToolsScreen extends StatelessWidget {
             title: 'Timers',
             subtitle: 'Intervals (Tabata, EMOM…), your own timers and quick countdowns',
             onTap: () => open(const TimersScreen()),
+          ),
+          const SizedBox(height: 12),
+          _ToolBox(
+            key: const Key('toolPlates'),
+            icon: Icons.fitness_center,
+            color: Colors.teal,
+            title: 'Plate calculator',
+            subtitle: 'Which plates to load for any weight – with your bar and the plates in your gym',
+            onTap: () => open(const PlateCalculatorScreen()),
           ),
           const SizedBox(height: 12),
           const ToolsGuide(),
@@ -171,6 +181,11 @@ class _ToolsGuideState extends State<ToolsGuide> {
             'Interval timers: work and rest rounds, e.g. Tabata or EMOM. Tap the play button to start, ⋯ to edit.',
             'Sounds: 2 high beeps = work, 1 low beep = rest, short ticks = last 3 seconds, 3 high beeps = done.',
             '"New timer" builds your own (any number of steps and rounds).',
+            'Your interval timers are also in the exercise list (type "Timers"): add one to a workout and start it there.',
+          ]),
+          section(Icons.fitness_center, 'Plate calculator', const [
+            'Type the weight you want and pick your bar – it shows the plates for each side.',
+            'Switch off plates your gym doesn\'t have; the bar is remembered for each exercise.',
           ]),
           section(Icons.lightbulb_outline, 'Good to know', const [
             'Rest between sets runs inside a workout – it ends with a ding.',

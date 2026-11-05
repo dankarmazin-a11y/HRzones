@@ -102,6 +102,45 @@ class IntervalPresetRepository {
 
   final AppDatabase db;
 
+  /// Called when the matching exercise rows changed (to clear caches).
+  void Function()? onExercisesChanged;
+
+  Future<IntervalPreset?> byId(String id) =>
+      (db.select(db.intervalPresets)..where((p) => p.id.equals(id))).getSingleOrNull();
+
+  /// Every preset also exists as an exercise (category "interval") so it can
+  /// be added to workouts. Creates/updates those rows; hides the ones whose
+  /// preset was deleted (old workouts still show them).
+  Future<void> syncExercises() async {
+    final presets = await db.select(db.intervalPresets).get();
+    final ids = {for (final p in presets) '$intervalExercisePrefix${p.id}'};
+    for (final p in presets) {
+      await _upsertExercise(p.id, p.name, p.rounds, decodeSegments(p.segmentsJson));
+    }
+    await (db.update(db.exercises)..where((e) => e.category.equals('interval') & e.id.isNotIn(ids))).write(
+      const ExercisesCompanion(hidden: Value(true)),
+    );
+    onExercisesChanged?.call();
+  }
+
+  Future<void> _upsertExercise(String presetId, String name, int rounds, List<IntervalSegment> segments) async {
+    final parts = segments.map((s) => '${s.label} ${s.seconds} s').join(' · ');
+    await db
+        .into(db.exercises)
+        .insertOnConflictUpdate(
+          ExercisesCompanion.insert(
+            id: Value('$intervalExercisePrefix$presetId'),
+            name: name,
+            primaryMuscle: 'full body',
+            category: const Value('interval'),
+            trackingType: TrackingType.duration,
+            instructions: Value(rounds > 1 ? '$rounds rounds of: $parts' : parts),
+            hidden: const Value(false),
+            updatedAt: Value(DateTime.now()),
+          ),
+        );
+  }
+
   Stream<List<IntervalPreset>> watchAll() => (db.select(
     db.intervalPresets,
   )..orderBy([(p) => OrderingTerm.asc(p.position), (p) => OrderingTerm.asc(p.name)])).watch();
@@ -135,10 +174,19 @@ class IntervalPresetRepository {
             updatedAt: Value(DateTime.now()),
           ),
         );
+    await _upsertExercise(presetId, name, rounds, segments);
+    onExercisesChanged?.call();
     return presetId;
   }
 
-  Future<void> delete(String id) => (db.delete(db.intervalPresets)..where((p) => p.id.equals(id))).go();
+  Future<void> delete(String id) async {
+    await (db.delete(db.intervalPresets)..where((p) => p.id.equals(id))).go();
+    // Keep the exercise for old workouts, but take it out of the list.
+    await (db.update(
+      db.exercises,
+    )..where((e) => e.id.equals('$intervalExercisePrefix$id'))).write(const ExercisesCompanion(hidden: Value(true)));
+    onExercisesChanged?.call();
+  }
 }
 
 extension _RawSettings on AppDatabase {

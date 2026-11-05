@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
+import '../beep/sounds.dart';
 import '../data/database.dart';
 import '../data/template_repository.dart';
 import '../data/workout_repository.dart';
@@ -9,8 +11,10 @@ import '../data/exercise_repository.dart';
 import '../hr/hr_monitor.dart';
 import '../data/preset_repository.dart';
 import '../hr/zones.dart';
+import '../notify/rest_notifier.dart';
 
 import 'active_workout.dart';
+import 'interval_runner.dart';
 import 'training_place.dart';
 import 'stats.dart';
 
@@ -39,7 +43,9 @@ class WorkoutSummary {
   ];
 
   double get volume => totalVolume(sets);
-  int get setCount => sets.length;
+
+  /// A left + right pair counts as one set.
+  int get setCount => workout.exercises.expand((e) => e.sets).where((s) => s.done && s.side != Side.right).length;
 
   /// Working sets per primary muscle (stretching rows count for their stretch).
   Map<String, int> get setsPerMuscle {
@@ -79,7 +85,11 @@ class WorkoutSummary {
     return WorkoutSummary(
       workout: w,
       endedAt: endedAt,
-      records: findRecords(current: summary.sets, history: history),
+      // Interval timers aren't lifts: no records for them.
+      records: findRecords(
+        current: summary.sets.where((s) => !s.exerciseId.startsWith(intervalExercisePrefix)).toList(),
+        history: history,
+      ),
       avgHr: avgHr,
       maxHr: maxHr,
     );
@@ -90,7 +100,11 @@ enum TimerKind { rest, setTimer, countdown, stopwatch }
 
 /// The one timer shown in the bottom bar of a workout.
 class RunningTimer {
-  RunningTimer({required this.kind, required this.total, this.exercise, this.set}) : startedAt = DateTime.now();
+  RunningTimer({required this.kind, required this.total, this.exercise, this.set, this.switchSides = false})
+    : startedAt = DateTime.now();
+
+  /// The short pause between the left and right side of a timed hold.
+  final bool switchSides;
 
   final TimerKind kind;
   final DateTime startedAt;
@@ -115,8 +129,10 @@ class RunningTimer {
   bool get countsDown => kind != TimerKind.stopwatch;
 
   String get label => switch (kind) {
-    TimerKind.rest => 'Rest',
-    TimerKind.setTimer => set?.subExercise?.name ?? exercise?.exercise.name ?? 'Set',
+    TimerKind.rest => switchSides ? 'Switch sides' : 'Rest',
+    TimerKind.setTimer =>
+      '${set?.subExercise?.name ?? exercise?.exercise.name ?? 'Set'}'
+          '${set?.side == null ? '' : (set!.side == Side.left ? ' · left' : ' · right')}',
     TimerKind.countdown => 'Timer',
     TimerKind.stopwatch => 'Stopwatch',
   };
@@ -172,13 +188,19 @@ class WorkoutSession extends ChangeNotifier {
             supersetGroup: e.supersetGroup,
             subExerciseIds: [
               for (final s in e.sets)
-                if (s.subExercise != null) s.subExercise!.id,
+                if (s.subExercise != null && s.side != Side.right) s.subExercise!.id,
             ],
             sets: e.exercise.isStretchSession
                 ? const []
                 : [
                     for (final s in e.sets)
-                      TemplateSet(type: s.type, weightKg: s.weightKg, reps: s.reps, durationS: s.durationS),
+                      TemplateSet(
+                        type: s.type,
+                        weightKg: s.weightKg,
+                        reps: s.reps,
+                        durationS: s.durationS,
+                        side: s.side,
+                      ),
                   ],
           ),
       ],
@@ -256,6 +278,9 @@ class WorkoutSession extends ChangeNotifier {
   /// Length of a timed set when nothing was entered.
   static const defaultSetSeconds = 30;
 
+  /// Pause between the left and right side of a timed hold.
+  static const switchSidesSeconds = 5;
+
   ActiveWorkout? _active;
   ActiveWorkout? get active => _active;
 
@@ -274,24 +299,26 @@ class WorkoutSession extends ChangeNotifier {
     _active = await workouts.loadActive();
     final w = _active;
     if (w != null) {
-      // The app was closed mid-workout: keep the audio alive again and turn
-      // the workout's heart-rate alerts back on.
-      await _holdAudio();
+      // The app was closed mid-workout: turn the workout's heart-rate alerts
+      // back on.
       final preset = zonesEnabled ? await presets?.byId(w.hrPresetId) : null;
+      final last = w.lastChangeAt; // turning alerts back on is not a change
       if (preset != null && !hr.running) await applyPreset(preset);
+      w.lastChangeAt = last;
+      _syncIdleNotice();
     }
     notifyListeners();
   }
 
-  /// A live workout keeps the audio session running, so rest/set timers can
-  /// still beep (and the app keeps counting) with the screen locked.
+  /// While a workout timer runs, the audio session stays on, so the timer
+  /// keeps counting and can beep with the screen locked. Only then: a silent
+  /// running audio engine costs battery (the phone got warm in the first
+  /// real workout).
   Future<void> _holdAudio() => hr.beeper.start('workout');
 
   void _releaseAudio() {
-    // Give a final beep time to play before the audio may stop.
-    Future<void>.delayed(const Duration(seconds: 2), () {
-      if (_active == null) hr.beeper.stop('workout');
-    });
+    // Give a final beep/ding time to play before the audio stops.
+    if (_timer == null) hr.beeper.stop('workout', const Duration(seconds: 3));
   }
 
   int restFor(Exercise e) => e.isStretch ? stretchRestSeconds : defaultRestSeconds;
@@ -311,9 +338,85 @@ class WorkoutSession extends ChangeNotifier {
   /// Heart-rate presets (set by AppServices; null in some tests).
   HrPresetRepository? presets;
 
+  /// Interval timers (to run interval "exercises" inside a workout).
+  IntervalPresetRepository? intervals;
+
   /// Heart-rate zones switched on (Tools › Heart-rate zones). Off: presets
   /// are never applied, so monitoring/beeps don't start by themselves.
   bool zonesEnabled = true;
+
+  /// End of rest: a light vibration (setting `restVibrate`, default on) and,
+  /// if turned on, a notification for when the phone is locked / in another
+  /// app (setting `restNotify`).
+  bool vibrateRestOver = true;
+  bool notifyRestOver = false;
+  RestNotifier? restNotifier;
+
+  /// How many times rest ended with a vibration (for tests).
+  int restVibrations = 0;
+
+  void _restOver() {
+    if (!vibrateRestOver) return;
+    restVibrations++;
+    try {
+      HapticFeedback.lightImpact().catchError((Object _) {});
+    } catch (_) {
+      // No vibration available (tests).
+    }
+  }
+
+  /// Schedules (or cancels) the "Rest is over" notification for the timer
+  /// that is running now.
+  void _syncRestNotice() {
+    final t = _timer;
+    final n = restNotifier;
+    if (n == null) return;
+    if (t != null && t.kind == TimerKind.rest && !t.switchSides && notifyRestOver && !editMode) {
+      n.scheduleRestOver(Duration(milliseconds: t.remaining * 1000));
+    } else {
+      n.cancel();
+    }
+  }
+
+  /// A workout with no change for this long counts as forgotten: a
+  /// notification ("Still working out?") and, back in the app, a question.
+  static const idleAfter = Duration(minutes: 90);
+
+  /// Setting `idleReminder` (default on).
+  bool idleReminder = true;
+
+  String get idleReminderText => '${idleAfter.inMinutes} minutes';
+
+  /// How long the running workout has had no change (zero while a timer runs).
+  Duration get idleFor {
+    final w = _active;
+    if (w == null || editMode || _timer != null) return Duration.zero;
+    return DateTime.now().difference(w.lastChangeAt);
+  }
+
+  /// "Keep going": the workout counts as active again.
+  Future<void> keepGoing() async {
+    _active?.lastChangeAt = DateTime.now();
+    await _saveNow();
+  }
+
+  /// (Re)schedules the "Still working out?" notification for [idleAfter]
+  /// after the last change.
+  void _syncIdleNotice() {
+    final n = restNotifier;
+    final w = _active;
+    if (n == null || editMode) return;
+    if (w == null || !idleReminder) {
+      n.cancelIdle();
+      return;
+    }
+    final due = w.lastChangeAt.add(idleAfter).difference(DateTime.now());
+    if (due > Duration.zero) {
+      n.scheduleIdle(due, workout: w.name);
+    } else {
+      n.cancelIdle(); // already overdue: the app asks on screen
+    }
+  }
 
   /// Hybrid trainers pick the place when a workout starts: gym, home or
   /// outdoors. Filters the exercise list during that workout.
@@ -327,7 +430,6 @@ class WorkoutSession extends ChangeNotifier {
   Future<void> startEmpty({HrPreset? preset}) async {
     _active = ActiveWorkout(name: _defaultName());
     hr.resetSession();
-    await _holdAudio();
     await applyPreset(preset);
     await _saveNow();
     notifyListeners();
@@ -336,7 +438,6 @@ class WorkoutSession extends ChangeNotifier {
   Future<void> startFromTemplate(TemplateWithSlots t) async {
     _active = await _buildFromTemplate(t, name: t.template.name);
     hr.resetSession();
-    await _holdAudio();
     // The template's heart-rate preset applies automatically.
     final preset = zonesEnabled ? await presets?.byId(t.template.hrPresetId) : null;
     if (preset != null) await applyPreset(preset);
@@ -370,7 +471,7 @@ class WorkoutSession extends ChangeNotifier {
       if (ex.isStretchSession) {
         for (final id in slot.subExerciseIds) {
           final stretch = await exercises.byId(id);
-          if (stretch != null) le.sets.add(LoggedSet(durationS: defaultSetSeconds)..subExercise = stretch);
+          if (stretch != null) _addStretchRows(le, [stretch]);
         }
         w.exercises.add(le);
         continue;
@@ -378,7 +479,9 @@ class WorkoutSession extends ChangeNotifier {
       le.previous = await workouts.previousSets(ex.id);
       if (slot.sets.isNotEmpty) {
         for (final ts in slot.sets) {
-          le.sets.add(LoggedSet(type: ts.type, weightKg: ts.weightKg, reps: ts.reps, durationS: ts.durationS));
+          le.sets.add(
+            LoggedSet(type: ts.type, weightKg: ts.weightKg, reps: ts.reps, durationS: ts.durationS)..side = ts.side,
+          );
         }
       } else {
         for (var i = 0; i < slot.targetSets; i++) {
@@ -386,10 +489,56 @@ class WorkoutSession extends ChangeNotifier {
           le.sets.add(LoggedSet(type: prev?.setType ?? SetType.normal));
         }
       }
+      _matchSides(le);
       w.exercises.add(le);
     }
     return w;
   }
+
+  /// Starts a new workout now with the exercises and values of an old one
+  /// (as targets, not ticked).
+  Future<bool> startFromWorkout(String workoutId) async {
+    final old = await workouts.loadById(workoutId);
+    if (old == null) return false;
+    final w = ActiveWorkout(name: old.name)..hrPresetId = zonesEnabled ? old.hrPresetId : null;
+    for (final e in old.exercises) {
+      final le = LoggedExercise(exercise: e.exercise, restSeconds: e.restSeconds, supersetGroup: e.supersetGroup)
+        ..notes = e.notes;
+      le.previous = e.exercise.isStretchSession ? const [] : await workouts.previousSets(e.exercise.id);
+      for (final s in e.sets) {
+        le.sets.add(s.copy());
+      }
+      w.exercises.add(le);
+    }
+    _active = w;
+    hr.resetSession();
+    final preset = await presets?.byId(w.hrPresetId);
+    if (preset != null) await applyPreset(preset);
+    await _saveNow();
+    notifyListeners();
+    return true;
+  }
+
+  /// Template slots for an old workout (Save as template).
+  static List<TemplateSlot> slotsFrom(ActiveWorkout w) => [
+    for (final e in w.exercises)
+      TemplateSlot(
+        exerciseId: e.exercise.id,
+        targetSets: e.sets.length,
+        restSeconds: e.restSeconds,
+        supersetGroup: e.supersetGroup,
+        subExerciseIds: [
+          for (final s in e.sets)
+            if (s.subExercise != null && s.side != Side.right) s.subExercise!.id,
+        ],
+        sets: e.exercise.isStretchSession
+            ? const []
+            : [
+                for (final s in e.sets)
+                  TemplateSet(type: s.type, weightKg: s.weightKg, reps: s.reps, durationS: s.durationS, side: s.side),
+              ],
+      ),
+  ];
 
   static String _defaultName() {
     final h = DateTime.now().hour;
@@ -417,11 +566,70 @@ class WorkoutSession extends ChangeNotifier {
     }
     for (final ex in list) {
       final le = LoggedExercise(exercise: ex, restSeconds: restFor(ex));
+      if (ex.isInterval) {
+        // One round of the interval timer; ▶ runs it.
+        final p = await intervals?.byId(ex.intervalPresetId!);
+        final secs = p == null ? null : totalSeconds(decodeSegments(p.segmentsJson), p.rounds);
+        le.sets.add(LoggedSet(durationS: secs));
+        w.exercises.add(le);
+        continue;
+      }
       le.previous = await workouts.previousSets(ex.id, excludeWorkoutId: w.id);
       le.sets.add(LoggedSet(type: le.previousFor(0)?.setType ?? SetType.normal));
+      _matchSides(le);
       w.exercises.add(le);
     }
     _changed();
+  }
+
+  /// One-sided exercises log every set as a left + right pair; others don't
+  /// split. Converts the sets of [e] to match its exercise's setting.
+  void _matchSides(LoggedExercise e) {
+    if (e.exercise.isStretchSession) return;
+    final split = e.exercise.unilateral;
+    final hasSides = e.sets.any((s) => s.side != null);
+    if (split && !hasSides) {
+      final out = <LoggedSet>[];
+      for (final s in e.sets) {
+        out
+          ..add(s..side = Side.left)
+          ..add(s.copy(side: Side.right)..completedAt = s.completedAt);
+      }
+      e.sets
+        ..clear()
+        ..addAll(out);
+    } else if (!split && hasSides) {
+      e.sets.removeWhere((s) => s.side == Side.right);
+      for (final s in e.sets) {
+        s.side = null;
+      }
+    }
+  }
+
+  /// "Each side" on/off for an exercise (saved for future workouts too). Its
+  /// sets become left/right pairs, or single sets again.
+  Future<void> setUnilateral(LoggedExercise e, bool on) async {
+    e.exercise = await exercises.setUnilateral(e.exercise.id, on);
+    _matchSides(e);
+    _changed();
+  }
+
+  /// Writes the permanent note of [e]'s exercise (dated today).
+  Future<void> setExerciseNote(LoggedExercise e, String text) async {
+    e.exercise = await exercises.setNote(e.exercise.id, text);
+    e.noteHidden = false;
+    notifyListeners();
+  }
+
+  /// Note on [e] for this workout only.
+  void setWorkoutNote(LoggedExercise e, String text) {
+    e.notes = text.trim();
+    _changed();
+  }
+
+  void hideNote(LoggedExercise e) {
+    e.noteHidden = true;
+    notifyListeners();
   }
 
   /// Adds stretches as rows of a "Stretching" card.
@@ -432,7 +640,15 @@ class WorkoutSession extends ChangeNotifier {
 
   void _addStretchRows(LoggedExercise card, List<Exercise> stretches) {
     for (final s in stretches) {
-      card.sets.add(LoggedSet(durationS: defaultSetSeconds)..subExercise = s);
+      final row = LoggedSet(durationS: defaultSetSeconds)..subExercise = s;
+      if (s.unilateral) {
+        // One stretch, both sides: left then right.
+        card.sets
+          ..add(row..side = Side.left)
+          ..add(row.copy(side: Side.right));
+      } else {
+        card.sets.add(row);
+      }
     }
   }
 
@@ -487,6 +703,16 @@ class WorkoutSession extends ChangeNotifier {
 
   void addSet(LoggedExercise e) {
     final last = e.sets.lastOrNull;
+    if (last?.side != null && !e.exercise.isStretchSession) {
+      // One-sided: add another left + right pair like the last one.
+      final left = e.sets.lastWhere((s) => s.side == Side.left, orElse: () => last!);
+      final type = last!.type == SetType.warmup ? SetType.normal : last.type;
+      e.sets
+        ..add(left.copy(side: Side.left)..type = type)
+        ..add(last.copy(side: Side.right)..type = type);
+      _changed();
+      return;
+    }
     e.sets.add(
       LoggedSet(
         type: last?.type == SetType.warmup ? SetType.normal : (last?.type ?? SetType.normal),
@@ -499,8 +725,17 @@ class WorkoutSession extends ChangeNotifier {
   }
 
   void removeSet(LoggedExercise e, LoggedSet s) {
-    if (_timer?.set == s) stopTimer();
-    e.sets.remove(s);
+    // A side never stays alone: removing left or right removes the pair.
+    final i = e.sets.indexOf(s);
+    final partner = switch (s.side) {
+      Side.left when i + 1 < e.sets.length && e.sets[i + 1].side == Side.right => e.sets[i + 1],
+      Side.right when i > 0 && e.sets[i - 1].side == Side.left => e.sets[i - 1],
+      _ => null,
+    };
+    for (final x in [s, ?partner]) {
+      if (_timer?.set == x) stopTimer();
+      e.sets.remove(x);
+    }
     _changed();
   }
 
@@ -542,9 +777,44 @@ class WorkoutSession extends ChangeNotifier {
     _changed();
   }
 
+  /// Tap order of the set types: number → F → W → D → number. (The stored
+  /// enum order is different and must not change.)
+  static const setTypeCycle = [SetType.normal, SetType.failure, SetType.warmup, SetType.drop];
+
   void cycleSetType(LoggedSet s) {
-    s.type = SetType.values[(s.type.index + 1) % SetType.values.length];
+    s.type = setTypeCycle[(setTypeCycle.indexOf(s.type) + 1) % setTypeCycle.length];
     _changed();
+  }
+
+  void setSetType(LoggedSet s, SetType type) {
+    s.type = type;
+    _changed();
+  }
+
+  /// True when the done set [s] beats everything logged for its exercise
+  /// before (heavier, more reps or a longer hold). Never on an exercise's
+  /// first workout – same rule as the summary's records.
+  Future<bool> isRecord(LoggedExercise e, LoggedSet s) async {
+    final w = _active;
+    if (w == null || !s.done || s.type == SetType.warmup) return false;
+    final id = (s.subExercise ?? e.exercise).id;
+    final history = await workouts.history([id], excludeWorkoutId: w.id);
+    if (history.isEmpty) return false;
+    final working = history.where((h) => h.type != SetType.warmup);
+    double best(double? Function(SetStat) f) => working.map(f).whereType<double>().fold(0.0, (a, b) => a > b ? a : b);
+    switch (e.exercise.trackingType) {
+      case TrackingType.duration:
+        return (s.durationS ?? 0) > best((h) => h.durationS?.toDouble());
+      case TrackingType.bodyweightReps || TrackingType.distance:
+        return (s.reps ?? 0) > best((h) => h.reps?.toDouble());
+      case TrackingType.weightReps:
+        final kg = s.weightKg ?? 0;
+        final heavier = kg > 0 && kg > best((h) => h.weightKg);
+        final e1rm = (s.reps ?? 0) > 0 ? estimated1RM(kg, s.reps!) : 0.0;
+        final stronger =
+            e1rm > 0 && e1rm > best((h) => (h.reps ?? 0) > 0 ? estimated1RM(h.weightKg ?? 0, h.reps!) : null);
+        return heavier || stronger;
+    }
   }
 
   /// Ticks a set done (fills empty values from the previous workout) and
@@ -580,6 +850,16 @@ class WorkoutSession extends ChangeNotifier {
       if (chain) _startNextTimedSet(e);
       return;
     }
+    // Left side done: the right side comes next – no rest. Timed holds get a
+    // short "switch sides" pause, then the right side starts by itself.
+    final idx = e.sets.indexOf(s);
+    if (s.side == Side.left && idx + 1 < e.sets.length && e.sets[idx + 1].side == Side.right) {
+      if (chain) {
+        _start(RunningTimer(kind: TimerKind.rest, total: switchSidesSeconds, switchSides: true)..chainNext = true);
+        _restChainFrom = e;
+      }
+      return;
+    }
     if (e.restSeconds > 0) {
       _start(RunningTimer(kind: TimerKind.rest, total: e.restSeconds)..chainNext = chain);
       _restChainFrom = chain ? e : null;
@@ -592,6 +872,14 @@ class WorkoutSession extends ChangeNotifier {
 
   void setRestSeconds(LoggedExercise e, int seconds) {
     e.restSeconds = seconds;
+    _changed();
+  }
+
+  /// An interval timer in the workout ran to the end: the round counts as
+  /// done and the normal rest starts.
+  void completeInterval(LoggedExercise e, LoggedSet s, {required int seconds}) {
+    s.durationS = seconds;
+    _complete(e, s);
     _changed();
   }
 
@@ -622,6 +910,8 @@ class WorkoutSession extends ChangeNotifier {
     final t = _timer;
     _timer = null;
     _ticker?.cancel();
+    _releaseAudio();
+    _syncRestNotice();
     _restChainFrom = null;
     if (t != null && t.kind == TimerKind.setTimer && t.exercise != null && t.set != null) {
       final held = t.elapsed;
@@ -641,6 +931,7 @@ class WorkoutSession extends ChangeNotifier {
     final t = _timer;
     if (t == null || !t.countsDown) return;
     t.total = (t.total + delta).clamp(1, 3600);
+    _syncRestNotice();
     notifyListeners();
   }
 
@@ -648,7 +939,9 @@ class WorkoutSession extends ChangeNotifier {
 
   void _start(RunningTimer t) {
     if (editMode) return; // no timers while editing a past workout
+    _holdAudio();
     _timer = t;
+    _syncRestNotice();
     _ticker?.cancel();
     _ticker = Timer.periodic(const Duration(milliseconds: 250), (_) => _tick());
     notifyListeners();
@@ -674,21 +967,24 @@ class WorkoutSession extends ChangeNotifier {
     {
       _ticker?.cancel();
       _timer = null;
+      _releaseAudio(); // kept if the next timer starts right away
       switch (t.kind) {
         case TimerKind.setTimer:
-          hr.beeper.beep(frequency: 880, count: 2);
+          hr.beeper.play(SoundEvent.setTimerOver);
           if (t.exercise != null && t.set != null && _active?.exercises.contains(t.exercise) == true) {
             _complete(t.exercise!, t.set!, chain: true);
             _changed();
           }
         case TimerKind.rest:
-          hr.beeper.ding(); // rest is over – a bell, not a beep
+          // Rest is over – a bell, not a beep. "Switch sides" gets a short beep.
+          hr.beeper.play(t.switchSides ? SoundEvent.switchSides : SoundEvent.restOver);
+          if (!t.switchSides) _restOver();
 
           final from = _restChainFrom;
           _restChainFrom = null;
           if (t.chainNext && from != null) _startNextTimedSet(from);
         case TimerKind.countdown:
-          hr.beeper.beep(frequency: 880, count: 3);
+          hr.beeper.play(SoundEvent.countdownOver);
         case TimerKind.stopwatch:
           break;
       }
@@ -708,7 +1004,8 @@ class WorkoutSession extends ChangeNotifier {
     if (list == null || !list.contains(e)) return null;
     final candidates = [e, if (list.indexOf(e) + 1 < list.length) list[list.indexOf(e) + 1]];
     for (final x in candidates) {
-      if (!x.exercise.isTimed) continue;
+      // Interval timers are started by hand (▶ opens the full-screen timer).
+      if (!x.exercise.isTimed || x.exercise.isInterval) continue;
       final next = x.sets.where((s) => !s.done && s != skip).firstOrNull;
       if (next != null) return (x, next);
     }
@@ -771,6 +1068,7 @@ class WorkoutSession extends ChangeNotifier {
   Future<WorkoutSummary> _finish(ActiveWorkout w, DateTime? endedAt) async {
     _timer = null;
     _ticker?.cancel();
+    _syncRestNotice();
     for (final e in w.exercises) {
       e.sets.removeWhere((s) => !s.done);
     }
@@ -781,6 +1079,7 @@ class WorkoutSession extends ChangeNotifier {
     await workouts.save(w, endedAt: end, avgHr: avg, maxHr: max);
     final summary = await WorkoutSummary.build(workouts, w, end, avgHr: avg, maxHr: max);
     _active = null;
+    restNotifier?.cancelIdle();
     _releaseAudio();
     notifyListeners();
     return summary;
@@ -798,9 +1097,11 @@ class WorkoutSession extends ChangeNotifier {
     }
     _timer = null;
     _ticker?.cancel();
+    _syncRestNotice();
     _saveTimer?.cancel();
     await workouts.delete(w.id);
     _active = null;
+    restNotifier?.cancelIdle();
     _releaseAudio();
     notifyListeners();
   }
@@ -811,6 +1112,7 @@ class WorkoutSession extends ChangeNotifier {
       if (notify) notifyListeners();
       return;
     }
+    _active?.lastChangeAt = DateTime.now();
     _saveTimer?.cancel();
     _saveTimer = Timer(const Duration(milliseconds: 400), _saveNow);
     if (notify) notifyListeners();
@@ -819,6 +1121,7 @@ class WorkoutSession extends ChangeNotifier {
   Future<void> _saveNow() async {
     final w = _active;
     if (w != null) await workouts.save(w);
+    _syncIdleNotice(); // debounced like the save: not on every keystroke
   }
 
   /// Saves pending changes immediately (e.g. in tests or when backgrounding).

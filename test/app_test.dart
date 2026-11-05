@@ -73,6 +73,9 @@ void main() {
     await tester.tap(find.text('Skip'));
     await tester.tap(find.text('Finish'));
     await settle(tester);
+    expect(find.text('All sets done – nice work.'), findsOneWidget); // always asked
+    await tester.tap(find.byKey(const Key('confirmFinish')));
+    await settle(tester);
     await settle(tester);
     expect(find.text('Workout complete'), findsOneWidget);
     expect(find.text('480 kg'), findsOneWidget);
@@ -138,6 +141,7 @@ void main() {
   testWidgets('rest bar grows on tap; stretch timer opens full screen', (tester) async {
     final s = (await tester.runAsync(testServices))!;
     await tester.runAsync(() async {
+      await s.exercises.setUnilateral('Hamstring_Stretch', false);
       await s.session.startEmpty();
       await s.session.addExercises([(await s.exercises.byId('Hamstring_Stretch'))!]);
     });

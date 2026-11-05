@@ -85,9 +85,10 @@ void main() {
 
     test('expands rounds', () {
       final steps = expandSegments(tabata, 8);
-      expect(steps.length, 16);
+      expect(steps.length, 15); // the final rest is dropped
+      expect(steps.last.work, isTrue);
       expect(steps.last.round, 8);
-      expect(totalSeconds(tabata, 8), 240);
+      expect(totalSeconds(tabata, 8), 230);
     });
 
     test('runs through the steps with beeps', () {
@@ -96,7 +97,7 @@ void main() {
       final t0 = DateTime(2026, 1, 1);
       r.begin(t0);
       expect(r.gettingReady, isTrue);
-      expect(r.totalRemaining, 3 + 60);
+      expect(r.totalRemaining, 3 + 50);
       DateTime at(double s) => t0.add(Duration(milliseconds: (s * 1000).round()));
       for (var ms = 100; ms <= 3100; ms += 100) {
         r.tick(at(ms / 1000));

@@ -14,9 +14,18 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
   private var volume: Float = 0.7
   /// True between "start" and "stop": the app wants the audio kept alive.
   private var wanted = false
+  /// Bumped by every start, so a delayed stop knows it is outdated. (A
+  /// single sound doesn't bump it: the delay is long enough for any sound,
+  /// and the engine must not stay on forever.)
+  private var generation = 0
 
   override init() {
     super.init()
+    // Before anything touches audio: "play along with other apps". With the
+    // default category, the first sound session stopped the user's music
+    // (Spotify) on the first launch. The session is only *activated* when a
+    // sound actually needs to play (start()).
+    try? AVAudioSession.sharedInstance().setCategory(.playback, options: [.mixWithOthers])
     engine.attach(player)
     engine.connect(player, to: engine.mainMixerNode, format: format)
     // iOS stops the engine on a phone call / Siri, or when the output changes
@@ -63,7 +72,17 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
         try start()
         result(nil)
       case "stop":
-        stop()
+        let afterMs = (args?["afterMs"] as? NSNumber)?.intValue ?? 0
+        if afterMs > 0 {
+          // Let the last sound finish; cancelled if anything starts again.
+          let g = generation
+          DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(afterMs)) { [weak self] in
+            guard let self, self.generation == g else { return }
+            self.stop()
+          }
+        } else {
+          stop()
+        }
         result(nil)
       case "beep":
         let frequency = (args?["frequency"] as? NSNumber)?.doubleValue ?? 1000
@@ -72,6 +91,11 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
         result(nil)
       case "ding":
         try play(makeDing())
+        result(nil)
+      case "sound":
+        let name = args?["name"] as? String ?? "ding"
+        let count = max(1, (args?["count"] as? NSNumber)?.intValue ?? 1)
+        try play(repeated(makeSound(name), count: count))
         result(nil)
       case "setVolume":
         volume = Float((args?["volume"] as? NSNumber)?.doubleValue ?? 0.7)
@@ -85,6 +109,7 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
   }
 
   private func start() throws {
+    generation += 1
     wanted = true
     let session = AVAudioSession.sharedInstance()
     try session.setCategory(.playback, options: [.mixWithOthers])
@@ -117,6 +142,92 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
     player.stop()  // drops anything still scheduled
     player.scheduleBuffer(buffer, completionHandler: nil)
     player.play()
+  }
+
+  /// The sounds the user can pick in Settings › Sounds (all generated).
+  private func makeSound(_ name: String) -> AVAudioPCMBuffer {
+    switch name {
+    case "chime":
+      // Two bell notes going up (E6 → A6).
+      return concat([makeBell(base: 1318.5, length: 0.35), makeBell(base: 1760, length: 0.6)], gap: 0)
+    case "click":
+      // Short wooden knock: high sine with a very fast decay.
+      return synth(length: 0.08) { (t: Double) -> Double in
+        let a: Double = sin(2 * Double.pi * 1900 * t) * exp(-60 * t)
+        let b: Double = sin(2 * Double.pi * 950 * t) * 0.4 * exp(-45 * t)
+        return a + b
+      }
+    case "buzz":
+      // Low, harsh buzzer (square wave).
+      return synth(length: 0.35) { (t: Double) -> Double in
+        let square: Double = sin(2 * Double.pi * 220 * t) >= 0 ? 0.45 : -0.45
+        let fade: Double = min(1.0, (0.35 - t) * 40)
+        return square * fade
+      }
+    case "whistle":
+      // Rising whistle, like a coach's whistle.
+      return synth(length: 0.35) { (t: Double) -> Double in
+        let f: Double = 1700 + 1100 * (t / 0.35)
+        let attack: Double = min(1.0, t * 80)
+        let release: Double = min(1.0, (0.35 - t) * 30)
+        return sin(2 * Double.pi * f * t) * 0.6 * attack * release
+      }
+    default:
+      return makeDing()
+    }
+  }
+
+  /// A buffer of [length] seconds filled by [f] (time in seconds → sample).
+  private func synth(length: Double, _ f: (Double) -> Double) -> AVAudioPCMBuffer {
+    let sr = format.sampleRate
+    let total = max(1, Int(length * sr))
+    let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(total))!
+    buffer.frameLength = AVAudioFrameCount(total)
+    let data = buffer.floatChannelData![0]
+    for i in 0..<total {
+      data[i] = Float(f(Double(i) / sr)) * volume
+    }
+    return buffer
+  }
+
+  private func makeBell(base: Double, length: Double) -> AVAudioPCMBuffer {
+    synth(length: length) { (t: Double) -> Double in
+      let partials: [(Double, Double, Double)] = [(1.0, 0.6, 4.0), (2.76, 0.25, 7.0), (5.4, 0.1, 10.0)]
+      var v = 0.0
+      for p in partials {
+        let wave: Double = sin(2 * Double.pi * base * p.0 * t)
+        v += wave * p.1 * exp(-p.2 * t)
+      }
+      return v * min(1.0, t / 0.004)
+    }
+  }
+
+  /// [buffers] one after another with [gap] seconds of silence between.
+  private func concat(_ buffers: [AVAudioPCMBuffer], gap: Double) -> AVAudioPCMBuffer {
+    let gapFrames = Int(gap * format.sampleRate)
+    let total = buffers.reduce(0) { $0 + Int($1.frameLength) } + gapFrames * max(0, buffers.count - 1)
+    let out = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(max(1, total)))!
+    out.frameLength = AVAudioFrameCount(max(1, total))
+    let dst = out.floatChannelData![0]
+    var pos = 0
+    for (i, b) in buffers.enumerated() {
+      let src = b.floatChannelData![0]
+      for j in 0..<Int(b.frameLength) {
+        dst[pos + j] = src[j]
+      }
+      pos += Int(b.frameLength)
+      if i < buffers.count - 1 {
+        for j in 0..<gapFrames {
+          dst[pos + j] = 0
+        }
+        pos += gapFrames
+      }
+    }
+    return out
+  }
+
+  private func repeated(_ buffer: AVAudioPCMBuffer, count: Int) -> AVAudioPCMBuffer {
+    count <= 1 ? buffer : concat(Array(repeating: buffer, count: count), gap: 0.12)
   }
 
   /// Bell-like "ding": a few inharmonic partials with a quick attack and a

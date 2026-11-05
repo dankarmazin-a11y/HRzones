@@ -55,6 +55,12 @@ const _v5Changes = [
   'DROP TABLE hr_presets',
   'DROP TABLE interval_presets',
 ];
+const _v6Columns = [
+  'exercises DROP COLUMN unilateral',
+  'exercises DROP COLUMN note',
+  'exercises DROP COLUMN note_at',
+  'workout_sets DROP COLUMN side',
+];
 const _v4Changes = [
   'exercises DROP COLUMN hidden',
   'template_exercises DROP COLUMN sets_json',
@@ -64,11 +70,12 @@ const _v4Changes = [
 
 void main() {
   final cases = [
-    ('v1 database is upgraded', 1, [..._v2Columns, ..._v3Columns, ..._v4Changes, ..._v5Changes]),
-    ('v2 database is upgraded', 2, [..._v3Columns, ..._v4Changes, ..._v5Changes]),
-    ('v3 database is upgraded', 3, [..._v4Changes, ..._v5Changes]),
-    ('v4 database is upgraded', 4, _v5Changes),
-    ('missing column/table is repaired', 5, [..._v2Columns, 'DROP TABLE goals']),
+    ('v1 database is upgraded', 1, [..._v2Columns, ..._v3Columns, ..._v4Changes, ..._v5Changes, ..._v6Columns]),
+    ('v2 database is upgraded', 2, [..._v3Columns, ..._v4Changes, ..._v5Changes, ..._v6Columns]),
+    ('v3 database is upgraded', 3, [..._v4Changes, ..._v5Changes, ..._v6Columns]),
+    ('v4 database is upgraded', 4, [..._v5Changes, ..._v6Columns]),
+    ('v5 database is upgraded', 5, _v6Columns),
+    ('missing column/table is repaired', 6, [..._v2Columns, 'DROP TABLE goals']),
   ];
   for (final (label, version, drop) in cases) {
     test(label, () async {
@@ -92,6 +99,12 @@ void main() {
       expect(await cols('templates'), contains('hr_preset_id'));
       expect(await cols('hr_presets'), contains('min_bpm'));
       expect(await cols('interval_presets'), contains('segments_json'));
+      expect(await cols('exercises'), containsAll(['unilateral', 'note', 'note_at']));
+      expect(await cols('workout_sets'), contains('side'));
+      if (version < 6) {
+        // Existing installs get the common one-sided exercises marked.
+        expect((await s.exercises.byId('Hamstring_Stretch'))!.unilateral, isTrue);
+      }
       expect((await s.exercises.all()).length, greaterThan(0));
       await s.close();
     });

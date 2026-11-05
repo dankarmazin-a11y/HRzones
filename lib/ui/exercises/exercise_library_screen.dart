@@ -164,7 +164,7 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
             ),
           _FilterRow(
             label: 'Type',
-            options: const ['strength', 'stretching', 'cardio'],
+            options: const ['strength', 'stretching', 'cardio', 'timers'],
             selected: _group?.name,
             onChanged: (v) {
               _group = v == null ? null : ExerciseGroup.values.byName(v);
