@@ -6,6 +6,7 @@ import '../../run/geo.dart';
 import '../../workout/stats.dart';
 import '../run/edit_run_screen.dart';
 import '../run/run_records.dart';
+import '../run/shoes.dart';
 import '../run/run_start.dart';
 import '../run/run_summary_screen.dart';
 import 'zones_screen.dart';
@@ -61,6 +62,8 @@ class RunScreen extends StatelessWidget {
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ZonesScreen())),
               ),
+              const SizedBox(height: 8),
+              const ShoesCard(),
               const SizedBox(height: 8),
               if (runs.isNotEmpty) ...[
                 _Totals(runs: runs),

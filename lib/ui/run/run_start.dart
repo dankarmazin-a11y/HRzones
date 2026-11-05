@@ -17,6 +17,7 @@ import '../screens/settings_screen.dart';
 import '../screens/workouts_screen.dart';
 import 'live_run_screen.dart';
 import 'pace_alert.dart';
+import '../../data/shoe_repository.dart';
 
 /// Start a run: the "Ready to run" sheet (heart-rate zone), location
 /// permission, a vibration, then the live run screen.
@@ -54,7 +55,7 @@ Future<void> startRun(BuildContext context) async {
     final preset = s.zonesEnabled.value ? choice.preset : null;
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => RunCountdownScreen(preset: preset, treadmill: choice.treadmill),
+        builder: (_) => RunCountdownScreen(preset: preset, treadmill: choice.treadmill, shoeId: choice.shoeId),
         fullscreenDialog: true,
       ),
     );
@@ -123,10 +124,11 @@ int runCountdownSeconds = 3;
 /// the run starts with a vibration and the live screen takes over. Tap ✕ to
 /// cancel, or "Start now" to skip the countdown.
 class RunCountdownScreen extends StatefulWidget {
-  const RunCountdownScreen({super.key, this.preset, this.treadmill = false});
+  const RunCountdownScreen({super.key, this.preset, this.treadmill = false, this.shoeId});
 
   final HrPreset? preset;
   final bool treadmill;
+  final String? shoeId;
 
   @override
   State<RunCountdownScreen> createState() => _RunCountdownScreenState();
@@ -173,7 +175,7 @@ class _RunCountdownScreenState extends State<RunCountdownScreen> {
     final s = Services.of(context);
     final nav = Navigator.of(context);
     s.hr.beeper.play(SoundEvent.intervalWork);
-    final access = await s.run.start(preset: widget.preset, treadmill: widget.treadmill);
+    final access = await s.run.start(preset: widget.preset, treadmill: widget.treadmill, shoeId: widget.shoeId);
     if (!mounted) return;
     if (access != LocationAccess.granted) {
       nav.pop();
@@ -242,10 +244,11 @@ class _RunCountdownScreenState extends State<RunCountdownScreen> {
 
 /// What the "Ready to run" sheet returns.
 class RunSetup {
-  const RunSetup({this.preset, this.treadmill = false});
+  const RunSetup({this.preset, this.treadmill = false, this.shoeId});
 
   final HrPreset? preset;
   final bool treadmill;
+  final String? shoeId;
 }
 
 /// Before a run: outdoor or treadmill, the heart-rate zone (or none), then
@@ -263,6 +266,8 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
   String? _selected;
   bool _loaded = false;
   bool _treadmill = false;
+  List<ShoeKm> _shoes = const [];
+  String? _shoeId;
 
   @override
   void didChangeDependencies() {
@@ -278,6 +283,9 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
     final presets = await s.presets.forUse(PresetUse.run);
     final last = initial ? await s.db.getSetting('runPresetId') : _selected;
     if (initial) _treadmill = await s.db.getSetting('runTreadmill') == '1';
+    final shoes = (await s.shoes.all()).where((x) => !x.shoe.retired).toList();
+    if (initial) _shoeId = shoes.where((x) => x.shoe.isDefault).firstOrNull?.shoe.id;
+    _shoes = shoes;
     if (!mounted) return;
     setState(() {
       _presets = presets;
@@ -374,6 +382,24 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
                   ),
               ],
               if (!_treadmill) const PaceAlertRow(),
+              if (_shoes.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    const Icon(Icons.directions_walk, size: 20),
+                    for (final x in _shoes)
+                      ChoiceChip(
+                        key: Key('runShoe_${x.shoe.id}'),
+                        label: Text(x.shoe.name),
+                        selected: _shoeId == x.shoe.id,
+                        onSelected: (on) => setState(() => _shoeId = on ? x.shoe.id : null),
+                      ),
+                  ],
+                ),
+              ],
               const RunVoiceSettings(compact: true),
               const SizedBox(height: 12),
               SizedBox(
@@ -387,6 +413,7 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
                     RunSetup(
                       preset: on ? _presets.where((p) => p.id == _selected).firstOrNull : null,
                       treadmill: _treadmill,
+                      shoeId: _shoeId,
                     ),
                   ),
                 ),

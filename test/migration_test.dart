@@ -65,6 +65,8 @@ const _v7Changes = ['DROP TABLE run_points', 'DROP TABLE runs'];
 const _v8Columns = ['runs DROP COLUMN bests_json'];
 const _v9Columns = ['goals DROP COLUMN distance_m'];
 const _v10Columns = ['runs DROP COLUMN kind', 'runs DROP COLUMN effort', 'runs DROP COLUMN weather'];
+const _v11Changes = ['runs DROP COLUMN shoe_id', 'DROP TABLE shoes'];
+const _shoes = ['DROP TABLE shoes'];
 const _v4Changes = [
   'exercises DROP COLUMN hidden',
   'template_exercises DROP COLUMN sets_json',
@@ -77,17 +79,22 @@ void main() {
     (
       'v1 database is upgraded',
       1,
-      [..._v2Columns, ..._v3Columns, ..._v4Changes, ..._v5Changes, ..._v6Columns, ..._v7Changes],
+      [..._v2Columns, ..._v3Columns, ..._v4Changes, ..._v5Changes, ..._v6Columns, ..._v7Changes, ..._shoes],
     ),
-    ('v2 database is upgraded', 2, [..._v3Columns, ..._v4Changes, ..._v5Changes, ..._v6Columns, ..._v7Changes]),
-    ('v3 database is upgraded', 3, [..._v4Changes, ..._v5Changes, ..._v6Columns, ..._v7Changes]),
-    ('v4 database is upgraded', 4, [..._v5Changes, ..._v6Columns, ..._v7Changes, ..._v9Columns]),
-    ('v5 database is upgraded', 5, [..._v6Columns, ..._v7Changes, ..._v9Columns]),
-    ('v6 database is upgraded', 6, [..._v7Changes, ..._v9Columns]),
-    ('v7 database is upgraded', 7, [..._v8Columns, ..._v9Columns, ..._v10Columns]),
-    ('v8 database is upgraded', 8, [..._v9Columns, ..._v10Columns]),
-    ('v9 database is upgraded', 9, _v10Columns),
-    ('missing column/table is repaired', 10, [..._v2Columns, 'DROP TABLE goals']),
+    (
+      'v2 database is upgraded',
+      2,
+      [..._v3Columns, ..._v4Changes, ..._v5Changes, ..._v6Columns, ..._v7Changes, ..._shoes],
+    ),
+    ('v3 database is upgraded', 3, [..._v4Changes, ..._v5Changes, ..._v6Columns, ..._v7Changes, ..._shoes]),
+    ('v4 database is upgraded', 4, [..._v5Changes, ..._v6Columns, ..._v7Changes, ..._v9Columns, ..._shoes]),
+    ('v5 database is upgraded', 5, [..._v6Columns, ..._v7Changes, ..._v9Columns, ..._shoes]),
+    ('v6 database is upgraded', 6, [..._v7Changes, ..._v9Columns, ..._shoes]),
+    ('v7 database is upgraded', 7, [..._v8Columns, ..._v9Columns, ..._v10Columns, ..._v11Changes]),
+    ('v8 database is upgraded', 8, [..._v9Columns, ..._v10Columns, ..._v11Changes]),
+    ('v9 database is upgraded', 9, [..._v10Columns, ..._v11Changes]),
+    ('v10 database is upgraded', 10, _v11Changes),
+    ('missing column/table is repaired', 11, [..._v2Columns, 'DROP TABLE goals']),
   ];
   for (final (label, version, drop) in cases) {
     test(label, () async {

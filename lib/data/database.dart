@@ -283,6 +283,27 @@ class Runs extends Table with SyncColumns {
   /// Weather tags, comma-separated ("sunny,windy").
   TextColumn get weather => text().nullable()();
 
+  /// The shoes worn (null = not set).
+  TextColumn get shoeId => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// Running shoes: km are counted from the runs they were worn on.
+class Shoes extends Table with SyncColumns {
+  TextColumn get name => text()();
+
+  /// Km the shoes already had when added.
+  RealColumn get startKm => real().withDefault(const Constant(0))();
+
+  /// Replace them at about this many km (reminder).
+  RealColumn get limitKm => real().withDefault(const Constant(700))();
+  BoolColumn get retired => boolean().withDefault(const Constant(false))();
+
+  /// Picked automatically for new runs.
+  BoolColumn get isDefault => boolean().withDefault(const Constant(false))();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -357,13 +378,14 @@ const defaultUnilateral = [
     IntervalPresets,
     Runs,
     RunPoints,
+    Shoes,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -411,6 +433,10 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(runs, runs.kind);
         await m.addColumn(runs, runs.effort);
         await m.addColumn(runs, runs.weather);
+      }
+      if (from < 11) {
+        if (from >= 7) await m.addColumn(runs, runs.shoeId);
+        await m.createTable(shoes);
       }
     },
     beforeOpen: (details) async {

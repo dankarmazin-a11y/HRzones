@@ -70,6 +70,7 @@ class RunRepository {
     int? avgHr,
     int? effort,
     String notes = '',
+    String? shoeId,
   }) async {
     final id = newId();
     await saveRun(
@@ -84,6 +85,7 @@ class RunRepository {
         effort: Value(effort),
         notes: Value(notes),
         bestsJson: const Value('{}'),
+        shoeId: Value(shoeId),
       ),
     );
     return id;

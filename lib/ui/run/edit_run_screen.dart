@@ -79,6 +79,7 @@ class _EditRunScreenState extends State<EditRunScreen> {
         distanceM: _km * 1000,
         kind: _kind,
         avgHr: _avgHr,
+        shoeId: (await s.shoes.defaultShoe())?.id,
       );
       await nav.pushReplacement(MaterialPageRoute(builder: (_) => RunSummaryScreen(runId: id)));
       return;
