@@ -10,6 +10,7 @@ import 'package:hrzones/hr/hr_monitor.dart';
 import 'package:hrzones/run/geo.dart';
 import 'package:hrzones/run/location_source.dart';
 import 'package:hrzones/run/run_session.dart';
+import 'package:hrzones/run/splits.dart';
 import 'package:hrzones/ui/run/run_map.dart';
 
 import 'app_test.dart' show settle, tearDownApp;
@@ -261,6 +262,9 @@ void main() {
     await settle(tester);
     expect(find.byKey(const Key('summaryDistance')), findsOneWidget);
     expect(find.text('1.20'), findsOneWidget);
+    await tester.scrollUntilVisible(find.byKey(const Key('split_2')), 200);
+    expect(find.byKey(const Key('split_1')), findsOneWidget);
+    expect(find.text('0.20'), findsOneWidget, reason: 'last partial km');
 
     await tester.pageBack();
     await settle(tester);
@@ -455,5 +459,47 @@ void main() {
       (lat: 2.2, lon: 1.0, segment: 1),
     ]);
     expect(segs.map((s) => s.length), [2, 3]);
+  });
+
+  group('splits', () {
+    SplitPoint pt(double metres, int s, {int segment = 0, int? hr}) {
+      final f = north(metres, s);
+      return (time: f.time, lat: f.lat, lon: f.lon, accuracy: 5.0, segment: segment, hr: hr);
+    }
+
+    test('one split per km with the moving time, last partial km', () {
+      // 1st km at 4 m/s (250 s), 2nd at 2.5 m/s (400 s), then 500 m at 5 m/s.
+      final pts = <SplitPoint>[];
+      for (var i = 0; i <= 250; i++) {
+        pts.add(pt(i * 4.0, i, hr: 150));
+      }
+      for (var i = 1; i <= 400; i++) {
+        pts.add(pt(1000 + i * 2.5, 250 + i, hr: 160));
+      }
+      for (var i = 1; i <= 100; i++) {
+        pts.add(pt(2000 + i * 5.0, 650 + i));
+      }
+      final splits = computeSplits(pts);
+      expect(splits, hasLength(3));
+      expect(splits[0].seconds, closeTo(250, 1.5));
+      expect(splits[0].pace, closeTo(250, 2));
+      expect(splits[0].avgHr, 150);
+      expect(splits[1].pace, closeTo(400, 2));
+      expect(splits[1].avgHr, 160);
+      expect(splits[2].partial, isTrue);
+      expect(splits[2].distanceM, closeTo(500, 2));
+      expect(splits[2].pace, closeTo(200, 2));
+    });
+
+    test('a pause does not count towards the split time', () {
+      final pts = <SplitPoint>[
+        for (var i = 0; i <= 100; i++) pt(i * 5.0, i), // 500 m in 100 s
+        // paused 10 minutes, then resumed 50 m further
+        for (var i = 0; i <= 100; i++) pt(550 + i * 5.0, 700 + i, segment: 1),
+      ];
+      final splits = computeSplits(pts);
+      expect(splits.first.distanceM, closeTo(1000, 1));
+      expect(splits.first.seconds, closeTo(200, 1.5), reason: '100 s + 100 s, not the 10-minute pause');
+    });
   });
 }
