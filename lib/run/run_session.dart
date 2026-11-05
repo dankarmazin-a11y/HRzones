@@ -84,6 +84,7 @@ class RunSession extends ChangeNotifier {
   DateTime? _endOverride;
   int _pausedMs = 0;
   String? _presetId;
+  String? _shoeId;
   int _segment = 0;
   final _tracker = DistanceTracker();
   final _route = <RoutePoint>[];
@@ -153,6 +154,9 @@ class RunSession extends ChangeNotifier {
   String? get runId => _id;
   DateTime? get startedAt => _startedAt;
   String? get presetId => _presetId;
+
+  /// The shoes worn on this run.
+  String? get shoeId => _shoeId;
   List<RoutePoint> get route => List.unmodifiable(_route);
   double get distanceM => _tracker.distanceM;
 
@@ -187,7 +191,7 @@ class RunSession extends ChangeNotifier {
 
   /// Starts recording. Asks for location permission first; returns what the
   /// phone answered (only [LocationAccess.granted] starts a run).
-  Future<LocationAccess> start({HrPreset? preset, bool treadmill = false}) async {
+  Future<LocationAccess> start({HrPreset? preset, bool treadmill = false, String? shoeId}) async {
     if (active) return LocationAccess.granted;
     final access = treadmill ? LocationAccess.granted : await location.ensureAccess();
     if (access != LocationAccess.granted) return access;
@@ -195,6 +199,7 @@ class RunSession extends ChangeNotifier {
     _id = newId();
     _startedAt = now();
     _treadmill = treadmill;
+    _shoeId = shoeId;
     _lastMoveAt = _startedAt;
     _presetId = preset?.id;
     hr.resetSession();
@@ -307,6 +312,7 @@ class RunSession extends ChangeNotifier {
     _pausedMs = row.pausedS * 1000;
     _presetId = row.hrPresetId;
     _treadmill = row.kind == RunKind.treadmill;
+    _shoeId = row.shoeId;
     var segment = -1;
     for (final p in await runs.points(row.id)) {
       if (p.segment != segment) _tracker.newSegment();
@@ -492,6 +498,7 @@ class RunSession extends ChangeNotifier {
         maxHr: Value(maxHr),
         bestsJson: Value(bests == null ? null : encodeBests(bests)),
         kind: Value(_treadmill ? RunKind.treadmill : RunKind.outdoor),
+        shoeId: Value(_shoeId),
         updatedAt: Value(now()),
       ),
     );
@@ -503,6 +510,7 @@ class RunSession extends ChangeNotifier {
     _pausedAt = null;
     _pausedMs = 0;
     _presetId = null;
+    _shoeId = null;
     _segment = 0;
     _tracker
       ..distanceM = 0

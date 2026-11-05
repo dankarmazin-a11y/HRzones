@@ -10,6 +10,7 @@ import 'run_map.dart';
 import 'edit_run_screen.dart';
 import 'run_feel.dart';
 import 'run_records.dart';
+import 'shoes.dart';
 
 import 'package:latlong2/latlong.dart';
 
@@ -143,6 +144,7 @@ class _Body extends StatelessWidget {
               : Text('Total ${formatDuration(run.endedAt!.difference(run.startedAt))}'),
         ),
         const SizedBox(height: 8),
+        RunShoeRow(runId: run.id, shoeId: run.shoeId),
         RunFeelCard(key: ValueKey('feel_${run.id}'), run: run),
         RunBestsCard(run: run),
         _SplitsSection(run: run),

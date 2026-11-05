@@ -5415,6 +5415,15 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _shoeIdMeta = const VerificationMeta('shoeId');
+  @override
+  late final GeneratedColumn<String> shoeId = GeneratedColumn<String>(
+    'shoe_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -5434,6 +5443,7 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
     kind,
     effort,
     weather,
+    shoeId,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -5494,6 +5504,9 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
     if (data.containsKey('weather')) {
       context.handle(_weatherMeta, weather.isAcceptableOrUnknown(data['weather']!, _weatherMeta));
     }
+    if (data.containsKey('shoe_id')) {
+      context.handle(_shoeIdMeta, shoeId.isAcceptableOrUnknown(data['shoe_id']!, _shoeIdMeta));
+    }
     return context;
   }
 
@@ -5522,6 +5535,7 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
       ),
       effort: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}effort']),
       weather: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}weather']),
+      shoeId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}shoe_id']),
     );
   }
 
@@ -5568,6 +5582,9 @@ class Run extends DataClass implements Insertable<Run> {
 
   /// Weather tags, comma-separated ("sunny,windy").
   final String? weather;
+
+  /// The shoes worn (null = not set).
+  final String? shoeId;
   const Run({
     required this.id,
     required this.updatedAt,
@@ -5586,6 +5603,7 @@ class Run extends DataClass implements Insertable<Run> {
     required this.kind,
     this.effort,
     this.weather,
+    this.shoeId,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -5625,6 +5643,9 @@ class Run extends DataClass implements Insertable<Run> {
     if (!nullToAbsent || weather != null) {
       map['weather'] = Variable<String>(weather);
     }
+    if (!nullToAbsent || shoeId != null) {
+      map['shoe_id'] = Variable<String>(shoeId);
+    }
     return map;
   }
 
@@ -5647,6 +5668,7 @@ class Run extends DataClass implements Insertable<Run> {
       kind: Value(kind),
       effort: effort == null && nullToAbsent ? const Value.absent() : Value(effort),
       weather: weather == null && nullToAbsent ? const Value.absent() : Value(weather),
+      shoeId: shoeId == null && nullToAbsent ? const Value.absent() : Value(shoeId),
     );
   }
 
@@ -5670,6 +5692,7 @@ class Run extends DataClass implements Insertable<Run> {
       kind: $RunsTable.$converterkind.fromJson(serializer.fromJson<int>(json['kind'])),
       effort: serializer.fromJson<int?>(json['effort']),
       weather: serializer.fromJson<String?>(json['weather']),
+      shoeId: serializer.fromJson<String?>(json['shoeId']),
     );
   }
   @override
@@ -5693,6 +5716,7 @@ class Run extends DataClass implements Insertable<Run> {
       'kind': serializer.toJson<int>($RunsTable.$converterkind.toJson(kind)),
       'effort': serializer.toJson<int?>(effort),
       'weather': serializer.toJson<String?>(weather),
+      'shoeId': serializer.toJson<String?>(shoeId),
     };
   }
 
@@ -5714,6 +5738,7 @@ class Run extends DataClass implements Insertable<Run> {
     RunKind? kind,
     Value<int?> effort = const Value.absent(),
     Value<String?> weather = const Value.absent(),
+    Value<String?> shoeId = const Value.absent(),
   }) => Run(
     id: id ?? this.id,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -5732,6 +5757,7 @@ class Run extends DataClass implements Insertable<Run> {
     kind: kind ?? this.kind,
     effort: effort.present ? effort.value : this.effort,
     weather: weather.present ? weather.value : this.weather,
+    shoeId: shoeId.present ? shoeId.value : this.shoeId,
   );
   Run copyWithCompanion(RunsCompanion data) {
     return Run(
@@ -5752,6 +5778,7 @@ class Run extends DataClass implements Insertable<Run> {
       kind: data.kind.present ? data.kind.value : this.kind,
       effort: data.effort.present ? data.effort.value : this.effort,
       weather: data.weather.present ? data.weather.value : this.weather,
+      shoeId: data.shoeId.present ? data.shoeId.value : this.shoeId,
     );
   }
 
@@ -5774,7 +5801,8 @@ class Run extends DataClass implements Insertable<Run> {
           ..write('bestsJson: $bestsJson, ')
           ..write('kind: $kind, ')
           ..write('effort: $effort, ')
-          ..write('weather: $weather')
+          ..write('weather: $weather, ')
+          ..write('shoeId: $shoeId')
           ..write(')'))
         .toString();
   }
@@ -5798,6 +5826,7 @@ class Run extends DataClass implements Insertable<Run> {
     kind,
     effort,
     weather,
+    shoeId,
   );
   @override
   bool operator ==(Object other) =>
@@ -5819,7 +5848,8 @@ class Run extends DataClass implements Insertable<Run> {
           other.bestsJson == this.bestsJson &&
           other.kind == this.kind &&
           other.effort == this.effort &&
-          other.weather == this.weather);
+          other.weather == this.weather &&
+          other.shoeId == this.shoeId);
 }
 
 class RunsCompanion extends UpdateCompanion<Run> {
@@ -5840,6 +5870,7 @@ class RunsCompanion extends UpdateCompanion<Run> {
   final Value<RunKind> kind;
   final Value<int?> effort;
   final Value<String?> weather;
+  final Value<String?> shoeId;
   final Value<int> rowid;
   const RunsCompanion({
     this.id = const Value.absent(),
@@ -5859,6 +5890,7 @@ class RunsCompanion extends UpdateCompanion<Run> {
     this.kind = const Value.absent(),
     this.effort = const Value.absent(),
     this.weather = const Value.absent(),
+    this.shoeId = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RunsCompanion.insert({
@@ -5879,6 +5911,7 @@ class RunsCompanion extends UpdateCompanion<Run> {
     this.kind = const Value.absent(),
     this.effort = const Value.absent(),
     this.weather = const Value.absent(),
+    this.shoeId = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : startedAt = Value(startedAt);
   static Insertable<Run> custom({
@@ -5899,6 +5932,7 @@ class RunsCompanion extends UpdateCompanion<Run> {
     Expression<int>? kind,
     Expression<int>? effort,
     Expression<String>? weather,
+    Expression<String>? shoeId,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -5919,6 +5953,7 @@ class RunsCompanion extends UpdateCompanion<Run> {
       if (kind != null) 'kind': kind,
       if (effort != null) 'effort': effort,
       if (weather != null) 'weather': weather,
+      if (shoeId != null) 'shoe_id': shoeId,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -5941,6 +5976,7 @@ class RunsCompanion extends UpdateCompanion<Run> {
     Value<RunKind>? kind,
     Value<int?>? effort,
     Value<String?>? weather,
+    Value<String?>? shoeId,
     Value<int>? rowid,
   }) {
     return RunsCompanion(
@@ -5961,6 +5997,7 @@ class RunsCompanion extends UpdateCompanion<Run> {
       kind: kind ?? this.kind,
       effort: effort ?? this.effort,
       weather: weather ?? this.weather,
+      shoeId: shoeId ?? this.shoeId,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -6019,6 +6056,9 @@ class RunsCompanion extends UpdateCompanion<Run> {
     if (weather.present) {
       map['weather'] = Variable<String>(weather.value);
     }
+    if (shoeId.present) {
+      map['shoe_id'] = Variable<String>(shoeId.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -6045,6 +6085,7 @@ class RunsCompanion extends UpdateCompanion<Run> {
           ..write('kind: $kind, ')
           ..write('effort: $effort, ')
           ..write('weather: $weather, ')
+          ..write('shoeId: $shoeId, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6553,6 +6594,392 @@ class RunPointsCompanion extends UpdateCompanion<RunPoint> {
   }
 }
 
+class $ShoesTable extends Shoes with TableInfo<$ShoesTable, Shoe> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ShoesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    clientDefault: newId,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    clientDefault: DateTime.now,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _startKmMeta = const VerificationMeta('startKm');
+  @override
+  late final GeneratedColumn<double> startKm = GeneratedColumn<double>(
+    'start_km',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _limitKmMeta = const VerificationMeta('limitKm');
+  @override
+  late final GeneratedColumn<double> limitKm = GeneratedColumn<double>(
+    'limit_km',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(700),
+  );
+  static const VerificationMeta _retiredMeta = const VerificationMeta('retired');
+  @override
+  late final GeneratedColumn<bool> retired = GeneratedColumn<bool>(
+    'retired',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('CHECK ("retired" IN (0, 1))'),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _isDefaultMeta = const VerificationMeta('isDefault');
+  @override
+  late final GeneratedColumn<bool> isDefault = GeneratedColumn<bool>(
+    'is_default',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('CHECK ("is_default" IN (0, 1))'),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, updatedAt, name, startKm, limitKm, retired, isDefault];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'shoes';
+  @override
+  VerificationContext validateIntegrity(Insertable<Shoe> instance, {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta, updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(_nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('start_km')) {
+      context.handle(_startKmMeta, startKm.isAcceptableOrUnknown(data['start_km']!, _startKmMeta));
+    }
+    if (data.containsKey('limit_km')) {
+      context.handle(_limitKmMeta, limitKm.isAcceptableOrUnknown(data['limit_km']!, _limitKmMeta));
+    }
+    if (data.containsKey('retired')) {
+      context.handle(_retiredMeta, retired.isAcceptableOrUnknown(data['retired']!, _retiredMeta));
+    }
+    if (data.containsKey('is_default')) {
+      context.handle(_isDefaultMeta, isDefault.isAcceptableOrUnknown(data['is_default']!, _isDefaultMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Shoe map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Shoe(
+      id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      updatedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+      name: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      startKm: attachedDatabase.typeMapping.read(DriftSqlType.double, data['${effectivePrefix}start_km'])!,
+      limitKm: attachedDatabase.typeMapping.read(DriftSqlType.double, data['${effectivePrefix}limit_km'])!,
+      retired: attachedDatabase.typeMapping.read(DriftSqlType.bool, data['${effectivePrefix}retired'])!,
+      isDefault: attachedDatabase.typeMapping.read(DriftSqlType.bool, data['${effectivePrefix}is_default'])!,
+    );
+  }
+
+  @override
+  $ShoesTable createAlias(String alias) {
+    return $ShoesTable(attachedDatabase, alias);
+  }
+}
+
+class Shoe extends DataClass implements Insertable<Shoe> {
+  final String id;
+  final DateTime updatedAt;
+  final String name;
+
+  /// Km the shoes already had when added.
+  final double startKm;
+
+  /// Replace them at about this many km (reminder).
+  final double limitKm;
+  final bool retired;
+
+  /// Picked automatically for new runs.
+  final bool isDefault;
+  const Shoe({
+    required this.id,
+    required this.updatedAt,
+    required this.name,
+    required this.startKm,
+    required this.limitKm,
+    required this.retired,
+    required this.isDefault,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['name'] = Variable<String>(name);
+    map['start_km'] = Variable<double>(startKm);
+    map['limit_km'] = Variable<double>(limitKm);
+    map['retired'] = Variable<bool>(retired);
+    map['is_default'] = Variable<bool>(isDefault);
+    return map;
+  }
+
+  ShoesCompanion toCompanion(bool nullToAbsent) {
+    return ShoesCompanion(
+      id: Value(id),
+      updatedAt: Value(updatedAt),
+      name: Value(name),
+      startKm: Value(startKm),
+      limitKm: Value(limitKm),
+      retired: Value(retired),
+      isDefault: Value(isDefault),
+    );
+  }
+
+  factory Shoe.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Shoe(
+      id: serializer.fromJson<String>(json['id']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      name: serializer.fromJson<String>(json['name']),
+      startKm: serializer.fromJson<double>(json['startKm']),
+      limitKm: serializer.fromJson<double>(json['limitKm']),
+      retired: serializer.fromJson<bool>(json['retired']),
+      isDefault: serializer.fromJson<bool>(json['isDefault']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'name': serializer.toJson<String>(name),
+      'startKm': serializer.toJson<double>(startKm),
+      'limitKm': serializer.toJson<double>(limitKm),
+      'retired': serializer.toJson<bool>(retired),
+      'isDefault': serializer.toJson<bool>(isDefault),
+    };
+  }
+
+  Shoe copyWith({
+    String? id,
+    DateTime? updatedAt,
+    String? name,
+    double? startKm,
+    double? limitKm,
+    bool? retired,
+    bool? isDefault,
+  }) => Shoe(
+    id: id ?? this.id,
+    updatedAt: updatedAt ?? this.updatedAt,
+    name: name ?? this.name,
+    startKm: startKm ?? this.startKm,
+    limitKm: limitKm ?? this.limitKm,
+    retired: retired ?? this.retired,
+    isDefault: isDefault ?? this.isDefault,
+  );
+  Shoe copyWithCompanion(ShoesCompanion data) {
+    return Shoe(
+      id: data.id.present ? data.id.value : this.id,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      name: data.name.present ? data.name.value : this.name,
+      startKm: data.startKm.present ? data.startKm.value : this.startKm,
+      limitKm: data.limitKm.present ? data.limitKm.value : this.limitKm,
+      retired: data.retired.present ? data.retired.value : this.retired,
+      isDefault: data.isDefault.present ? data.isDefault.value : this.isDefault,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Shoe(')
+          ..write('id: $id, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('name: $name, ')
+          ..write('startKm: $startKm, ')
+          ..write('limitKm: $limitKm, ')
+          ..write('retired: $retired, ')
+          ..write('isDefault: $isDefault')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, updatedAt, name, startKm, limitKm, retired, isDefault);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Shoe &&
+          other.id == this.id &&
+          other.updatedAt == this.updatedAt &&
+          other.name == this.name &&
+          other.startKm == this.startKm &&
+          other.limitKm == this.limitKm &&
+          other.retired == this.retired &&
+          other.isDefault == this.isDefault);
+}
+
+class ShoesCompanion extends UpdateCompanion<Shoe> {
+  final Value<String> id;
+  final Value<DateTime> updatedAt;
+  final Value<String> name;
+  final Value<double> startKm;
+  final Value<double> limitKm;
+  final Value<bool> retired;
+  final Value<bool> isDefault;
+  final Value<int> rowid;
+  const ShoesCompanion({
+    this.id = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.name = const Value.absent(),
+    this.startKm = const Value.absent(),
+    this.limitKm = const Value.absent(),
+    this.retired = const Value.absent(),
+    this.isDefault = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ShoesCompanion.insert({
+    this.id = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    required String name,
+    this.startKm = const Value.absent(),
+    this.limitKm = const Value.absent(),
+    this.retired = const Value.absent(),
+    this.isDefault = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : name = Value(name);
+  static Insertable<Shoe> custom({
+    Expression<String>? id,
+    Expression<DateTime>? updatedAt,
+    Expression<String>? name,
+    Expression<double>? startKm,
+    Expression<double>? limitKm,
+    Expression<bool>? retired,
+    Expression<bool>? isDefault,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (name != null) 'name': name,
+      if (startKm != null) 'start_km': startKm,
+      if (limitKm != null) 'limit_km': limitKm,
+      if (retired != null) 'retired': retired,
+      if (isDefault != null) 'is_default': isDefault,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ShoesCompanion copyWith({
+    Value<String>? id,
+    Value<DateTime>? updatedAt,
+    Value<String>? name,
+    Value<double>? startKm,
+    Value<double>? limitKm,
+    Value<bool>? retired,
+    Value<bool>? isDefault,
+    Value<int>? rowid,
+  }) {
+    return ShoesCompanion(
+      id: id ?? this.id,
+      updatedAt: updatedAt ?? this.updatedAt,
+      name: name ?? this.name,
+      startKm: startKm ?? this.startKm,
+      limitKm: limitKm ?? this.limitKm,
+      retired: retired ?? this.retired,
+      isDefault: isDefault ?? this.isDefault,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (startKm.present) {
+      map['start_km'] = Variable<double>(startKm.value);
+    }
+    if (limitKm.present) {
+      map['limit_km'] = Variable<double>(limitKm.value);
+    }
+    if (retired.present) {
+      map['retired'] = Variable<bool>(retired.value);
+    }
+    if (isDefault.present) {
+      map['is_default'] = Variable<bool>(isDefault.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ShoesCompanion(')
+          ..write('id: $id, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('name: $name, ')
+          ..write('startKm: $startKm, ')
+          ..write('limitKm: $limitKm, ')
+          ..write('retired: $retired, ')
+          ..write('isDefault: $isDefault, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -6569,6 +6996,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $IntervalPresetsTable intervalPresets = $IntervalPresetsTable(this);
   late final $RunsTable runs = $RunsTable(this);
   late final $RunPointsTable runPoints = $RunPointsTable(this);
+  late final $ShoesTable shoes = $ShoesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables => allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
@@ -6586,6 +7014,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     intervalPresets,
     runs,
     runPoints,
+    shoes,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -10103,6 +10532,7 @@ typedef $$RunsTableCreateCompanionBuilder = RunsCompanion Function({
   Value<RunKind> kind,
   Value<int?> effort,
   Value<String?> weather,
+  Value<String?> shoeId,
   Value<int> rowid,
 });
 typedef $$RunsTableUpdateCompanionBuilder = RunsCompanion Function({
@@ -10123,6 +10553,7 @@ typedef $$RunsTableUpdateCompanionBuilder = RunsCompanion Function({
   Value<RunKind> kind,
   Value<int?> effort,
   Value<String?> weather,
+  Value<String?> shoeId,
   Value<int> rowid,
 });
 
@@ -10197,6 +10628,9 @@ class $$RunsTableFilterComposer extends Composer<_$AppDatabase, $RunsTable> {
 
   ColumnFilters<String> get weather =>
       $composableBuilder(column: $table.weather, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get shoeId =>
+      $composableBuilder(column: $table.shoeId, builder: (column) => ColumnFilters(column));
 
   Expression<bool> runPointsRefs(Expression<bool> Function($$RunPointsTableFilterComposer f) f) {
     final $$RunPointsTableFilterComposer composer = $composerBuilder(
@@ -10274,6 +10708,9 @@ class $$RunsTableOrderingComposer extends Composer<_$AppDatabase, $RunsTable> {
 
   ColumnOrderings<String> get weather =>
       $composableBuilder(column: $table.weather, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get shoeId =>
+      $composableBuilder(column: $table.shoeId, builder: (column) => ColumnOrderings(column));
 }
 
 class $$RunsTableAnnotationComposer extends Composer<_$AppDatabase, $RunsTable> {
@@ -10318,6 +10755,8 @@ class $$RunsTableAnnotationComposer extends Composer<_$AppDatabase, $RunsTable> 
   GeneratedColumn<int> get effort => $composableBuilder(column: $table.effort, builder: (column) => column);
 
   GeneratedColumn<String> get weather => $composableBuilder(column: $table.weather, builder: (column) => column);
+
+  GeneratedColumn<String> get shoeId => $composableBuilder(column: $table.shoeId, builder: (column) => column);
 
   Expression<T> runPointsRefs<T extends Object>(Expression<T> Function($$RunPointsTableAnnotationComposer a) f) {
     final $$RunPointsTableAnnotationComposer composer = $composerBuilder(
@@ -10380,6 +10819,7 @@ class $$RunsTableTableManager
                 Value<RunKind> kind = const Value.absent(),
                 Value<int?> effort = const Value.absent(),
                 Value<String?> weather = const Value.absent(),
+                Value<String?> shoeId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RunsCompanion(
                 id: id,
@@ -10399,6 +10839,7 @@ class $$RunsTableTableManager
                 kind: kind,
                 effort: effort,
                 weather: weather,
+                shoeId: shoeId,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -10420,6 +10861,7 @@ class $$RunsTableTableManager
                 Value<RunKind> kind = const Value.absent(),
                 Value<int?> effort = const Value.absent(),
                 Value<String?> weather = const Value.absent(),
+                Value<String?> shoeId = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RunsCompanion.insert(
                 id: id,
@@ -10439,6 +10881,7 @@ class $$RunsTableTableManager
                 kind: kind,
                 effort: effort,
                 weather: weather,
+                shoeId: shoeId,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) =>
@@ -10802,6 +11245,197 @@ typedef $$RunPointsTableProcessedTableManager =
       RunPoint,
       PrefetchHooks Function({bool runId})
     >;
+typedef $$ShoesTableCreateCompanionBuilder = ShoesCompanion Function({
+  Value<String> id,
+  Value<DateTime> updatedAt,
+  required String name,
+  Value<double> startKm,
+  Value<double> limitKm,
+  Value<bool> retired,
+  Value<bool> isDefault,
+  Value<int> rowid,
+});
+typedef $$ShoesTableUpdateCompanionBuilder = ShoesCompanion Function({
+  Value<String> id,
+  Value<DateTime> updatedAt,
+  Value<String> name,
+  Value<double> startKm,
+  Value<double> limitKm,
+  Value<bool> retired,
+  Value<bool> isDefault,
+  Value<int> rowid,
+});
+
+class $$ShoesTableFilterComposer extends Composer<_$AppDatabase, $ShoesTable> {
+  $$ShoesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get startKm =>
+      $composableBuilder(column: $table.startKm, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get limitKm =>
+      $composableBuilder(column: $table.limitKm, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get retired =>
+      $composableBuilder(column: $table.retired, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isDefault =>
+      $composableBuilder(column: $table.isDefault, builder: (column) => ColumnFilters(column));
+}
+
+class $$ShoesTableOrderingComposer extends Composer<_$AppDatabase, $ShoesTable> {
+  $$ShoesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get startKm =>
+      $composableBuilder(column: $table.startKm, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get limitKm =>
+      $composableBuilder(column: $table.limitKm, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get retired =>
+      $composableBuilder(column: $table.retired, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isDefault =>
+      $composableBuilder(column: $table.isDefault, builder: (column) => ColumnOrderings(column));
+}
+
+class $$ShoesTableAnnotationComposer extends Composer<_$AppDatabase, $ShoesTable> {
+  $$ShoesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id => $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt => $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get name => $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<double> get startKm => $composableBuilder(column: $table.startKm, builder: (column) => column);
+
+  GeneratedColumn<double> get limitKm => $composableBuilder(column: $table.limitKm, builder: (column) => column);
+
+  GeneratedColumn<bool> get retired => $composableBuilder(column: $table.retired, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDefault => $composableBuilder(column: $table.isDefault, builder: (column) => column);
+}
+
+class $$ShoesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ShoesTable,
+          Shoe,
+          $$ShoesTableFilterComposer,
+          $$ShoesTableOrderingComposer,
+          $$ShoesTableAnnotationComposer,
+          $$ShoesTableCreateCompanionBuilder,
+          $$ShoesTableUpdateCompanionBuilder,
+          (Shoe, BaseReferences<_$AppDatabase, $ShoesTable, Shoe>),
+          Shoe,
+          PrefetchHooks Function()
+        > {
+  $$ShoesTableTableManager(_$AppDatabase db, $ShoesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () => $$ShoesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () => $$ShoesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () => $$ShoesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<double> startKm = const Value.absent(),
+                Value<double> limitKm = const Value.absent(),
+                Value<bool> retired = const Value.absent(),
+                Value<bool> isDefault = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ShoesCompanion(
+                id: id,
+                updatedAt: updatedAt,
+                name: name,
+                startKm: startKm,
+                limitKm: limitKm,
+                retired: retired,
+                isDefault: isDefault,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                required String name,
+                Value<double> startKm = const Value.absent(),
+                Value<double> limitKm = const Value.absent(),
+                Value<bool> retired = const Value.absent(),
+                Value<bool> isDefault = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ShoesCompanion.insert(
+                id: id,
+                updatedAt: updatedAt,
+                name: name,
+                startKm: startKm,
+                limitKm: limitKm,
+                retired: retired,
+                isDefault: isDefault,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ShoesTable, Shoe>(table),
+                  BaseReferences<_$AppDatabase, $ShoesTable, Shoe>(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ShoesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ShoesTable,
+      Shoe,
+      $$ShoesTableFilterComposer,
+      $$ShoesTableOrderingComposer,
+      $$ShoesTableAnnotationComposer,
+      $$ShoesTableCreateCompanionBuilder,
+      $$ShoesTableUpdateCompanionBuilder,
+      (Shoe, BaseReferences<_$AppDatabase, $ShoesTable, Shoe>),
+      Shoe,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -10823,4 +11457,5 @@ class $AppDatabaseManager {
       $$IntervalPresetsTableTableManager(_db, _db.intervalPresets);
   $$RunsTableTableManager get runs => $$RunsTableTableManager(_db, _db.runs);
   $$RunPointsTableTableManager get runPoints => $$RunPointsTableTableManager(_db, _db.runPoints);
+  $$ShoesTableTableManager get shoes => $$ShoesTableTableManager(_db, _db.shoes);
 }

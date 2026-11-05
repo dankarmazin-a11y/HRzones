@@ -9,6 +9,7 @@ import 'data/database.dart';
 import 'data/goal_repository.dart';
 import 'data/preset_repository.dart';
 import 'data/run_repository.dart';
+import 'data/shoe_repository.dart';
 import 'workout/training_level.dart';
 import 'workout/training_place.dart';
 import 'data/exercise_repository.dart';
@@ -29,6 +30,7 @@ class AppServices {
   AppServices._(this.db, this.hr, this._loadExercises, this.restNotifier, LocationSource? location)
     : exercises = ExerciseRepository(db),
       runs = RunRepository(db),
+      shoes = ShoeRepository(db),
       templates = TemplateRepository(db),
       body = BodyRepository(db),
       presets = HrPresetRepository(db),
@@ -46,6 +48,7 @@ class AppServices {
   }
 
   final RunRepository runs;
+  final ShoeRepository shoes;
 
   /// Target pace range in s/km for pace beeps (setting `runPaceAlert`,
   /// "330-350"; empty = off).

@@ -80,6 +80,7 @@ Future<Uint8List> exportWorkbook(AppDatabase db) async {
 
   // Runs: one row per run, and one row per km split.
   final runRepo = RunRepository(db);
+  final shoes = {for (final x in await db.select(db.shoes).get()) x.id: x};
   final runs =
       await (db.select(db.runs)
             ..where((r) => r.endedAt.isNotNull())
@@ -99,6 +100,7 @@ Future<Uint8List> exportWorkbook(AppDatabase db) async {
       'Kind',
       'Effort (1–10)',
       'Weather',
+      'Shoes',
       'Notes',
     ],
   ];
@@ -119,6 +121,7 @@ Future<Uint8List> exportWorkbook(AppDatabase db) async {
       r.kind.name,
       r.effort,
       r.weather,
+      shoes[r.shoeId]?.name,
       r.notes.isEmpty ? null : r.notes,
     ]);
     final points = await runRepo.points(r.id);
