@@ -240,6 +240,54 @@ class IntervalPresets extends Table with SyncColumns {
   Set<Column> get primaryKey => {id};
 }
 
+/// A GPS run. While it is being recorded `endedAt` is null; the moving time
+/// is (pausedAt ?? now) − startedAt − pausedS.
+class Runs extends Table with SyncColumns {
+  TextColumn get name => text().withDefault(const Constant('Run'))();
+  DateTimeColumn get startedAt => dateTime()();
+
+  /// Null while the run is being recorded.
+  DateTimeColumn get endedAt => dateTime().nullable()();
+
+  /// Set while paused: when the pause started.
+  DateTimeColumn get pausedAt => dateTime().nullable()();
+
+  /// Seconds spent in earlier (finished) pauses.
+  IntColumn get pausedS => integer().withDefault(const Constant(0))();
+
+  /// Moving time in seconds (kept up to date while recording).
+  IntColumn get durationS => integer().withDefault(const Constant(0))();
+  RealColumn get distanceM => real().withDefault(const Constant(0))();
+  TextColumn get hrPresetId => text().nullable()();
+  IntColumn get avgHr => integer().nullable()();
+  IntColumn get maxHr => integer().nullable()();
+  TextColumn get notes => text().withDefault(const Constant(''))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// One GPS fix of a run (about one per second while moving).
+class RunPoints extends Table with SyncColumns {
+  TextColumn get runId => text().references(Runs, #id, onDelete: KeyAction.cascade)();
+  DateTimeColumn get time => dateTime()();
+  RealColumn get lat => real()();
+  RealColumn get lon => real()();
+
+  /// Metres (GPS accuracy radius / altitude).
+  RealColumn get accuracy => real().nullable()();
+  RealColumn get altitude => real().nullable()();
+
+  /// Pauses split the route: points of different segments are not joined.
+  IntColumn get segment => integer().withDefault(const Constant(0))();
+
+  /// Heart rate at this point (null without a signal).
+  IntColumn get hr => integer().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 class Settings extends Table {
   TextColumn get key => text()();
   TextColumn get value => text()();
@@ -287,13 +335,15 @@ const defaultUnilateral = [
     Goals,
     HrPresets,
     IntervalPresets,
+    Runs,
+    RunPoints,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -329,9 +379,14 @@ class AppDatabase extends _$AppDatabase {
           updates: {exercises},
         );
       }
+      if (from < 7) {
+        await m.createTable(runs);
+        await m.createTable(runPoints); // its index is created in beforeOpen
+      }
     },
     beforeOpen: (details) async {
       await _addMissingColumns();
+      await customStatement(_runPointsIndex);
       await customStatement('PRAGMA foreign_keys = ON');
     },
   );
@@ -354,6 +409,10 @@ class AppDatabase extends _$AppDatabase {
       }
     }
   }
+
+  /// Points are always read per run, in time order (created on every open, so
+  /// new installs and upgrades both get it).
+  static const _runPointsIndex = 'CREATE INDEX IF NOT EXISTS run_points_by_run ON run_points (run_id, time)';
 
   static QueryExecutor _open() => driftDatabase(
     name: 'hrzones',

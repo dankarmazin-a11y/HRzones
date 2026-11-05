@@ -55,10 +55,15 @@
 	<string>Main</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>HR Zones connects to your heart-rate strap to show your heart rate and beep when you leave your zone.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>HR Zones records your route, distance and pace while you run – also with the screen locked.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>HR Zones records your route, distance and pace while you run – also with the screen locked.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>
 		<string>bluetooth-central</string>
+		<string>location</string>
 	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>

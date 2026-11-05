@@ -54,7 +54,7 @@ Future<void> backUpNow(BuildContext context) async {
 Future<void> restoreFromBackup(BuildContext context) async {
   final s = Services.of(context);
   final messenger = ScaffoldMessenger.of(context);
-  if (s.session.active != null) {
+  if (s.session.active != null || s.run.active) {
     messenger.showSnackBar(const SnackBar(content: Text('Finish or discard the running workout first.')));
     return;
   }

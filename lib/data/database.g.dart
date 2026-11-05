@@ -5209,6 +5209,1143 @@ class IntervalPresetsCompanion extends UpdateCompanion<IntervalPreset> {
   }
 }
 
+class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RunsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    clientDefault: newId,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    clientDefault: DateTime.now,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('Run'),
+  );
+  static const VerificationMeta _startedAtMeta = const VerificationMeta('startedAt');
+  @override
+  late final GeneratedColumn<DateTime> startedAt = GeneratedColumn<DateTime>(
+    'started_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _endedAtMeta = const VerificationMeta('endedAt');
+  @override
+  late final GeneratedColumn<DateTime> endedAt = GeneratedColumn<DateTime>(
+    'ended_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pausedAtMeta = const VerificationMeta('pausedAt');
+  @override
+  late final GeneratedColumn<DateTime> pausedAt = GeneratedColumn<DateTime>(
+    'paused_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _pausedSMeta = const VerificationMeta('pausedS');
+  @override
+  late final GeneratedColumn<int> pausedS = GeneratedColumn<int>(
+    'paused_s',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _durationSMeta = const VerificationMeta('durationS');
+  @override
+  late final GeneratedColumn<int> durationS = GeneratedColumn<int>(
+    'duration_s',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _distanceMMeta = const VerificationMeta('distanceM');
+  @override
+  late final GeneratedColumn<double> distanceM = GeneratedColumn<double>(
+    'distance_m',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _hrPresetIdMeta = const VerificationMeta('hrPresetId');
+  @override
+  late final GeneratedColumn<String> hrPresetId = GeneratedColumn<String>(
+    'hr_preset_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _avgHrMeta = const VerificationMeta('avgHr');
+  @override
+  late final GeneratedColumn<int> avgHr = GeneratedColumn<int>(
+    'avg_hr',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _maxHrMeta = const VerificationMeta('maxHr');
+  @override
+  late final GeneratedColumn<int> maxHr = GeneratedColumn<int>(
+    'max_hr',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    updatedAt,
+    name,
+    startedAt,
+    endedAt,
+    pausedAt,
+    pausedS,
+    durationS,
+    distanceM,
+    hrPresetId,
+    avgHr,
+    maxHr,
+    notes,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'runs';
+  @override
+  VerificationContext validateIntegrity(Insertable<Run> instance, {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta, updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(_nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    }
+    if (data.containsKey('started_at')) {
+      context.handle(_startedAtMeta, startedAt.isAcceptableOrUnknown(data['started_at']!, _startedAtMeta));
+    } else if (isInserting) {
+      context.missing(_startedAtMeta);
+    }
+    if (data.containsKey('ended_at')) {
+      context.handle(_endedAtMeta, endedAt.isAcceptableOrUnknown(data['ended_at']!, _endedAtMeta));
+    }
+    if (data.containsKey('paused_at')) {
+      context.handle(_pausedAtMeta, pausedAt.isAcceptableOrUnknown(data['paused_at']!, _pausedAtMeta));
+    }
+    if (data.containsKey('paused_s')) {
+      context.handle(_pausedSMeta, pausedS.isAcceptableOrUnknown(data['paused_s']!, _pausedSMeta));
+    }
+    if (data.containsKey('duration_s')) {
+      context.handle(_durationSMeta, durationS.isAcceptableOrUnknown(data['duration_s']!, _durationSMeta));
+    }
+    if (data.containsKey('distance_m')) {
+      context.handle(_distanceMMeta, distanceM.isAcceptableOrUnknown(data['distance_m']!, _distanceMMeta));
+    }
+    if (data.containsKey('hr_preset_id')) {
+      context.handle(_hrPresetIdMeta, hrPresetId.isAcceptableOrUnknown(data['hr_preset_id']!, _hrPresetIdMeta));
+    }
+    if (data.containsKey('avg_hr')) {
+      context.handle(_avgHrMeta, avgHr.isAcceptableOrUnknown(data['avg_hr']!, _avgHrMeta));
+    }
+    if (data.containsKey('max_hr')) {
+      context.handle(_maxHrMeta, maxHr.isAcceptableOrUnknown(data['max_hr']!, _maxHrMeta));
+    }
+    if (data.containsKey('notes')) {
+      context.handle(_notesMeta, notes.isAcceptableOrUnknown(data['notes']!, _notesMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Run map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Run(
+      id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      updatedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+      name: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      startedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}started_at'])!,
+      endedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}ended_at']),
+      pausedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}paused_at']),
+      pausedS: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}paused_s'])!,
+      durationS: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}duration_s'])!,
+      distanceM: attachedDatabase.typeMapping.read(DriftSqlType.double, data['${effectivePrefix}distance_m'])!,
+      hrPresetId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}hr_preset_id']),
+      avgHr: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}avg_hr']),
+      maxHr: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}max_hr']),
+      notes: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}notes'])!,
+    );
+  }
+
+  @override
+  $RunsTable createAlias(String alias) {
+    return $RunsTable(attachedDatabase, alias);
+  }
+}
+
+class Run extends DataClass implements Insertable<Run> {
+  final String id;
+  final DateTime updatedAt;
+  final String name;
+  final DateTime startedAt;
+
+  /// Null while the run is being recorded.
+  final DateTime? endedAt;
+
+  /// Set while paused: when the pause started.
+  final DateTime? pausedAt;
+
+  /// Seconds spent in earlier (finished) pauses.
+  final int pausedS;
+
+  /// Moving time in seconds (kept up to date while recording).
+  final int durationS;
+  final double distanceM;
+  final String? hrPresetId;
+  final int? avgHr;
+  final int? maxHr;
+  final String notes;
+  const Run({
+    required this.id,
+    required this.updatedAt,
+    required this.name,
+    required this.startedAt,
+    this.endedAt,
+    this.pausedAt,
+    required this.pausedS,
+    required this.durationS,
+    required this.distanceM,
+    this.hrPresetId,
+    this.avgHr,
+    this.maxHr,
+    required this.notes,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['name'] = Variable<String>(name);
+    map['started_at'] = Variable<DateTime>(startedAt);
+    if (!nullToAbsent || endedAt != null) {
+      map['ended_at'] = Variable<DateTime>(endedAt);
+    }
+    if (!nullToAbsent || pausedAt != null) {
+      map['paused_at'] = Variable<DateTime>(pausedAt);
+    }
+    map['paused_s'] = Variable<int>(pausedS);
+    map['duration_s'] = Variable<int>(durationS);
+    map['distance_m'] = Variable<double>(distanceM);
+    if (!nullToAbsent || hrPresetId != null) {
+      map['hr_preset_id'] = Variable<String>(hrPresetId);
+    }
+    if (!nullToAbsent || avgHr != null) {
+      map['avg_hr'] = Variable<int>(avgHr);
+    }
+    if (!nullToAbsent || maxHr != null) {
+      map['max_hr'] = Variable<int>(maxHr);
+    }
+    map['notes'] = Variable<String>(notes);
+    return map;
+  }
+
+  RunsCompanion toCompanion(bool nullToAbsent) {
+    return RunsCompanion(
+      id: Value(id),
+      updatedAt: Value(updatedAt),
+      name: Value(name),
+      startedAt: Value(startedAt),
+      endedAt: endedAt == null && nullToAbsent ? const Value.absent() : Value(endedAt),
+      pausedAt: pausedAt == null && nullToAbsent ? const Value.absent() : Value(pausedAt),
+      pausedS: Value(pausedS),
+      durationS: Value(durationS),
+      distanceM: Value(distanceM),
+      hrPresetId: hrPresetId == null && nullToAbsent ? const Value.absent() : Value(hrPresetId),
+      avgHr: avgHr == null && nullToAbsent ? const Value.absent() : Value(avgHr),
+      maxHr: maxHr == null && nullToAbsent ? const Value.absent() : Value(maxHr),
+      notes: Value(notes),
+    );
+  }
+
+  factory Run.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Run(
+      id: serializer.fromJson<String>(json['id']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      name: serializer.fromJson<String>(json['name']),
+      startedAt: serializer.fromJson<DateTime>(json['startedAt']),
+      endedAt: serializer.fromJson<DateTime?>(json['endedAt']),
+      pausedAt: serializer.fromJson<DateTime?>(json['pausedAt']),
+      pausedS: serializer.fromJson<int>(json['pausedS']),
+      durationS: serializer.fromJson<int>(json['durationS']),
+      distanceM: serializer.fromJson<double>(json['distanceM']),
+      hrPresetId: serializer.fromJson<String?>(json['hrPresetId']),
+      avgHr: serializer.fromJson<int?>(json['avgHr']),
+      maxHr: serializer.fromJson<int?>(json['maxHr']),
+      notes: serializer.fromJson<String>(json['notes']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'name': serializer.toJson<String>(name),
+      'startedAt': serializer.toJson<DateTime>(startedAt),
+      'endedAt': serializer.toJson<DateTime?>(endedAt),
+      'pausedAt': serializer.toJson<DateTime?>(pausedAt),
+      'pausedS': serializer.toJson<int>(pausedS),
+      'durationS': serializer.toJson<int>(durationS),
+      'distanceM': serializer.toJson<double>(distanceM),
+      'hrPresetId': serializer.toJson<String?>(hrPresetId),
+      'avgHr': serializer.toJson<int?>(avgHr),
+      'maxHr': serializer.toJson<int?>(maxHr),
+      'notes': serializer.toJson<String>(notes),
+    };
+  }
+
+  Run copyWith({
+    String? id,
+    DateTime? updatedAt,
+    String? name,
+    DateTime? startedAt,
+    Value<DateTime?> endedAt = const Value.absent(),
+    Value<DateTime?> pausedAt = const Value.absent(),
+    int? pausedS,
+    int? durationS,
+    double? distanceM,
+    Value<String?> hrPresetId = const Value.absent(),
+    Value<int?> avgHr = const Value.absent(),
+    Value<int?> maxHr = const Value.absent(),
+    String? notes,
+  }) => Run(
+    id: id ?? this.id,
+    updatedAt: updatedAt ?? this.updatedAt,
+    name: name ?? this.name,
+    startedAt: startedAt ?? this.startedAt,
+    endedAt: endedAt.present ? endedAt.value : this.endedAt,
+    pausedAt: pausedAt.present ? pausedAt.value : this.pausedAt,
+    pausedS: pausedS ?? this.pausedS,
+    durationS: durationS ?? this.durationS,
+    distanceM: distanceM ?? this.distanceM,
+    hrPresetId: hrPresetId.present ? hrPresetId.value : this.hrPresetId,
+    avgHr: avgHr.present ? avgHr.value : this.avgHr,
+    maxHr: maxHr.present ? maxHr.value : this.maxHr,
+    notes: notes ?? this.notes,
+  );
+  Run copyWithCompanion(RunsCompanion data) {
+    return Run(
+      id: data.id.present ? data.id.value : this.id,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      name: data.name.present ? data.name.value : this.name,
+      startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,
+      endedAt: data.endedAt.present ? data.endedAt.value : this.endedAt,
+      pausedAt: data.pausedAt.present ? data.pausedAt.value : this.pausedAt,
+      pausedS: data.pausedS.present ? data.pausedS.value : this.pausedS,
+      durationS: data.durationS.present ? data.durationS.value : this.durationS,
+      distanceM: data.distanceM.present ? data.distanceM.value : this.distanceM,
+      hrPresetId: data.hrPresetId.present ? data.hrPresetId.value : this.hrPresetId,
+      avgHr: data.avgHr.present ? data.avgHr.value : this.avgHr,
+      maxHr: data.maxHr.present ? data.maxHr.value : this.maxHr,
+      notes: data.notes.present ? data.notes.value : this.notes,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Run(')
+          ..write('id: $id, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('name: $name, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('endedAt: $endedAt, ')
+          ..write('pausedAt: $pausedAt, ')
+          ..write('pausedS: $pausedS, ')
+          ..write('durationS: $durationS, ')
+          ..write('distanceM: $distanceM, ')
+          ..write('hrPresetId: $hrPresetId, ')
+          ..write('avgHr: $avgHr, ')
+          ..write('maxHr: $maxHr, ')
+          ..write('notes: $notes')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    updatedAt,
+    name,
+    startedAt,
+    endedAt,
+    pausedAt,
+    pausedS,
+    durationS,
+    distanceM,
+    hrPresetId,
+    avgHr,
+    maxHr,
+    notes,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Run &&
+          other.id == this.id &&
+          other.updatedAt == this.updatedAt &&
+          other.name == this.name &&
+          other.startedAt == this.startedAt &&
+          other.endedAt == this.endedAt &&
+          other.pausedAt == this.pausedAt &&
+          other.pausedS == this.pausedS &&
+          other.durationS == this.durationS &&
+          other.distanceM == this.distanceM &&
+          other.hrPresetId == this.hrPresetId &&
+          other.avgHr == this.avgHr &&
+          other.maxHr == this.maxHr &&
+          other.notes == this.notes);
+}
+
+class RunsCompanion extends UpdateCompanion<Run> {
+  final Value<String> id;
+  final Value<DateTime> updatedAt;
+  final Value<String> name;
+  final Value<DateTime> startedAt;
+  final Value<DateTime?> endedAt;
+  final Value<DateTime?> pausedAt;
+  final Value<int> pausedS;
+  final Value<int> durationS;
+  final Value<double> distanceM;
+  final Value<String?> hrPresetId;
+  final Value<int?> avgHr;
+  final Value<int?> maxHr;
+  final Value<String> notes;
+  final Value<int> rowid;
+  const RunsCompanion({
+    this.id = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.name = const Value.absent(),
+    this.startedAt = const Value.absent(),
+    this.endedAt = const Value.absent(),
+    this.pausedAt = const Value.absent(),
+    this.pausedS = const Value.absent(),
+    this.durationS = const Value.absent(),
+    this.distanceM = const Value.absent(),
+    this.hrPresetId = const Value.absent(),
+    this.avgHr = const Value.absent(),
+    this.maxHr = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  RunsCompanion.insert({
+    this.id = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.name = const Value.absent(),
+    required DateTime startedAt,
+    this.endedAt = const Value.absent(),
+    this.pausedAt = const Value.absent(),
+    this.pausedS = const Value.absent(),
+    this.durationS = const Value.absent(),
+    this.distanceM = const Value.absent(),
+    this.hrPresetId = const Value.absent(),
+    this.avgHr = const Value.absent(),
+    this.maxHr = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : startedAt = Value(startedAt);
+  static Insertable<Run> custom({
+    Expression<String>? id,
+    Expression<DateTime>? updatedAt,
+    Expression<String>? name,
+    Expression<DateTime>? startedAt,
+    Expression<DateTime>? endedAt,
+    Expression<DateTime>? pausedAt,
+    Expression<int>? pausedS,
+    Expression<int>? durationS,
+    Expression<double>? distanceM,
+    Expression<String>? hrPresetId,
+    Expression<int>? avgHr,
+    Expression<int>? maxHr,
+    Expression<String>? notes,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (name != null) 'name': name,
+      if (startedAt != null) 'started_at': startedAt,
+      if (endedAt != null) 'ended_at': endedAt,
+      if (pausedAt != null) 'paused_at': pausedAt,
+      if (pausedS != null) 'paused_s': pausedS,
+      if (durationS != null) 'duration_s': durationS,
+      if (distanceM != null) 'distance_m': distanceM,
+      if (hrPresetId != null) 'hr_preset_id': hrPresetId,
+      if (avgHr != null) 'avg_hr': avgHr,
+      if (maxHr != null) 'max_hr': maxHr,
+      if (notes != null) 'notes': notes,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  RunsCompanion copyWith({
+    Value<String>? id,
+    Value<DateTime>? updatedAt,
+    Value<String>? name,
+    Value<DateTime>? startedAt,
+    Value<DateTime?>? endedAt,
+    Value<DateTime?>? pausedAt,
+    Value<int>? pausedS,
+    Value<int>? durationS,
+    Value<double>? distanceM,
+    Value<String?>? hrPresetId,
+    Value<int?>? avgHr,
+    Value<int?>? maxHr,
+    Value<String>? notes,
+    Value<int>? rowid,
+  }) {
+    return RunsCompanion(
+      id: id ?? this.id,
+      updatedAt: updatedAt ?? this.updatedAt,
+      name: name ?? this.name,
+      startedAt: startedAt ?? this.startedAt,
+      endedAt: endedAt ?? this.endedAt,
+      pausedAt: pausedAt ?? this.pausedAt,
+      pausedS: pausedS ?? this.pausedS,
+      durationS: durationS ?? this.durationS,
+      distanceM: distanceM ?? this.distanceM,
+      hrPresetId: hrPresetId ?? this.hrPresetId,
+      avgHr: avgHr ?? this.avgHr,
+      maxHr: maxHr ?? this.maxHr,
+      notes: notes ?? this.notes,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (startedAt.present) {
+      map['started_at'] = Variable<DateTime>(startedAt.value);
+    }
+    if (endedAt.present) {
+      map['ended_at'] = Variable<DateTime>(endedAt.value);
+    }
+    if (pausedAt.present) {
+      map['paused_at'] = Variable<DateTime>(pausedAt.value);
+    }
+    if (pausedS.present) {
+      map['paused_s'] = Variable<int>(pausedS.value);
+    }
+    if (durationS.present) {
+      map['duration_s'] = Variable<int>(durationS.value);
+    }
+    if (distanceM.present) {
+      map['distance_m'] = Variable<double>(distanceM.value);
+    }
+    if (hrPresetId.present) {
+      map['hr_preset_id'] = Variable<String>(hrPresetId.value);
+    }
+    if (avgHr.present) {
+      map['avg_hr'] = Variable<int>(avgHr.value);
+    }
+    if (maxHr.present) {
+      map['max_hr'] = Variable<int>(maxHr.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RunsCompanion(')
+          ..write('id: $id, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('name: $name, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('endedAt: $endedAt, ')
+          ..write('pausedAt: $pausedAt, ')
+          ..write('pausedS: $pausedS, ')
+          ..write('durationS: $durationS, ')
+          ..write('distanceM: $distanceM, ')
+          ..write('hrPresetId: $hrPresetId, ')
+          ..write('avgHr: $avgHr, ')
+          ..write('maxHr: $maxHr, ')
+          ..write('notes: $notes, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $RunPointsTable extends RunPoints with TableInfo<$RunPointsTable, RunPoint> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RunPointsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    clientDefault: newId,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    clientDefault: DateTime.now,
+  );
+  static const VerificationMeta _runIdMeta = const VerificationMeta('runId');
+  @override
+  late final GeneratedColumn<String> runId = GeneratedColumn<String>(
+    'run_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('REFERENCES runs (id) ON DELETE CASCADE'),
+  );
+  static const VerificationMeta _timeMeta = const VerificationMeta('time');
+  @override
+  late final GeneratedColumn<DateTime> time = GeneratedColumn<DateTime>(
+    'time',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _latMeta = const VerificationMeta('lat');
+  @override
+  late final GeneratedColumn<double> lat = GeneratedColumn<double>(
+    'lat',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lonMeta = const VerificationMeta('lon');
+  @override
+  late final GeneratedColumn<double> lon = GeneratedColumn<double>(
+    'lon',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _accuracyMeta = const VerificationMeta('accuracy');
+  @override
+  late final GeneratedColumn<double> accuracy = GeneratedColumn<double>(
+    'accuracy',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _altitudeMeta = const VerificationMeta('altitude');
+  @override
+  late final GeneratedColumn<double> altitude = GeneratedColumn<double>(
+    'altitude',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _segmentMeta = const VerificationMeta('segment');
+  @override
+  late final GeneratedColumn<int> segment = GeneratedColumn<int>(
+    'segment',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _hrMeta = const VerificationMeta('hr');
+  @override
+  late final GeneratedColumn<int> hr = GeneratedColumn<int>(
+    'hr',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, updatedAt, runId, time, lat, lon, accuracy, altitude, segment, hr];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'run_points';
+  @override
+  VerificationContext validateIntegrity(Insertable<RunPoint> instance, {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta, updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
+    if (data.containsKey('run_id')) {
+      context.handle(_runIdMeta, runId.isAcceptableOrUnknown(data['run_id']!, _runIdMeta));
+    } else if (isInserting) {
+      context.missing(_runIdMeta);
+    }
+    if (data.containsKey('time')) {
+      context.handle(_timeMeta, time.isAcceptableOrUnknown(data['time']!, _timeMeta));
+    } else if (isInserting) {
+      context.missing(_timeMeta);
+    }
+    if (data.containsKey('lat')) {
+      context.handle(_latMeta, lat.isAcceptableOrUnknown(data['lat']!, _latMeta));
+    } else if (isInserting) {
+      context.missing(_latMeta);
+    }
+    if (data.containsKey('lon')) {
+      context.handle(_lonMeta, lon.isAcceptableOrUnknown(data['lon']!, _lonMeta));
+    } else if (isInserting) {
+      context.missing(_lonMeta);
+    }
+    if (data.containsKey('accuracy')) {
+      context.handle(_accuracyMeta, accuracy.isAcceptableOrUnknown(data['accuracy']!, _accuracyMeta));
+    }
+    if (data.containsKey('altitude')) {
+      context.handle(_altitudeMeta, altitude.isAcceptableOrUnknown(data['altitude']!, _altitudeMeta));
+    }
+    if (data.containsKey('segment')) {
+      context.handle(_segmentMeta, segment.isAcceptableOrUnknown(data['segment']!, _segmentMeta));
+    }
+    if (data.containsKey('hr')) {
+      context.handle(_hrMeta, hr.isAcceptableOrUnknown(data['hr']!, _hrMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  RunPoint map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RunPoint(
+      id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      updatedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+      runId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}run_id'])!,
+      time: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}time'])!,
+      lat: attachedDatabase.typeMapping.read(DriftSqlType.double, data['${effectivePrefix}lat'])!,
+      lon: attachedDatabase.typeMapping.read(DriftSqlType.double, data['${effectivePrefix}lon'])!,
+      accuracy: attachedDatabase.typeMapping.read(DriftSqlType.double, data['${effectivePrefix}accuracy']),
+      altitude: attachedDatabase.typeMapping.read(DriftSqlType.double, data['${effectivePrefix}altitude']),
+      segment: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}segment'])!,
+      hr: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}hr']),
+    );
+  }
+
+  @override
+  $RunPointsTable createAlias(String alias) {
+    return $RunPointsTable(attachedDatabase, alias);
+  }
+}
+
+class RunPoint extends DataClass implements Insertable<RunPoint> {
+  final String id;
+  final DateTime updatedAt;
+  final String runId;
+  final DateTime time;
+  final double lat;
+  final double lon;
+
+  /// Metres (GPS accuracy radius / altitude).
+  final double? accuracy;
+  final double? altitude;
+
+  /// Pauses split the route: points of different segments are not joined.
+  final int segment;
+
+  /// Heart rate at this point (null without a signal).
+  final int? hr;
+  const RunPoint({
+    required this.id,
+    required this.updatedAt,
+    required this.runId,
+    required this.time,
+    required this.lat,
+    required this.lon,
+    this.accuracy,
+    this.altitude,
+    required this.segment,
+    this.hr,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['run_id'] = Variable<String>(runId);
+    map['time'] = Variable<DateTime>(time);
+    map['lat'] = Variable<double>(lat);
+    map['lon'] = Variable<double>(lon);
+    if (!nullToAbsent || accuracy != null) {
+      map['accuracy'] = Variable<double>(accuracy);
+    }
+    if (!nullToAbsent || altitude != null) {
+      map['altitude'] = Variable<double>(altitude);
+    }
+    map['segment'] = Variable<int>(segment);
+    if (!nullToAbsent || hr != null) {
+      map['hr'] = Variable<int>(hr);
+    }
+    return map;
+  }
+
+  RunPointsCompanion toCompanion(bool nullToAbsent) {
+    return RunPointsCompanion(
+      id: Value(id),
+      updatedAt: Value(updatedAt),
+      runId: Value(runId),
+      time: Value(time),
+      lat: Value(lat),
+      lon: Value(lon),
+      accuracy: accuracy == null && nullToAbsent ? const Value.absent() : Value(accuracy),
+      altitude: altitude == null && nullToAbsent ? const Value.absent() : Value(altitude),
+      segment: Value(segment),
+      hr: hr == null && nullToAbsent ? const Value.absent() : Value(hr),
+    );
+  }
+
+  factory RunPoint.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RunPoint(
+      id: serializer.fromJson<String>(json['id']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      runId: serializer.fromJson<String>(json['runId']),
+      time: serializer.fromJson<DateTime>(json['time']),
+      lat: serializer.fromJson<double>(json['lat']),
+      lon: serializer.fromJson<double>(json['lon']),
+      accuracy: serializer.fromJson<double?>(json['accuracy']),
+      altitude: serializer.fromJson<double?>(json['altitude']),
+      segment: serializer.fromJson<int>(json['segment']),
+      hr: serializer.fromJson<int?>(json['hr']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'runId': serializer.toJson<String>(runId),
+      'time': serializer.toJson<DateTime>(time),
+      'lat': serializer.toJson<double>(lat),
+      'lon': serializer.toJson<double>(lon),
+      'accuracy': serializer.toJson<double?>(accuracy),
+      'altitude': serializer.toJson<double?>(altitude),
+      'segment': serializer.toJson<int>(segment),
+      'hr': serializer.toJson<int?>(hr),
+    };
+  }
+
+  RunPoint copyWith({
+    String? id,
+    DateTime? updatedAt,
+    String? runId,
+    DateTime? time,
+    double? lat,
+    double? lon,
+    Value<double?> accuracy = const Value.absent(),
+    Value<double?> altitude = const Value.absent(),
+    int? segment,
+    Value<int?> hr = const Value.absent(),
+  }) => RunPoint(
+    id: id ?? this.id,
+    updatedAt: updatedAt ?? this.updatedAt,
+    runId: runId ?? this.runId,
+    time: time ?? this.time,
+    lat: lat ?? this.lat,
+    lon: lon ?? this.lon,
+    accuracy: accuracy.present ? accuracy.value : this.accuracy,
+    altitude: altitude.present ? altitude.value : this.altitude,
+    segment: segment ?? this.segment,
+    hr: hr.present ? hr.value : this.hr,
+  );
+  RunPoint copyWithCompanion(RunPointsCompanion data) {
+    return RunPoint(
+      id: data.id.present ? data.id.value : this.id,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      runId: data.runId.present ? data.runId.value : this.runId,
+      time: data.time.present ? data.time.value : this.time,
+      lat: data.lat.present ? data.lat.value : this.lat,
+      lon: data.lon.present ? data.lon.value : this.lon,
+      accuracy: data.accuracy.present ? data.accuracy.value : this.accuracy,
+      altitude: data.altitude.present ? data.altitude.value : this.altitude,
+      segment: data.segment.present ? data.segment.value : this.segment,
+      hr: data.hr.present ? data.hr.value : this.hr,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RunPoint(')
+          ..write('id: $id, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('runId: $runId, ')
+          ..write('time: $time, ')
+          ..write('lat: $lat, ')
+          ..write('lon: $lon, ')
+          ..write('accuracy: $accuracy, ')
+          ..write('altitude: $altitude, ')
+          ..write('segment: $segment, ')
+          ..write('hr: $hr')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, updatedAt, runId, time, lat, lon, accuracy, altitude, segment, hr);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RunPoint &&
+          other.id == this.id &&
+          other.updatedAt == this.updatedAt &&
+          other.runId == this.runId &&
+          other.time == this.time &&
+          other.lat == this.lat &&
+          other.lon == this.lon &&
+          other.accuracy == this.accuracy &&
+          other.altitude == this.altitude &&
+          other.segment == this.segment &&
+          other.hr == this.hr);
+}
+
+class RunPointsCompanion extends UpdateCompanion<RunPoint> {
+  final Value<String> id;
+  final Value<DateTime> updatedAt;
+  final Value<String> runId;
+  final Value<DateTime> time;
+  final Value<double> lat;
+  final Value<double> lon;
+  final Value<double?> accuracy;
+  final Value<double?> altitude;
+  final Value<int> segment;
+  final Value<int?> hr;
+  final Value<int> rowid;
+  const RunPointsCompanion({
+    this.id = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.runId = const Value.absent(),
+    this.time = const Value.absent(),
+    this.lat = const Value.absent(),
+    this.lon = const Value.absent(),
+    this.accuracy = const Value.absent(),
+    this.altitude = const Value.absent(),
+    this.segment = const Value.absent(),
+    this.hr = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  RunPointsCompanion.insert({
+    this.id = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    required String runId,
+    required DateTime time,
+    required double lat,
+    required double lon,
+    this.accuracy = const Value.absent(),
+    this.altitude = const Value.absent(),
+    this.segment = const Value.absent(),
+    this.hr = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : runId = Value(runId),
+       time = Value(time),
+       lat = Value(lat),
+       lon = Value(lon);
+  static Insertable<RunPoint> custom({
+    Expression<String>? id,
+    Expression<DateTime>? updatedAt,
+    Expression<String>? runId,
+    Expression<DateTime>? time,
+    Expression<double>? lat,
+    Expression<double>? lon,
+    Expression<double>? accuracy,
+    Expression<double>? altitude,
+    Expression<int>? segment,
+    Expression<int>? hr,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (runId != null) 'run_id': runId,
+      if (time != null) 'time': time,
+      if (lat != null) 'lat': lat,
+      if (lon != null) 'lon': lon,
+      if (accuracy != null) 'accuracy': accuracy,
+      if (altitude != null) 'altitude': altitude,
+      if (segment != null) 'segment': segment,
+      if (hr != null) 'hr': hr,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  RunPointsCompanion copyWith({
+    Value<String>? id,
+    Value<DateTime>? updatedAt,
+    Value<String>? runId,
+    Value<DateTime>? time,
+    Value<double>? lat,
+    Value<double>? lon,
+    Value<double?>? accuracy,
+    Value<double?>? altitude,
+    Value<int>? segment,
+    Value<int?>? hr,
+    Value<int>? rowid,
+  }) {
+    return RunPointsCompanion(
+      id: id ?? this.id,
+      updatedAt: updatedAt ?? this.updatedAt,
+      runId: runId ?? this.runId,
+      time: time ?? this.time,
+      lat: lat ?? this.lat,
+      lon: lon ?? this.lon,
+      accuracy: accuracy ?? this.accuracy,
+      altitude: altitude ?? this.altitude,
+      segment: segment ?? this.segment,
+      hr: hr ?? this.hr,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (runId.present) {
+      map['run_id'] = Variable<String>(runId.value);
+    }
+    if (time.present) {
+      map['time'] = Variable<DateTime>(time.value);
+    }
+    if (lat.present) {
+      map['lat'] = Variable<double>(lat.value);
+    }
+    if (lon.present) {
+      map['lon'] = Variable<double>(lon.value);
+    }
+    if (accuracy.present) {
+      map['accuracy'] = Variable<double>(accuracy.value);
+    }
+    if (altitude.present) {
+      map['altitude'] = Variable<double>(altitude.value);
+    }
+    if (segment.present) {
+      map['segment'] = Variable<int>(segment.value);
+    }
+    if (hr.present) {
+      map['hr'] = Variable<int>(hr.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RunPointsCompanion(')
+          ..write('id: $id, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('runId: $runId, ')
+          ..write('time: $time, ')
+          ..write('lat: $lat, ')
+          ..write('lon: $lon, ')
+          ..write('accuracy: $accuracy, ')
+          ..write('altitude: $altitude, ')
+          ..write('segment: $segment, ')
+          ..write('hr: $hr, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5223,6 +6360,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $GoalsTable goals = $GoalsTable(this);
   late final $HrPresetsTable hrPresets = $HrPresetsTable(this);
   late final $IntervalPresetsTable intervalPresets = $IntervalPresetsTable(this);
+  late final $RunsTable runs = $RunsTable(this);
+  late final $RunPointsTable runPoints = $RunPointsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables => allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
@@ -5238,6 +6377,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     goals,
     hrPresets,
     intervalPresets,
+    runs,
+    runPoints,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -5256,6 +6397,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     WritePropagation(
       on: TableUpdateQuery.onTableName('workout_exercises', limitUpdateKind: UpdateKind.delete),
       result: [TableUpdate('workout_sets', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName('runs', limitUpdateKind: UpdateKind.delete),
+      result: [TableUpdate('run_points', kind: UpdateKind.delete)],
     ),
   ]);
   @override
@@ -8719,6 +9864,666 @@ typedef $$IntervalPresetsTableProcessedTableManager =
       IntervalPreset,
       PrefetchHooks Function()
     >;
+typedef $$RunsTableCreateCompanionBuilder = RunsCompanion Function({
+  Value<String> id,
+  Value<DateTime> updatedAt,
+  Value<String> name,
+  required DateTime startedAt,
+  Value<DateTime?> endedAt,
+  Value<DateTime?> pausedAt,
+  Value<int> pausedS,
+  Value<int> durationS,
+  Value<double> distanceM,
+  Value<String?> hrPresetId,
+  Value<int?> avgHr,
+  Value<int?> maxHr,
+  Value<String> notes,
+  Value<int> rowid,
+});
+typedef $$RunsTableUpdateCompanionBuilder = RunsCompanion Function({
+  Value<String> id,
+  Value<DateTime> updatedAt,
+  Value<String> name,
+  Value<DateTime> startedAt,
+  Value<DateTime?> endedAt,
+  Value<DateTime?> pausedAt,
+  Value<int> pausedS,
+  Value<int> durationS,
+  Value<double> distanceM,
+  Value<String?> hrPresetId,
+  Value<int?> avgHr,
+  Value<int?> maxHr,
+  Value<String> notes,
+  Value<int> rowid,
+});
+
+final class $$RunsTableReferences extends BaseReferences<_$AppDatabase, $RunsTable, Run> {
+  $$RunsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$RunPointsTable, List<RunPoint>> _runPointsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(db.runPoints, aliasName: 'runs__id__run_points__run_id');
+
+  $$RunPointsTableProcessedTableManager get runPointsRefs {
+    final manager = $$RunPointsTableTableManager(
+      $_db,
+      $_db.runPoints,
+    ).filter((f) => f.runId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_runPointsRefsTable($_db));
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: cache));
+  }
+}
+
+class $$RunsTableFilterComposer extends Composer<_$AppDatabase, $RunsTable> {
+  $$RunsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get startedAt =>
+      $composableBuilder(column: $table.startedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get endedAt =>
+      $composableBuilder(column: $table.endedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get pausedAt =>
+      $composableBuilder(column: $table.pausedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get pausedS =>
+      $composableBuilder(column: $table.pausedS, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get durationS =>
+      $composableBuilder(column: $table.durationS, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get distanceM =>
+      $composableBuilder(column: $table.distanceM, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get hrPresetId =>
+      $composableBuilder(column: $table.hrPresetId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get avgHr => $composableBuilder(column: $table.avgHr, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get maxHr => $composableBuilder(column: $table.maxHr, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => ColumnFilters(column));
+
+  Expression<bool> runPointsRefs(Expression<bool> Function($$RunPointsTableFilterComposer f) f) {
+    final $$RunPointsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.runPoints,
+      getReferencedColumn: (t) => t.runId,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$RunPointsTableFilterComposer(
+            $db: $db,
+            $table: $db.runPoints,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$RunsTableOrderingComposer extends Composer<_$AppDatabase, $RunsTable> {
+  $$RunsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get startedAt =>
+      $composableBuilder(column: $table.startedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get endedAt =>
+      $composableBuilder(column: $table.endedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get pausedAt =>
+      $composableBuilder(column: $table.pausedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get pausedS =>
+      $composableBuilder(column: $table.pausedS, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get durationS =>
+      $composableBuilder(column: $table.durationS, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get distanceM =>
+      $composableBuilder(column: $table.distanceM, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get hrPresetId =>
+      $composableBuilder(column: $table.hrPresetId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get avgHr =>
+      $composableBuilder(column: $table.avgHr, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get maxHr =>
+      $composableBuilder(column: $table.maxHr, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => ColumnOrderings(column));
+}
+
+class $$RunsTableAnnotationComposer extends Composer<_$AppDatabase, $RunsTable> {
+  $$RunsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id => $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt => $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get name => $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get startedAt => $composableBuilder(column: $table.startedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get endedAt => $composableBuilder(column: $table.endedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get pausedAt => $composableBuilder(column: $table.pausedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get pausedS => $composableBuilder(column: $table.pausedS, builder: (column) => column);
+
+  GeneratedColumn<int> get durationS => $composableBuilder(column: $table.durationS, builder: (column) => column);
+
+  GeneratedColumn<double> get distanceM => $composableBuilder(column: $table.distanceM, builder: (column) => column);
+
+  GeneratedColumn<String> get hrPresetId => $composableBuilder(column: $table.hrPresetId, builder: (column) => column);
+
+  GeneratedColumn<int> get avgHr => $composableBuilder(column: $table.avgHr, builder: (column) => column);
+
+  GeneratedColumn<int> get maxHr => $composableBuilder(column: $table.maxHr, builder: (column) => column);
+
+  GeneratedColumn<String> get notes => $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  Expression<T> runPointsRefs<T extends Object>(Expression<T> Function($$RunPointsTableAnnotationComposer a) f) {
+    final $$RunPointsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.runPoints,
+      getReferencedColumn: (t) => t.runId,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$RunPointsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.runPoints,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$RunsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $RunsTable,
+          Run,
+          $$RunsTableFilterComposer,
+          $$RunsTableOrderingComposer,
+          $$RunsTableAnnotationComposer,
+          $$RunsTableCreateCompanionBuilder,
+          $$RunsTableUpdateCompanionBuilder,
+          (Run, $$RunsTableReferences),
+          Run,
+          PrefetchHooks Function({bool runPointsRefs})
+        > {
+  $$RunsTableTableManager(_$AppDatabase db, $RunsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () => $$RunsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () => $$RunsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () => $$RunsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<DateTime> startedAt = const Value.absent(),
+                Value<DateTime?> endedAt = const Value.absent(),
+                Value<DateTime?> pausedAt = const Value.absent(),
+                Value<int> pausedS = const Value.absent(),
+                Value<int> durationS = const Value.absent(),
+                Value<double> distanceM = const Value.absent(),
+                Value<String?> hrPresetId = const Value.absent(),
+                Value<int?> avgHr = const Value.absent(),
+                Value<int?> maxHr = const Value.absent(),
+                Value<String> notes = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => RunsCompanion(
+                id: id,
+                updatedAt: updatedAt,
+                name: name,
+                startedAt: startedAt,
+                endedAt: endedAt,
+                pausedAt: pausedAt,
+                pausedS: pausedS,
+                durationS: durationS,
+                distanceM: distanceM,
+                hrPresetId: hrPresetId,
+                avgHr: avgHr,
+                maxHr: maxHr,
+                notes: notes,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                required DateTime startedAt,
+                Value<DateTime?> endedAt = const Value.absent(),
+                Value<DateTime?> pausedAt = const Value.absent(),
+                Value<int> pausedS = const Value.absent(),
+                Value<int> durationS = const Value.absent(),
+                Value<double> distanceM = const Value.absent(),
+                Value<String?> hrPresetId = const Value.absent(),
+                Value<int?> avgHr = const Value.absent(),
+                Value<int?> maxHr = const Value.absent(),
+                Value<String> notes = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => RunsCompanion.insert(
+                id: id,
+                updatedAt: updatedAt,
+                name: name,
+                startedAt: startedAt,
+                endedAt: endedAt,
+                pausedAt: pausedAt,
+                pausedS: pausedS,
+                durationS: durationS,
+                distanceM: distanceM,
+                hrPresetId: hrPresetId,
+                avgHr: avgHr,
+                maxHr: maxHr,
+                notes: notes,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) =>
+              p0.map((e) => (e.readTable<$RunsTable, Run>(table), $$RunsTableReferences(db, table, e))).toList(),
+          prefetchHooksCallback: ({runPointsRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [if (runPointsRefs) db.runPoints],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (runPointsRefs)
+                    await $_getPrefetchedDataByColumns<Run, $RunsTable, RunPoint, $RunPointsTable>(
+                      currentTable: table,
+                      referencedTable: $$RunsTableReferences._runPointsRefsTable(db),
+                      managerFromTypedResult: (p0) => $$RunsTableReferences(db, table, p0).runPointsRefs,
+                      currentColumn: 'id',
+                      referencedColumn: 'run_id',
+                      typedResults: items,
+                    ),
+                ];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$RunsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $RunsTable,
+      Run,
+      $$RunsTableFilterComposer,
+      $$RunsTableOrderingComposer,
+      $$RunsTableAnnotationComposer,
+      $$RunsTableCreateCompanionBuilder,
+      $$RunsTableUpdateCompanionBuilder,
+      (Run, $$RunsTableReferences),
+      Run,
+      PrefetchHooks Function({bool runPointsRefs})
+    >;
+typedef $$RunPointsTableCreateCompanionBuilder = RunPointsCompanion Function({
+  Value<String> id,
+  Value<DateTime> updatedAt,
+  required String runId,
+  required DateTime time,
+  required double lat,
+  required double lon,
+  Value<double?> accuracy,
+  Value<double?> altitude,
+  Value<int> segment,
+  Value<int?> hr,
+  Value<int> rowid,
+});
+typedef $$RunPointsTableUpdateCompanionBuilder = RunPointsCompanion Function({
+  Value<String> id,
+  Value<DateTime> updatedAt,
+  Value<String> runId,
+  Value<DateTime> time,
+  Value<double> lat,
+  Value<double> lon,
+  Value<double?> accuracy,
+  Value<double?> altitude,
+  Value<int> segment,
+  Value<int?> hr,
+  Value<int> rowid,
+});
+
+final class $$RunPointsTableReferences extends BaseReferences<_$AppDatabase, $RunPointsTable, RunPoint> {
+  $$RunPointsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $RunsTable _runIdTable(_$AppDatabase db) => db.runs.createAlias('run_points__run_id__runs__id');
+
+  $$RunsTableProcessedTableManager get runId {
+    final $_column = $_itemColumn<String>('run_id')!;
+
+    final manager = $$RunsTableTableManager($_db, $_db.runs).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_runIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$RunPointsTableFilterComposer extends Composer<_$AppDatabase, $RunPointsTable> {
+  $$RunPointsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get time =>
+      $composableBuilder(column: $table.time, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get lat => $composableBuilder(column: $table.lat, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get lon => $composableBuilder(column: $table.lon, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get accuracy =>
+      $composableBuilder(column: $table.accuracy, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get altitude =>
+      $composableBuilder(column: $table.altitude, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get segment =>
+      $composableBuilder(column: $table.segment, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get hr => $composableBuilder(column: $table.hr, builder: (column) => ColumnFilters(column));
+
+  $$RunsTableFilterComposer get runId {
+    final $$RunsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.runId,
+      referencedTable: $db.runs,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$RunsTableFilterComposer(
+            $db: $db,
+            $table: $db.runs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$RunPointsTableOrderingComposer extends Composer<_$AppDatabase, $RunPointsTable> {
+  $$RunPointsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get time =>
+      $composableBuilder(column: $table.time, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get lat =>
+      $composableBuilder(column: $table.lat, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get lon =>
+      $composableBuilder(column: $table.lon, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get accuracy =>
+      $composableBuilder(column: $table.accuracy, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get altitude =>
+      $composableBuilder(column: $table.altitude, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get segment =>
+      $composableBuilder(column: $table.segment, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get hr => $composableBuilder(column: $table.hr, builder: (column) => ColumnOrderings(column));
+
+  $$RunsTableOrderingComposer get runId {
+    final $$RunsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.runId,
+      referencedTable: $db.runs,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$RunsTableOrderingComposer(
+            $db: $db,
+            $table: $db.runs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$RunPointsTableAnnotationComposer extends Composer<_$AppDatabase, $RunPointsTable> {
+  $$RunPointsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id => $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt => $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get time => $composableBuilder(column: $table.time, builder: (column) => column);
+
+  GeneratedColumn<double> get lat => $composableBuilder(column: $table.lat, builder: (column) => column);
+
+  GeneratedColumn<double> get lon => $composableBuilder(column: $table.lon, builder: (column) => column);
+
+  GeneratedColumn<double> get accuracy => $composableBuilder(column: $table.accuracy, builder: (column) => column);
+
+  GeneratedColumn<double> get altitude => $composableBuilder(column: $table.altitude, builder: (column) => column);
+
+  GeneratedColumn<int> get segment => $composableBuilder(column: $table.segment, builder: (column) => column);
+
+  GeneratedColumn<int> get hr => $composableBuilder(column: $table.hr, builder: (column) => column);
+
+  $$RunsTableAnnotationComposer get runId {
+    final $$RunsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.runId,
+      referencedTable: $db.runs,
+      getReferencedColumn: (t) => t.id,
+      builder: (joinBuilder, {$addJoinBuilderToRootComposer, $removeJoinBuilderFromRootComposer}) =>
+          $$RunsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.runs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer: $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$RunPointsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $RunPointsTable,
+          RunPoint,
+          $$RunPointsTableFilterComposer,
+          $$RunPointsTableOrderingComposer,
+          $$RunPointsTableAnnotationComposer,
+          $$RunPointsTableCreateCompanionBuilder,
+          $$RunPointsTableUpdateCompanionBuilder,
+          (RunPoint, $$RunPointsTableReferences),
+          RunPoint,
+          PrefetchHooks Function({bool runId})
+        > {
+  $$RunPointsTableTableManager(_$AppDatabase db, $RunPointsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () => $$RunPointsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () => $$RunPointsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () => $$RunPointsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<String> runId = const Value.absent(),
+                Value<DateTime> time = const Value.absent(),
+                Value<double> lat = const Value.absent(),
+                Value<double> lon = const Value.absent(),
+                Value<double?> accuracy = const Value.absent(),
+                Value<double?> altitude = const Value.absent(),
+                Value<int> segment = const Value.absent(),
+                Value<int?> hr = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => RunPointsCompanion(
+                id: id,
+                updatedAt: updatedAt,
+                runId: runId,
+                time: time,
+                lat: lat,
+                lon: lon,
+                accuracy: accuracy,
+                altitude: altitude,
+                segment: segment,
+                hr: hr,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                required String runId,
+                required DateTime time,
+                required double lat,
+                required double lon,
+                Value<double?> accuracy = const Value.absent(),
+                Value<double?> altitude = const Value.absent(),
+                Value<int> segment = const Value.absent(),
+                Value<int?> hr = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => RunPointsCompanion.insert(
+                id: id,
+                updatedAt: updatedAt,
+                runId: runId,
+                time: time,
+                lat: lat,
+                lon: lon,
+                accuracy: accuracy,
+                altitude: altitude,
+                segment: segment,
+                hr: hr,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable<$RunPointsTable, RunPoint>(table), $$RunPointsTableReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: ({runId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (runId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.runId,
+                        referencedTable: $$RunPointsTableReferences._runIdTable(db),
+                        referencedColumn: $$RunPointsTableReferences._runIdTable(db).id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$RunPointsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $RunPointsTable,
+      RunPoint,
+      $$RunPointsTableFilterComposer,
+      $$RunPointsTableOrderingComposer,
+      $$RunPointsTableAnnotationComposer,
+      $$RunPointsTableCreateCompanionBuilder,
+      $$RunPointsTableUpdateCompanionBuilder,
+      (RunPoint, $$RunPointsTableReferences),
+      RunPoint,
+      PrefetchHooks Function({bool runId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -8738,4 +10543,6 @@ class $AppDatabaseManager {
   $$HrPresetsTableTableManager get hrPresets => $$HrPresetsTableTableManager(_db, _db.hrPresets);
   $$IntervalPresetsTableTableManager get intervalPresets =>
       $$IntervalPresetsTableTableManager(_db, _db.intervalPresets);
+  $$RunsTableTableManager get runs => $$RunsTableTableManager(_db, _db.runs);
+  $$RunPointsTableTableManager get runPoints => $$RunPointsTableTableManager(_db, _db.runPoints);
 }

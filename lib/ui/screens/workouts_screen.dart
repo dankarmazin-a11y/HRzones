@@ -10,6 +10,7 @@ import '../history/history_screen.dart';
 import '../programs/starter_programs_screen.dart';
 import '../workout/workout_editor.dart';
 import '../workout/active_workout_screen.dart';
+import '../run/run_start.dart';
 
 class WorkoutsScreen extends StatelessWidget {
   const WorkoutsScreen({super.key});
@@ -171,6 +172,7 @@ class TemplateCard extends StatelessWidget {
 
 /// Asks before replacing a workout that is already in progress.
 Future<bool> _confirmReplace(BuildContext context) async {
+  if (!await confirmNoRun(context) || !context.mounted) return false;
   final session = Services.of(context).session;
   if (session.active == null) return true;
   final choice = await showDialog<String>(

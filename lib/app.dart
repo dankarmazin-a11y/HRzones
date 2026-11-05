@@ -8,6 +8,7 @@ import 'ui/screens/profile_screen.dart';
 import 'ui/screens/run_screen.dart';
 import 'ui/screens/tools_screen.dart';
 import 'ui/screens/workouts_screen.dart';
+import 'ui/run/running_run_bar.dart';
 import 'ui/tools_icon.dart';
 import 'ui/workout/forgotten_workout.dart';
 import 'ui/workout/running_workout_bar.dart';
@@ -99,6 +100,7 @@ class _HomeShellState extends State<HomeShell> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const RunningWorkoutBar(),
+              const RunningRunBar(),
               NavigationBar(
                 selectedIndex: _tab.index,
                 onDestinationSelected: (i) => _select(AppTab.values[i]),

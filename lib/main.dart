@@ -23,8 +23,12 @@ void main() {
             // Switching apps closes the keyboard (it used to stay open, stuck).
             FocusManager.instance.primaryFocus?.unfocus();
             services.session.flush();
+            services.run.flush();
           },
-          onPause: services.session.flush,
+          onPause: () {
+            services.session.flush();
+            services.run.flush();
+          },
         );
         return services;
       },
