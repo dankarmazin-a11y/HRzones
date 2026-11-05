@@ -61,11 +61,15 @@ class _HomeShellState extends State<HomeShell> {
   /// positions got mixed up.
   final _scroll = [for (final _ in AppTab.values) ScrollController()];
 
+  /// Swipe left/right between the tabs.
+  final _pages = PageController();
+
   @override
   void dispose() {
     for (final c in _scroll) {
       c.dispose();
     }
+    _pages.dispose();
     super.dispose();
   }
 
@@ -76,23 +80,33 @@ class _HomeShellState extends State<HomeShell> {
       if (c.hasClients) c.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
       return;
     }
+    _goTo(t);
+  }
+
+  void _goTo(AppTab t) {
     setState(() => _tab = t);
+    // Jump (no slide through the tabs in between).
+    if (_pages.hasClients) _pages.jumpToPage(t.index);
   }
 
   @override
   Widget build(BuildContext context) {
     return ForgottenWorkoutWatcher(
       child: AppShell(
-        goTo: (t) => setState(() => _tab = t),
+        goTo: _goTo,
         child: Scaffold(
-          body: IndexedStack(
-            index: _tab.index,
+          body: PageView(
+            key: const Key('tabPages'),
+            controller: _pages,
+            onPageChanged: (i) => setState(() => _tab = AppTab.values[i]),
             children: [
               for (final (i, screen) in _screens.indexed)
-                PrimaryScrollController(
-                  controller: _scroll[i],
-                  automaticallyInheritForPlatforms: TargetPlatform.values.toSet(),
-                  child: screen,
+                _KeepAlive(
+                  child: PrimaryScrollController(
+                    controller: _scroll[i],
+                    automaticallyInheritForPlatforms: TargetPlatform.values.toSet(),
+                    child: screen,
+                  ),
                 ),
             ],
           ),
@@ -129,5 +143,26 @@ class _HomeShellState extends State<HomeShell> {
         ),
       ),
     );
+  }
+}
+
+/// Keeps a tab's screen (and its scroll position) when swiped away.
+class _KeepAlive extends StatefulWidget {
+  const _KeepAlive({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_KeepAlive> createState() => _KeepAliveState();
+}
+
+class _KeepAliveState extends State<_KeepAlive> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }

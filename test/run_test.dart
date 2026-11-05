@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hrzones/app.dart';
 import 'package:hrzones/beep/beeper.dart';
+import 'package:hrzones/data/database.dart';
 import 'package:hrzones/data/run_repository.dart';
 import 'package:hrzones/hr/hr_monitor.dart';
 import 'package:hrzones/run/geo.dart';
@@ -228,6 +229,8 @@ void main() {
     expect(find.textContaining('Your runs will show up here'), findsOneWidget);
     await tester.tap(find.byKey(const Key('startRun')));
     await settle(tester);
+    await tester.tap(find.byKey(const Key('goRun')));
+    await settle(tester);
     expect(find.byKey(const Key('runDistance')), findsOneWidget);
     expect(find.text('Finding GPS…'), findsOneWidget);
 
@@ -262,6 +265,8 @@ void main() {
     await settle(tester);
     await tester.tap(find.byKey(const Key('startRunHome')));
     await settle(tester);
+    await tester.tap(find.byKey(const Key('goRun')));
+    await settle(tester);
     await tester.tap(find.byKey(const Key('minimizeRun')));
     await settle(tester);
     expect(find.byKey(const Key('runningRunBar')), findsOneWidget);
@@ -273,6 +278,68 @@ void main() {
     await settle(tester);
     expect(s.session.active, isNull);
     await tester.runAsync(s.run.discard);
+    await tearDownApp(tester, s);
+  });
+
+  testWidgets('Home › Run always offers the heart-rate zone; the choice is remembered', (tester) async {
+    final s = (await tester.runAsync(testServices))!;
+    s.run.location = FakeLocation();
+    final presetId = (await tester.runAsync(
+      () => s.presets.save(name: 'Easy run', min: 130, max: 145, use: PresetUse.run),
+    ))!;
+    await tester.pumpWidget(HrZonesApp(services: s));
+    await settle(tester);
+
+    await tester.tap(find.byKey(const Key('startRunHome')));
+    await settle(tester);
+    expect(find.text('Ready to run'), findsOneWidget);
+    expect(find.byKey(const Key('runZoneNew')), findsOneWidget);
+    await tester.tap(find.byKey(Key('runZone_$presetId')));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('goRun')));
+    await settle(tester);
+    expect(s.run.presetId, presetId);
+    expect(s.hr.running, isTrue, reason: 'zone beeps on');
+    expect(s.hr.range.min, 130);
+    await tester.tap(find.byKey(const Key('minimizeRun')));
+    await settle(tester);
+    await tester.runAsync(s.run.discard);
+    expect(s.hr.running, isFalse);
+
+    // Next time the same zone is already picked.
+    await tester.tap(find.byKey(const Key('startRunHome')));
+    await settle(tester);
+    expect(tester.widget<ChoiceChip>(find.byKey(Key('runZone_$presetId'))).selected, isTrue);
+    await tester.tap(find.byKey(const Key('runZoneNone')));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('goRun')));
+    await settle(tester);
+    expect(s.run.presetId, isNull);
+    expect(s.hr.running, isFalse);
+    await tester.runAsync(s.run.discard);
+    await tearDownApp(tester, s);
+  });
+
+  testWidgets('swipe left/right between the tabs', (tester) async {
+    final s = (await tester.runAsync(testServices))!;
+    await tester.pumpWidget(HrZonesApp(services: s));
+    await settle(tester);
+    NavigationBar bar() => tester.widget<NavigationBar>(find.byType(NavigationBar));
+    expect(bar().selectedIndex, 0);
+    await tester.fling(find.byKey(const Key('tabPages')), const Offset(-400, 0), 1000);
+    await settle(tester);
+    expect(bar().selectedIndex, 1);
+    await tester.fling(find.byKey(const Key('tabPages')), const Offset(-400, 0), 1000);
+    await settle(tester);
+    expect(bar().selectedIndex, 2);
+    await tester.fling(find.byKey(const Key('tabPages')), const Offset(400, 0), 1000);
+    await settle(tester);
+    expect(bar().selectedIndex, 1);
+    // Tapping a tab still jumps straight there.
+    await tester.tap(find.text('Profile').last);
+    await settle(tester);
+    expect(bar().selectedIndex, 4);
+    expect(find.descendant(of: find.byType(AppBar), matching: find.text('Profile')), findsWidgets);
     await tearDownApp(tester, s);
   });
 }
