@@ -8,6 +8,7 @@ import '../../run/run_session.dart';
 import '../../workout/stats.dart';
 import '../timer_style.dart';
 import '../zone_colors.dart';
+import 'run_start.dart';
 import 'run_summary_screen.dart';
 
 /// The run being recorded: distance, time, pace, heart rate; pause / finish.
@@ -87,33 +88,43 @@ class _Numbers extends StatelessWidget {
         ],
       ),
     );
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          FittedBox(
-            child: Text(
-              formatKm(run.distanceM),
-              key: const Key('runDistance'),
-              style: TimerStyle.digits.copyWith(fontSize: 120),
-            ),
+    // Small phones: everything shrinks to fit instead of overflowing.
+    return LayoutBuilder(
+      builder: (context, box) => Center(
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: SizedBox(
+            width: box.maxWidth,
+            child: Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: _column(run, label, stat)),
           ),
-          const Text('Kilometres', style: label),
-          const SizedBox(height: 32),
-          Row(
-            children: [
-              stat(formatDuration(run.moving), 'Time', key: const Key('runTime')),
-              stat(formatPace(run.currentPace), 'Pace /km', key: const Key('runPace')),
-              stat(formatPace(run.avgPace), 'Avg pace', key: const Key('runAvgPace')),
-            ],
-          ),
-          const SizedBox(height: 24),
-          const _HeartRate(),
-        ],
+        ),
       ),
     );
   }
+
+  Widget _column(RunSession run, TextStyle label, Widget Function(String, String, {Key? key}) stat) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      FittedBox(
+        child: Text(
+          formatKm(run.distanceM),
+          key: const Key('runDistance'),
+          style: TimerStyle.digits.copyWith(fontSize: 120),
+        ),
+      ),
+      Text('Kilometres', style: label),
+      const SizedBox(height: 32),
+      Row(
+        children: [
+          stat(formatDuration(run.moving), 'Time', key: const Key('runTime')),
+          stat(formatPace(run.currentPace), 'Pace /km', key: const Key('runPace')),
+          stat(formatPace(run.avgPace), 'Avg pace', key: const Key('runAvgPace')),
+        ],
+      ),
+      const SizedBox(height: 24),
+      const _HeartRate(),
+    ],
+  );
 }
 
 class _HeartRate extends StatelessWidget {
@@ -220,6 +231,7 @@ class _Controls extends StatelessWidget {
       nav.pop();
     } else if (choice == 'save') {
       final id = await run.finish();
+      if (id != null) runVibration(start: false);
       if (id != null) await nav.pushReplacement(MaterialPageRoute(builder: (_) => RunSummaryScreen(runId: id)));
     }
   }

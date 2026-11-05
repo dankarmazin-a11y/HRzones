@@ -10,6 +10,7 @@ The owner is not a developer. Explain steps plainly, keep instructions short, an
 **Owner rules:**
 - After every change, always send the **web preview link** (https://dankarmazin-a11y.github.io/HRzones/ – updates ~5 min after the PR is merged) and the IPA link.
 - In conversation, **"workout" means any training** – strength or running.
+- **Claude merges its own PRs** (owner, 2026-11-05) unless the owner says otherwise – only after check + web + iOS builds are green (dispatch `build.yml` on the branch for the iOS build before merging).
 
 ## Decisions so far
 - **Framework: Flutter** (Dart), iPhone first, Android later from the same codebase. Platform-specific parts (HealthKit, background audio/beeps, GPS background) live in small native modules (Swift on iOS) behind platform channels.
@@ -133,6 +134,11 @@ The owner is not a developer. Explain steps plainly, keep instructions short, an
   - iOS: `NSLocationWhenInUseUsageDescription` (+ AlwaysAndWhenInUse text), `UIBackgroundModes` += `location`. "While Using the App" permission is enough for locked-screen recording (blue location pill). No entitlement needed → works with Sideloadly.
   - UI: Run tab (`run_screen.dart`: Start run, this week km, run list), `LiveRunScreen` (dark, bold white digits, GPS chip, Pause → Resume/Finish), `RunSummaryScreen` (delete in ⋮), `RunningRunBar` above the tabs. Home "Run" tile starts a run. A run and a strength workout can't run at the same time (`confirmNoRun` / dialog in `startRun`). Restore from backup is refused during a run.
   - Tests: `test/run_test.dart` (`FakeLocation` pushes fixes), migration v6→v7.
+- **Owner feedback after step 1 (2026-11-05):**
+  - Every run start shows the **"Ready to run" sheet** (`ReadyToRunSheet` in `run_start.dart`): zone beeps switch (= the global `zones` setting), run presets as chips + "New zone", heart-rate source line, big Start. Last choice remembered (setting `runPresetId`). (Before, `pickPreset` silently returned "no zone" when there were no run presets – the owner saw no zone option.)
+  - **Vibration** on run start (once) and finish (twice): `runVibration` (`HapticFeedback.vibrate`).
+  - **Swipe between tabs**: `HomeShell` uses a `PageView` (key `tabPages`) with keep-alive pages instead of `IndexedStack`; tapping a tab jumps (`jumpToPage`).
+  - Live run numbers scale down to fit small screens (`FittedBox` + `LayoutBuilder`).
 - Owner preferences: clean, short exercise names; popular items first; everything adjustable both by tapping presets and by typing a value.
 - **DB changes checklist** (a forgotten migration broke the live preview on 2026-11-02): add the column as nullable/defaulted, bump `schemaVersion`, add an `onUpgrade` step, and extend `test/migration_test.dart` (it builds an old-version DB file and opens it with the current code). `_addMissingColumns()` in `beforeOpen` is only a safety net.
 - State management: plain `ChangeNotifier` + `InheritedWidget` (`Services`, `HrScope`) – no package yet.
