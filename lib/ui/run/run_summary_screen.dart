@@ -12,6 +12,7 @@ import 'edit_run_screen.dart';
 import 'run_feel.dart';
 import 'run_records.dart';
 import 'run_start.dart';
+import 'share_run.dart';
 import 'shoes.dart';
 
 import 'package:fl_chart/fl_chart.dart';
@@ -59,12 +60,16 @@ class RunSummaryScreen extends StatelessWidget {
                 key: const Key('runMenu'),
                 onSelected: (v) => switch (v) {
                   'delete' => _delete(context),
+                  'share' when run != null => Navigator.of(
+                    context,
+                  ).push(MaterialPageRoute(builder: (_) => ShareRunScreen(run: run))),
                   'edit' when run != null => Navigator.of(
                     context,
                   ).push(MaterialPageRoute(builder: (_) => EditRunScreen(run: run))),
                   _ => null,
                 },
                 itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'share', child: Text('Share picture')),
                   PopupMenuItem(value: 'edit', child: Text('Edit run')),
                   PopupMenuItem(value: 'delete', child: Text('Delete run')),
                 ],
