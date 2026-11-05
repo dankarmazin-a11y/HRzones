@@ -263,6 +263,10 @@ class Runs extends Table with SyncColumns {
   IntColumn get maxHr => integer().nullable()();
   TextColumn get notes => text().withDefault(const Constant(''))();
 
+  /// Fastest time per record distance inside this run, JSON {"1000": 251.3,
+  /// "5000": …} (seconds). Null = not worked out yet (computed on demand).
+  TextColumn get bestsJson => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -343,7 +347,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -383,6 +387,8 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(runs);
         await m.createTable(runPoints); // its index is created in beforeOpen
       }
+      // Before v7 the runs table is created above, already with this column.
+      if (from == 7) await m.addColumn(runs, runs.bestsJson);
     },
     beforeOpen: (details) async {
       await _addMissingColumns();

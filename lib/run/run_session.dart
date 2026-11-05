@@ -7,6 +7,7 @@ import '../data/database.dart';
 import '../data/run_repository.dart';
 import '../hr/hr_monitor.dart';
 import '../hr/zones.dart';
+import 'best_efforts.dart';
 import 'geo.dart';
 import 'location_source.dart';
 import 'run_voice.dart';
@@ -186,8 +187,17 @@ class RunSession extends ChangeNotifier {
       await _stopGps();
       final end = _pausedAt ?? now();
       await _savePoints();
-      await _saveRun(endedAt: end, avgHr: hr.sessionAvg, maxHr: hr.sessionMax);
-      voice?.finished(distanceM, moving);
+      final bests = bestEfforts(
+        _route.map((p) => (time: p.time, lat: p.lat, lon: p.lon, accuracy: p.accuracy, segment: p.segment)),
+      );
+      // Faster than every earlier run (the first run at a distance isn't a record).
+      final before = await runs.records(before: _startedAt, excludeId: id);
+      final newRecords = <int, double>{
+        for (final e in bests.entries)
+          if (before.fastest[e.key] != null && e.value < before.fastest[e.key]!.value) e.key: e.value,
+      };
+      await _saveRun(endedAt: end, avgHr: hr.sessionAvg, maxHr: hr.sessionMax, bests: bests);
+      voice?.finished(distanceM, moving, newRecords: newRecords);
       if (_hrStartedByRun) await hr.stop();
       _reset();
       notifyListeners();
@@ -317,7 +327,7 @@ class RunSession extends ChangeNotifier {
     ]);
   }
 
-  Future<void> _saveRun({DateTime? endedAt, int? avgHr, int? maxHr}) async {
+  Future<void> _saveRun({DateTime? endedAt, int? avgHr, int? maxHr, Map<int, double>? bests}) async {
     final id = _id, start = _startedAt;
     if (id == null || start == null) return;
     await runs.saveRun(
@@ -332,6 +342,7 @@ class RunSession extends ChangeNotifier {
         hrPresetId: Value(_presetId),
         avgHr: Value(avgHr),
         maxHr: Value(maxHr),
+        bestsJson: Value(bests == null ? null : encodeBests(bests)),
         updatedAt: Value(now()),
       ),
     );

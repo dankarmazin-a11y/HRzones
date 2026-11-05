@@ -5338,6 +5338,15 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
     requiredDuringInsert: false,
     defaultValue: const Constant(''),
   );
+  static const VerificationMeta _bestsJsonMeta = const VerificationMeta('bestsJson');
+  @override
+  late final GeneratedColumn<String> bestsJson = GeneratedColumn<String>(
+    'bests_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -5353,6 +5362,7 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
     avgHr,
     maxHr,
     notes,
+    bestsJson,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -5404,6 +5414,9 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
     if (data.containsKey('notes')) {
       context.handle(_notesMeta, notes.isAcceptableOrUnknown(data['notes']!, _notesMeta));
     }
+    if (data.containsKey('bests_json')) {
+      context.handle(_bestsJsonMeta, bestsJson.isAcceptableOrUnknown(data['bests_json']!, _bestsJsonMeta));
+    }
     return context;
   }
 
@@ -5426,6 +5439,7 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
       avgHr: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}avg_hr']),
       maxHr: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}max_hr']),
       notes: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}notes'])!,
+      bestsJson: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}bests_json']),
     );
   }
 
@@ -5457,6 +5471,10 @@ class Run extends DataClass implements Insertable<Run> {
   final int? avgHr;
   final int? maxHr;
   final String notes;
+
+  /// Fastest time per record distance inside this run, JSON {"1000": 251.3,
+  /// "5000": …} (seconds). Null = not worked out yet (computed on demand).
+  final String? bestsJson;
   const Run({
     required this.id,
     required this.updatedAt,
@@ -5471,6 +5489,7 @@ class Run extends DataClass implements Insertable<Run> {
     this.avgHr,
     this.maxHr,
     required this.notes,
+    this.bestsJson,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -5498,6 +5517,9 @@ class Run extends DataClass implements Insertable<Run> {
       map['max_hr'] = Variable<int>(maxHr);
     }
     map['notes'] = Variable<String>(notes);
+    if (!nullToAbsent || bestsJson != null) {
+      map['bests_json'] = Variable<String>(bestsJson);
+    }
     return map;
   }
 
@@ -5516,6 +5538,7 @@ class Run extends DataClass implements Insertable<Run> {
       avgHr: avgHr == null && nullToAbsent ? const Value.absent() : Value(avgHr),
       maxHr: maxHr == null && nullToAbsent ? const Value.absent() : Value(maxHr),
       notes: Value(notes),
+      bestsJson: bestsJson == null && nullToAbsent ? const Value.absent() : Value(bestsJson),
     );
   }
 
@@ -5535,6 +5558,7 @@ class Run extends DataClass implements Insertable<Run> {
       avgHr: serializer.fromJson<int?>(json['avgHr']),
       maxHr: serializer.fromJson<int?>(json['maxHr']),
       notes: serializer.fromJson<String>(json['notes']),
+      bestsJson: serializer.fromJson<String?>(json['bestsJson']),
     );
   }
   @override
@@ -5554,6 +5578,7 @@ class Run extends DataClass implements Insertable<Run> {
       'avgHr': serializer.toJson<int?>(avgHr),
       'maxHr': serializer.toJson<int?>(maxHr),
       'notes': serializer.toJson<String>(notes),
+      'bestsJson': serializer.toJson<String?>(bestsJson),
     };
   }
 
@@ -5571,6 +5596,7 @@ class Run extends DataClass implements Insertable<Run> {
     Value<int?> avgHr = const Value.absent(),
     Value<int?> maxHr = const Value.absent(),
     String? notes,
+    Value<String?> bestsJson = const Value.absent(),
   }) => Run(
     id: id ?? this.id,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -5585,6 +5611,7 @@ class Run extends DataClass implements Insertable<Run> {
     avgHr: avgHr.present ? avgHr.value : this.avgHr,
     maxHr: maxHr.present ? maxHr.value : this.maxHr,
     notes: notes ?? this.notes,
+    bestsJson: bestsJson.present ? bestsJson.value : this.bestsJson,
   );
   Run copyWithCompanion(RunsCompanion data) {
     return Run(
@@ -5601,6 +5628,7 @@ class Run extends DataClass implements Insertable<Run> {
       avgHr: data.avgHr.present ? data.avgHr.value : this.avgHr,
       maxHr: data.maxHr.present ? data.maxHr.value : this.maxHr,
       notes: data.notes.present ? data.notes.value : this.notes,
+      bestsJson: data.bestsJson.present ? data.bestsJson.value : this.bestsJson,
     );
   }
 
@@ -5619,7 +5647,8 @@ class Run extends DataClass implements Insertable<Run> {
           ..write('hrPresetId: $hrPresetId, ')
           ..write('avgHr: $avgHr, ')
           ..write('maxHr: $maxHr, ')
-          ..write('notes: $notes')
+          ..write('notes: $notes, ')
+          ..write('bestsJson: $bestsJson')
           ..write(')'))
         .toString();
   }
@@ -5639,6 +5668,7 @@ class Run extends DataClass implements Insertable<Run> {
     avgHr,
     maxHr,
     notes,
+    bestsJson,
   );
   @override
   bool operator ==(Object other) =>
@@ -5656,7 +5686,8 @@ class Run extends DataClass implements Insertable<Run> {
           other.hrPresetId == this.hrPresetId &&
           other.avgHr == this.avgHr &&
           other.maxHr == this.maxHr &&
-          other.notes == this.notes);
+          other.notes == this.notes &&
+          other.bestsJson == this.bestsJson);
 }
 
 class RunsCompanion extends UpdateCompanion<Run> {
@@ -5673,6 +5704,7 @@ class RunsCompanion extends UpdateCompanion<Run> {
   final Value<int?> avgHr;
   final Value<int?> maxHr;
   final Value<String> notes;
+  final Value<String?> bestsJson;
   final Value<int> rowid;
   const RunsCompanion({
     this.id = const Value.absent(),
@@ -5688,6 +5720,7 @@ class RunsCompanion extends UpdateCompanion<Run> {
     this.avgHr = const Value.absent(),
     this.maxHr = const Value.absent(),
     this.notes = const Value.absent(),
+    this.bestsJson = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RunsCompanion.insert({
@@ -5704,6 +5737,7 @@ class RunsCompanion extends UpdateCompanion<Run> {
     this.avgHr = const Value.absent(),
     this.maxHr = const Value.absent(),
     this.notes = const Value.absent(),
+    this.bestsJson = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : startedAt = Value(startedAt);
   static Insertable<Run> custom({
@@ -5720,6 +5754,7 @@ class RunsCompanion extends UpdateCompanion<Run> {
     Expression<int>? avgHr,
     Expression<int>? maxHr,
     Expression<String>? notes,
+    Expression<String>? bestsJson,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -5736,6 +5771,7 @@ class RunsCompanion extends UpdateCompanion<Run> {
       if (avgHr != null) 'avg_hr': avgHr,
       if (maxHr != null) 'max_hr': maxHr,
       if (notes != null) 'notes': notes,
+      if (bestsJson != null) 'bests_json': bestsJson,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -5754,6 +5790,7 @@ class RunsCompanion extends UpdateCompanion<Run> {
     Value<int?>? avgHr,
     Value<int?>? maxHr,
     Value<String>? notes,
+    Value<String?>? bestsJson,
     Value<int>? rowid,
   }) {
     return RunsCompanion(
@@ -5770,6 +5807,7 @@ class RunsCompanion extends UpdateCompanion<Run> {
       avgHr: avgHr ?? this.avgHr,
       maxHr: maxHr ?? this.maxHr,
       notes: notes ?? this.notes,
+      bestsJson: bestsJson ?? this.bestsJson,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -5816,6 +5854,9 @@ class RunsCompanion extends UpdateCompanion<Run> {
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
+    if (bestsJson.present) {
+      map['bests_json'] = Variable<String>(bestsJson.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -5838,6 +5879,7 @@ class RunsCompanion extends UpdateCompanion<Run> {
           ..write('avgHr: $avgHr, ')
           ..write('maxHr: $maxHr, ')
           ..write('notes: $notes, ')
+          ..write('bestsJson: $bestsJson, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -9878,6 +9920,7 @@ typedef $$RunsTableCreateCompanionBuilder = RunsCompanion Function({
   Value<int?> avgHr,
   Value<int?> maxHr,
   Value<String> notes,
+  Value<String?> bestsJson,
   Value<int> rowid,
 });
 typedef $$RunsTableUpdateCompanionBuilder = RunsCompanion Function({
@@ -9894,6 +9937,7 @@ typedef $$RunsTableUpdateCompanionBuilder = RunsCompanion Function({
   Value<int?> avgHr,
   Value<int?> maxHr,
   Value<String> notes,
+  Value<String?> bestsJson,
   Value<int> rowid,
 });
 
@@ -9956,6 +10000,9 @@ class $$RunsTableFilterComposer extends Composer<_$AppDatabase, $RunsTable> {
 
   ColumnFilters<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get bestsJson =>
+      $composableBuilder(column: $table.bestsJson, builder: (column) => ColumnFilters(column));
 
   Expression<bool> runPointsRefs(Expression<bool> Function($$RunPointsTableFilterComposer f) f) {
     final $$RunPointsTableFilterComposer composer = $composerBuilder(
@@ -10021,6 +10068,9 @@ class $$RunsTableOrderingComposer extends Composer<_$AppDatabase, $RunsTable> {
 
   ColumnOrderings<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get bestsJson =>
+      $composableBuilder(column: $table.bestsJson, builder: (column) => ColumnOrderings(column));
 }
 
 class $$RunsTableAnnotationComposer extends Composer<_$AppDatabase, $RunsTable> {
@@ -10056,6 +10106,8 @@ class $$RunsTableAnnotationComposer extends Composer<_$AppDatabase, $RunsTable> 
   GeneratedColumn<int> get maxHr => $composableBuilder(column: $table.maxHr, builder: (column) => column);
 
   GeneratedColumn<String> get notes => $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<String> get bestsJson => $composableBuilder(column: $table.bestsJson, builder: (column) => column);
 
   Expression<T> runPointsRefs<T extends Object>(Expression<T> Function($$RunPointsTableAnnotationComposer a) f) {
     final $$RunPointsTableAnnotationComposer composer = $composerBuilder(
@@ -10114,6 +10166,7 @@ class $$RunsTableTableManager
                 Value<int?> avgHr = const Value.absent(),
                 Value<int?> maxHr = const Value.absent(),
                 Value<String> notes = const Value.absent(),
+                Value<String?> bestsJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RunsCompanion(
                 id: id,
@@ -10129,6 +10182,7 @@ class $$RunsTableTableManager
                 avgHr: avgHr,
                 maxHr: maxHr,
                 notes: notes,
+                bestsJson: bestsJson,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -10146,6 +10200,7 @@ class $$RunsTableTableManager
                 Value<int?> avgHr = const Value.absent(),
                 Value<int?> maxHr = const Value.absent(),
                 Value<String> notes = const Value.absent(),
+                Value<String?> bestsJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RunsCompanion.insert(
                 id: id,
@@ -10161,6 +10216,7 @@ class $$RunsTableTableManager
                 avgHr: avgHr,
                 maxHr: maxHr,
                 notes: notes,
+                bestsJson: bestsJson,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) =>

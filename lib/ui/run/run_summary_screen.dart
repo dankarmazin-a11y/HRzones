@@ -7,6 +7,7 @@ import '../../run/splits.dart';
 import '../../workout/stats.dart';
 import '../hr_presets.dart';
 import 'run_map.dart';
+import 'run_records.dart';
 
 import 'package:latlong2/latlong.dart';
 
@@ -130,9 +131,8 @@ class _Body extends StatelessWidget {
               : Text('Total ${formatDuration(run.endedAt!.difference(run.startedAt))}'),
         ),
         const SizedBox(height: 8),
+        RunBestsCard(run: run),
         _SplitsSection(run: run),
-        const SizedBox(height: 8),
-        Text('Running records are coming next.', textAlign: TextAlign.center, style: text.bodySmall),
       ],
     );
   }
