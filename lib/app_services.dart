@@ -20,6 +20,7 @@ import 'hr/zones.dart';
 import 'notify/rest_notifier.dart';
 import 'run/location_source.dart';
 import 'run/run_session.dart';
+import 'run/run_voice.dart';
 import 'workout/workout_session.dart';
 
 /// Everything the screens need: database repositories, HR monitor and the
@@ -39,10 +40,24 @@ class AppServices {
       ..restNotifier = restNotifier
       ..intervals = intervals;
     goals = GoalRepository(db, workouts, exercises, body);
-    run = RunSession(runs: runs, hr: hr, location: location);
+    run = RunSession(runs: runs, hr: hr, location: location)..voice = RunVoice(hr.beeper.speak);
   }
 
   final RunRepository runs;
+
+  /// Voice updates during runs (setting `runVoice`, default on) every
+  /// [RunVoice.everyM] metres (setting `runVoiceEvery`, default 1000).
+  Future<void> setRunVoice({bool? on, int? everyM}) async {
+    final v = run.voice!;
+    if (on != null) {
+      v.enabled = on;
+      await db.setSetting('runVoice', on ? '1' : '0');
+    }
+    if (everyM != null) {
+      v.everyM = everyM;
+      await db.setSetting('runVoiceEvery', '$everyM');
+    }
+  }
 
   /// The run being recorded (GPS).
   late final RunSession run;
@@ -220,6 +235,9 @@ class AppServices {
     session.vibrateRestOver = await db.getSetting('restVibrate') != '0';
     session.notifyRestOver = await db.getSetting('restNotify') == '1';
     session.idleReminder = await db.getSetting('idleReminder') != '0';
+    run.voice!
+      ..enabled = await db.getSetting('runVoice') != '0'
+      ..everyM = await getInt('runVoiceEvery') ?? 1000;
     hr.beeper.choices.clear();
     try {
       final saved = jsonDecode(await db.getSetting('sounds') ?? '{}') as Map<String, dynamic>;

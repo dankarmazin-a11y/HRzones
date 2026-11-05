@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app_services.dart';
 import '../../data/database.dart';
 import '../../run/geo.dart';
+import '../../run/splits.dart';
 import '../../workout/stats.dart';
 import '../hr_presets.dart';
 import 'run_map.dart';
@@ -122,7 +123,9 @@ class _Body extends StatelessWidget {
               : Text('Total ${formatDuration(run.endedAt!.difference(run.startedAt))}'),
         ),
         const SizedBox(height: 8),
-        Text('Map, km splits and records are coming next.', textAlign: TextAlign.center, style: text.bodySmall),
+        _SplitsSection(run: run),
+        const SizedBox(height: 8),
+        Text('Running records are coming next.', textAlign: TextAlign.center, style: text.bodySmall),
       ],
     );
   }
@@ -205,6 +208,116 @@ class _RouteCardState extends State<_RouteCard> {
               ),
             ),
             const Positioned(right: 8, top: 8, child: Icon(Icons.open_in_full, size: 20)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Time and pace for every kilometre, fastest in bold, bar = relative speed.
+class _SplitsSection extends StatefulWidget {
+  const _SplitsSection({required this.run});
+
+  final Run run;
+
+  @override
+  State<_SplitsSection> createState() => _SplitsSectionState();
+}
+
+class _SplitsSectionState extends State<_SplitsSection> {
+  List<KmSplit>? _splits;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_splits == null) _load();
+  }
+
+  Future<void> _load() async {
+    final points = await Services.of(context).runs.points(widget.run.id);
+    if (!mounted) return;
+    setState(
+      () => _splits = computeSplits(
+        points.map((p) => (time: p.time, lat: p.lat, lon: p.lon, accuracy: p.accuracy, segment: p.segment, hr: p.hr)),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final splits = _splits;
+    if (splits == null || splits.isEmpty) return const SizedBox.shrink();
+    final text = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    final full = splits.where((x) => !x.partial && x.pace != null).toList();
+    final fastest = full.length < 2 ? null : full.reduce((a, b) => a.pace! <= b.pace! ? a : b);
+    final paces = splits.map((x) => x.pace).whereType<double>().toList();
+    final slowest = paces.isEmpty ? 1.0 : paces.reduce((a, b) => a > b ? a : b);
+    final quickest = paces.isEmpty ? 1.0 : paces.reduce((a, b) => a < b ? a : b);
+    final hasHr = splits.any((x) => x.avgHr != null);
+    final head = text.labelMedium?.copyWith(color: scheme.onSurfaceVariant);
+    return Card(
+      key: const Key('splits'),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Splits', style: text.titleMedium),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                SizedBox(width: 48, child: Text('KM', style: head)),
+                SizedBox(width: 64, child: Text('PACE', style: head)),
+                const Expanded(child: SizedBox()),
+                if (hasHr)
+                  SizedBox(
+                    width: 44,
+                    child: Text('HR', textAlign: TextAlign.end, style: head),
+                  ),
+              ],
+            ),
+            for (final x in splits)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  key: Key('split_${x.km}'),
+                  children: [
+                    SizedBox(width: 48, child: Text(x.partial ? (x.distanceM / 1000).toStringAsFixed(2) : '${x.km}')),
+                    SizedBox(
+                      width: 64,
+                      child: Text(
+                        formatPace(x.pace),
+                        style: TextStyle(fontWeight: x == fastest ? FontWeight.w900 : FontWeight.w500),
+                      ),
+                    ),
+                    Expanded(
+                      child: LayoutBuilder(
+                        builder: (context, box) {
+                          // Faster = longer bar (the slowest still gets a third).
+                          final p = x.pace ?? slowest;
+                          final span = slowest - quickest;
+                          final f = span <= 0 ? 1.0 : 1 - (p - quickest) / span * 0.67;
+                          return Align(
+                            alignment: Alignment.centerLeft,
+                            child: Container(
+                              height: 10,
+                              width: box.maxWidth * f,
+                              decoration: BoxDecoration(
+                                color: x == fastest ? scheme.primary : scheme.primary.withValues(alpha: 0.45),
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    if (hasHr)
+                      SizedBox(width: 44, child: Text(x.avgHr == null ? '–' : '${x.avgHr}', textAlign: TextAlign.end)),
+                  ],
+                ),
+              ),
           ],
         ),
       ),
