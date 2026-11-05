@@ -45,10 +45,29 @@ class AppServices {
 
   final RunRepository runs;
 
+  /// Target pace range in s/km for pace beeps (setting `runPaceAlert`,
+  /// "330-350"; empty = off).
+  Future<void> setPaceAlert(HrRange? range) async {
+    run.paceAlert = range;
+    await db.setSetting('runPaceAlert', range == null ? '' : '${range.min}-${range.max}');
+  }
+
   /// Voice updates during runs (setting `runVoice`, default on) every
   /// [RunVoice.everyM] metres (setting `runVoiceEvery`, default 1000).
-  Future<void> setRunVoice({bool? on, int? everyM}) async {
+  Future<void> setRunVoice({bool? on, int? everyM, Set<VoiceItem>? items, String? kind, bool? spokenAlerts}) async {
     final v = run.voice!;
+    if (items != null) {
+      v.items = items;
+      await db.setSetting('runVoiceItems', items.map((i) => i.name).join(','));
+    }
+    if (kind != null) {
+      v.kind = kind;
+      await db.setSetting('runVoiceKind', kind);
+    }
+    if (spokenAlerts != null) {
+      v.spokenAlerts = spokenAlerts;
+      await db.setSetting('spokenAlerts', spokenAlerts ? '1' : '0');
+    }
     if (on != null) {
       v.enabled = on;
       await db.setSetting('runVoice', on ? '1' : '0');
@@ -237,7 +256,16 @@ class AppServices {
     session.idleReminder = await db.getSetting('idleReminder') != '0';
     run.voice!
       ..enabled = await db.getSetting('runVoice') != '0'
-      ..everyM = await getInt('runVoiceEvery') ?? 1000;
+      ..everyM = await getInt('runVoiceEvery') ?? 1000
+      ..kind = await db.getSetting('runVoiceKind') ?? 'default'
+      ..spokenAlerts = await db.getSetting('spokenAlerts') != '0';
+    final items = await db.getSetting('runVoiceItems');
+    if (items != null) {
+      run.voice!.items = {for (final n in items.split(',')) ?VoiceItem.values.where((i) => i.name == n).firstOrNull};
+    }
+    final pace = (await db.getSetting('runPaceAlert'))?.split('-');
+    final pMin = int.tryParse(pace?.firstOrNull ?? ''), pMax = int.tryParse(pace?.lastOrNull ?? '');
+    run.paceAlert = pMin != null && pMax != null && pMin < pMax ? HrRange(min: pMin, max: pMax) : null;
     hr.beeper.choices.clear();
     try {
       final saved = jsonDecode(await db.getSetting('sounds') ?? '{}') as Map<String, dynamic>;

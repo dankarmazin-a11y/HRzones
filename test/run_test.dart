@@ -553,7 +553,7 @@ void main() {
 
     test('voice off: silent; every ½ km', () {
       final said = <String>[];
-      final v = RunVoice((t) async => said.add(t))..everyM = 500;
+      final v = RunVoice((t, {voice = 'default'}) async => said.add(t))..everyM = 500;
       v.started();
       v.progress(510, const Duration(minutes: 3));
       expect(said.last, startsWith('0.5 kilometres. Time 3 minutes.'));

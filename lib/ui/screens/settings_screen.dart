@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../app_services.dart';
+import '../../run/run_voice.dart';
+import '../run/pace_alert.dart';
 import '../../beep/sounds.dart';
 import '../../workout/training_level.dart';
 import '../../workout/training_place.dart';
@@ -279,7 +281,7 @@ class _RunVoiceSettingsState extends State<RunVoiceSettings> {
             setState(() {});
           },
         ),
-        if (!widget.compact && v.enabled)
+        if (!widget.compact && v.enabled) ...[
           Padding(
             padding: const EdgeInsets.only(left: 56),
             child: SegmentedButton<int>(
@@ -294,6 +296,72 @@ class _RunVoiceSettingsState extends State<RunVoiceSettings> {
               },
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(56, 12, 0, 0),
+            child: Text('What it says', style: Theme.of(context).textTheme.labelLarge),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(left: 56),
+            child: Wrap(
+              spacing: 6,
+              children: [
+                for (final item in VoiceItem.values)
+                  FilterChip(
+                    key: Key('voiceItem_${item.name}'),
+                    label: Text(item.label),
+                    selected: v.items.contains(item),
+                    onSelected: (on) async {
+                      await s.setRunVoice(items: on ? {...v.items, item} : ({...v.items}..remove(item)));
+                      setState(() {});
+                    },
+                  ),
+              ],
+            ),
+          ),
+        ],
+        if (!widget.compact) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(56, 12, 0, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: SegmentedButton<String>(
+                    key: const Key('voiceKind'),
+                    segments: const [
+                      ButtonSegment(value: 'default', label: Text('Default')),
+                      ButtonSegment(value: 'female', label: Text('Female')),
+                      ButtonSegment(value: 'male', label: Text('Male')),
+                    ],
+                    selected: {v.kind},
+                    onSelectionChanged: (sel) async {
+                      await s.setRunVoice(kind: sel.first);
+                      setState(() {});
+                    },
+                  ),
+                ),
+                IconButton(
+                  key: const Key('testVoice'),
+                  tooltip: 'Test voice',
+                  icon: const Icon(Icons.play_circle_outline),
+                  onPressed: v.test,
+                ),
+              ],
+            ),
+          ),
+          SwitchListTile(
+            key: const Key('spokenAlertsSwitch'),
+            contentPadding: EdgeInsets.zero,
+            secondary: const Icon(Icons.campaign_outlined),
+            title: const Text('Say the alerts'),
+            subtitle: const Text('During runs: "Heart rate 168. Slow down." after the beeps'),
+            value: v.spokenAlerts,
+            onChanged: (on) async {
+              await s.setRunVoice(spokenAlerts: on);
+              setState(() {});
+            },
+          ),
+          const PaceAlertRow(),
+        ],
       ],
     );
   }

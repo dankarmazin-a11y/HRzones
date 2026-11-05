@@ -48,8 +48,8 @@ abstract class Beeper {
   Future<void> sound(String name, {int count = 1});
 
   /// Says [text] out loud (voice updates during runs). Other apps' music is
-  /// turned down while speaking.
-  Future<void> speak(String text);
+  /// turned down while speaking. [voice]: "default", "female" or "male".
+  Future<void> speak(String text, {String voice = 'default'});
 
   /// The sound picked for each event (Settings › Sounds); missing = classic.
   final choices = <SoundEvent, SoundChoice>{};
@@ -108,7 +108,7 @@ class NativeBeeper extends Beeper {
   Future<void> sound(String name, {int count = 1}) => _call('sound', {'name': name, 'count': count});
 
   @override
-  Future<void> speak(String text) => _call('speak', {'text': text});
+  Future<void> speak(String text, {String voice = 'default'}) => _call('speak', {'text': text, 'voice': voice});
 }
 
 /// Used on web and in tests: records calls instead of making sound.
@@ -138,7 +138,7 @@ class SilentBeeper extends Beeper {
   final spoken = <String>[];
 
   @override
-  Future<void> speak(String text) async {
+  Future<void> speak(String text, {String voice = 'default'}) async {
     spoken.add(text);
     calls.add('speak');
   }

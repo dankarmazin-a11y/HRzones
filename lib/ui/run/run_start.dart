@@ -16,6 +16,7 @@ import '../zone_colors.dart';
 import '../screens/settings_screen.dart';
 import '../screens/workouts_screen.dart';
 import 'live_run_screen.dart';
+import 'pace_alert.dart';
 
 /// Start a run: the "Ready to run" sheet (heart-rate zone), location
 /// permission, a vibration, then the live run screen.
@@ -339,6 +340,7 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
                     ),
                   ),
               ],
+              const PaceAlertRow(),
               const RunVoiceSettings(compact: true),
               const SizedBox(height: 12),
               SizedBox(

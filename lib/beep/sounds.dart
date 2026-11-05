@@ -10,7 +10,9 @@ enum SoundEvent {
   intervalWork('Interval: work', 'A work period starts', count: 2, frequency: 1100),
   intervalRest('Interval: rest', 'A rest period starts', count: 1, frequency: 550),
   intervalTick('Interval: 3-2-1', 'Last seconds before the next period', count: 1, frequency: 880),
-  intervalDone('Interval: finished', 'The whole interval timer is done', count: 3, frequency: 1200);
+  intervalDone('Interval: finished', 'The whole interval timer is done', count: 3, frequency: 1200),
+  paceFast('Run: too fast', 'Faster than your target pace', count: 2, frequency: 1500),
+  paceSlow('Run: too slow', 'Slower than your target pace', count: 1, frequency: 400);
 
   const SoundEvent(this.label, this.description, {required this.count, this.frequency = 880, this.classicDing = false});
 
