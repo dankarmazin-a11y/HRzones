@@ -21,6 +21,12 @@ abstract class RestNotifier {
 
   Future<void> cancelIdle();
 
+  /// "Still running?" in [after] – a run still recording without movement,
+  /// or paused for a long time (replaces an earlier one).
+  Future<void> scheduleRunIdle(Duration after, {required bool paused});
+
+  Future<void> cancelRunIdle();
+
   static RestNotifier create() => kIsWeb ? SilentRestNotifier() : LocalRestNotifier();
 }
 
@@ -29,6 +35,7 @@ class LocalRestNotifier extends RestNotifier {
   bool _ready = false;
   static const _id = 1;
   static const _idleId = 2;
+  static const _runIdleId = 3;
 
   Future<bool> _init() async {
     if (_ready) return true;
@@ -117,6 +124,35 @@ class LocalRestNotifier extends RestNotifier {
       await _plugin.cancel(id: _idleId);
     } catch (_) {}
   }
+
+  @override
+  Future<void> scheduleRunIdle(Duration after, {required bool paused}) async {
+    if (!await _init()) return;
+    try {
+      await _plugin.zonedSchedule(
+        id: _runIdleId,
+        title: 'Still running?',
+        body: paused
+            ? 'Your run has been paused for a long time. Tap to finish it.'
+            : 'Your run is still recording but you haven\'t moved for 20 minutes. Tap to finish it.',
+        scheduledDate: tz.TZDateTime.now(tz.UTC).add(after),
+        notificationDetails: const NotificationDetails(
+          iOS: DarwinNotificationDetails(presentAlert: false, presentBanner: false, presentList: false),
+        ),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      );
+    } catch (e) {
+      debugPrint('Could not schedule the run reminder: $e');
+    }
+  }
+
+  @override
+  Future<void> cancelRunIdle() async {
+    if (!_ready) return;
+    try {
+      await _plugin.cancel(id: _runIdleId);
+    } catch (_) {}
+  }
 }
 
 /// Web preview and tests: records what would happen.
@@ -141,4 +177,13 @@ class SilentRestNotifier extends RestNotifier {
 
   @override
   Future<void> cancelIdle() async => idleCancelled++;
+
+  final runIdleScheduled = <(Duration, bool)>[];
+  int runIdleCancelled = 0;
+
+  @override
+  Future<void> scheduleRunIdle(Duration after, {required bool paused}) async => runIdleScheduled.add((after, paused));
+
+  @override
+  Future<void> cancelRunIdle() async => runIdleCancelled++;
 }

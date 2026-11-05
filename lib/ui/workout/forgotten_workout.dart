@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 import '../../app_services.dart';
 import '../../workout/stats.dart';
 import '../../workout/workout_session.dart';
+import '../run/forgotten_run.dart';
 import 'active_workout_screen.dart';
 import 'workout_summary_screen.dart';
 
-/// Watches for a workout left open ("Still working out?"): when the app
+/// Watches for a workout left open ("Still working out?") or a forgotten
+/// run ("Still running?"): when the app
 /// comes back to the foreground (e.g. from the reminder notification), at
 /// start-up, and once a minute while it is open.
 class ForgottenWorkoutWatcher extends StatefulWidget {
@@ -42,6 +44,16 @@ class _ForgottenWorkoutWatcherState extends State<ForgottenWorkoutWatcher> {
 
   Future<void> _check() async {
     if (_asking || !mounted) return;
+    final run = Services.of(context).run;
+    if (run.active && run.idleFor > Duration.zero) {
+      _asking = true;
+      try {
+        await askAboutForgottenRun(context, run);
+      } finally {
+        _asking = false;
+      }
+      return;
+    }
     final session = Services.of(context).session;
     if (session.active == null || session.idleFor < WorkoutSession.idleAfter) return;
     _asking = true;

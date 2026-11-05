@@ -10,6 +10,7 @@ import '../../run/route_zones.dart';
 import '../../run/run_session.dart';
 import '../../workout/stats.dart';
 import '../timer_style.dart';
+import '../number_input.dart';
 import '../zone_colors.dart';
 import 'run_map.dart';
 import 'run_start.dart';
@@ -33,7 +34,7 @@ class _LiveRunScreenState extends State<LiveRunScreen> {
   @override
   Widget build(BuildContext context) {
     final run = Services.of(context).run;
-    final map = LiveRunScreen.showMap;
+    final map = LiveRunScreen.showMap && !run.treadmill;
     return ListenableBuilder(
       listenable: run,
       builder: (context, _) {
@@ -48,15 +49,16 @@ class _LiveRunScreenState extends State<LiveRunScreen> {
               icon: const Icon(Icons.keyboard_arrow_down),
               onPressed: () => Navigator.pop(context),
             ),
-            title: Text(run.paused ? 'Paused' : 'Run'),
+            title: Text(run.paused ? 'Paused' : (run.treadmill ? 'Treadmill run' : 'Run')),
             actions: [
-              _GpsChip(status: run.gps),
-              IconButton(
-                key: const Key('toggleRunMap'),
-                tooltip: map ? 'Show numbers' : 'Show map',
-                icon: Icon(map ? Icons.speed : Icons.map_outlined),
-                onPressed: () => setState(() => LiveRunScreen.showMap = !map),
-              ),
+              if (!run.treadmill) _GpsChip(status: run.gps),
+              if (!run.treadmill)
+                IconButton(
+                  key: const Key('toggleRunMap'),
+                  tooltip: map ? 'Show numbers' : 'Show map',
+                  icon: Icon(map ? Icons.speed : Icons.map_outlined),
+                  onPressed: () => setState(() => LiveRunScreen.showMap = !map),
+                ),
               const SizedBox(width: 4),
             ],
           ),
@@ -128,29 +130,46 @@ class _Numbers extends StatelessWidget {
     );
   }
 
-  Widget _column(RunSession run, TextStyle label, Widget Function(String, String, {Key? key}) stat) => Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      FittedBox(
-        child: Text(
-          formatKm(run.distanceM),
-          key: const Key('runDistance'),
-          style: TimerStyle.digits.copyWith(fontSize: 120),
-        ),
-      ),
-      Text('Kilometres', style: label),
-      const SizedBox(height: 32),
-      Row(
-        children: [
-          stat(formatDuration(run.moving), 'Time', key: const Key('runTime')),
-          stat(formatPace(run.currentPace), 'Pace /km', key: const Key('runPace')),
-          stat(formatPace(run.avgPace), 'Avg pace', key: const Key('runAvgPace')),
-        ],
-      ),
-      const SizedBox(height: 24),
-      const _HeartRate(),
-    ],
-  );
+  Widget _column(RunSession run, TextStyle label, Widget Function(String, String, {Key? key}) stat) => run.treadmill
+      ? Column(
+          // Treadmill: no GPS – the time is the big number.
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FittedBox(
+              child: Text(
+                formatDuration(run.moving),
+                key: const Key('runTime'),
+                style: TimerStyle.digits.copyWith(fontSize: 110),
+              ),
+            ),
+            Text('Time', style: label),
+            const SizedBox(height: 32),
+            const _HeartRate(),
+          ],
+        )
+      : Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FittedBox(
+              child: Text(
+                formatKm(run.distanceM),
+                key: const Key('runDistance'),
+                style: TimerStyle.digits.copyWith(fontSize: 120),
+              ),
+            ),
+            Text('Kilometres', style: label),
+            const SizedBox(height: 32),
+            Row(
+              children: [
+                stat(formatDuration(run.moving), 'Time', key: const Key('runTime')),
+                stat(formatPace(run.currentPace), 'Pace /km', key: const Key('runPace')),
+                stat(formatPace(run.avgPace), 'Avg pace', key: const Key('runAvgPace')),
+              ],
+            ),
+            const SizedBox(height: 24),
+            const _HeartRate(),
+          ],
+        );
 }
 
 class _HeartRate extends StatelessWidget {
@@ -222,13 +241,15 @@ class _Controls extends StatelessWidget {
 
   Future<void> _finish(BuildContext context) async {
     final nav = Navigator.of(context);
-    final tooShort = run.distanceM < 50;
+    final tooShort = !run.treadmill && run.distanceM < 50;
     final choice = await showDialog<String>(
       context: context,
       builder: (c) => AlertDialog(
         title: const Text('Finish run?'),
         content: Text(
-          tooShort
+          run.treadmill
+              ? 'Treadmill run, ${formatDuration(run.moving)}. Next: the distance.'
+              : tooShort
               ? 'This run is shorter than 50 m. Save it anyway?'
               : '${formatKm(run.distanceM)} km in ${formatDuration(run.moving)}',
         ),
@@ -256,10 +277,33 @@ class _Controls extends StatelessWidget {
       await run.discard();
       nav.pop();
     } else if (choice == 'save') {
+      if (run.treadmill) {
+        if (context.mounted) await _finishTreadmill(context);
+        return;
+      }
       final id = await run.finish();
       if (id != null) runVibration(times: 2);
       if (id != null) await nav.pushReplacement(MaterialPageRoute(builder: (_) => RunSummaryScreen(runId: id)));
     }
+  }
+
+  /// Treadmill: the distance from the treadmill's display.
+  Future<void> _finishTreadmill(BuildContext context) async {
+    final nav = Navigator.of(context);
+    final km = await promptNumber(
+      context,
+      title: 'Distance (km) – from the treadmill',
+      initial: 5,
+      decimal: true,
+      min: 0,
+      max: 100,
+      suffix: 'km',
+    );
+    if (km == null) return;
+    final id = await run.finish(distanceM: km * 1000);
+    if (id == null) return;
+    runVibration(times: 2);
+    await nav.pushReplacement(MaterialPageRoute(builder: (_) => RunSummaryScreen(runId: id)));
   }
 
   @override

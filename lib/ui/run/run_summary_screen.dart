@@ -7,6 +7,8 @@ import '../../run/splits.dart';
 import '../../workout/stats.dart';
 import '../hr_presets.dart';
 import 'run_map.dart';
+import 'edit_run_screen.dart';
+import 'run_feel.dart';
 import 'run_records.dart';
 
 import 'package:latlong2/latlong.dart';
@@ -50,8 +52,18 @@ class RunSummaryScreen extends StatelessWidget {
             title: Text(run == null ? 'Run' : runTitle(run)),
             actions: [
               PopupMenuButton<String>(
-                onSelected: (v) => v == 'delete' ? _delete(context) : null,
-                itemBuilder: (_) => const [PopupMenuItem(value: 'delete', child: Text('Delete run'))],
+                key: const Key('runMenu'),
+                onSelected: (v) => switch (v) {
+                  'delete' => _delete(context),
+                  'edit' when run != null => Navigator.of(
+                    context,
+                  ).push(MaterialPageRoute(builder: (_) => EditRunScreen(run: run))),
+                  _ => null,
+                },
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'edit', child: Text('Edit run')),
+                  PopupMenuItem(value: 'delete', child: Text('Delete run')),
+                ],
               ),
             ],
           ),
@@ -131,6 +143,7 @@ class _Body extends StatelessWidget {
               : Text('Total ${formatDuration(run.endedAt!.difference(run.startedAt))}'),
         ),
         const SizedBox(height: 8),
+        RunFeelCard(key: ValueKey('feel_${run.id}'), run: run),
         RunBestsCard(run: run),
         _SplitsSection(run: run),
       ],
@@ -204,7 +217,12 @@ class _RouteCardState extends State<_RouteCard> {
       return Card(
         child: SizedBox(
           height: 80,
-          child: Center(child: Text('No GPS route recorded', style: Theme.of(context).textTheme.bodyMedium)),
+          child: Center(
+            child: Text(
+              widget.run.kind == RunKind.treadmill ? 'Treadmill run – no route' : 'No GPS route recorded',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
         ),
       );
     }

@@ -96,6 +96,10 @@ Future<Uint8List> exportWorkbook(AppDatabase db) async {
       'Max HR',
       'HR zone preset',
       for (final d in recordDistances.values) 'Best $d (min)',
+      'Kind',
+      'Effort (1–10)',
+      'Weather',
+      'Notes',
     ],
   ];
   final splitRows = <List<Object?>>[
@@ -112,6 +116,10 @@ Future<Uint8List> exportWorkbook(AppDatabase db) async {
       r.maxHr,
       presets[r.hrPresetId]?.name,
       for (final d in recordDistances.keys) bests[d] == null ? null : double.parse((bests[d]! / 60).toStringAsFixed(2)),
+      r.kind.name,
+      r.effort,
+      r.weather,
+      r.notes.isEmpty ? null : r.notes,
     ]);
     final points = await runRepo.points(r.id);
     for (final sp in computeSplits(

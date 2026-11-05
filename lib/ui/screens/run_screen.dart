@@ -4,6 +4,7 @@ import '../../app_services.dart';
 import '../../data/database.dart';
 import '../../run/geo.dart';
 import '../../workout/stats.dart';
+import '../run/edit_run_screen.dart';
 import '../run/run_records.dart';
 import '../run/run_start.dart';
 import '../run/run_summary_screen.dart';
@@ -18,7 +19,17 @@ class RunScreen extends StatelessWidget {
     final s = Services.of(context);
     final text = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('Run')),
+      appBar: AppBar(
+        title: const Text('Run'),
+        actions: [
+          IconButton(
+            key: const Key('logRun'),
+            tooltip: 'Log a run',
+            icon: const Icon(Icons.edit_calendar),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EditRunScreen())),
+          ),
+        ],
+      ),
       body: StreamBuilder<List<Run>>(
         stream: s.runs.watchFinished(),
         builder: (context, snap) {
@@ -127,10 +138,12 @@ class RunTile extends StatelessWidget {
     final pace = paceSecPerKm(run.distanceM, run.durationS.toDouble());
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: const CircleAvatar(child: Icon(Icons.directions_run)),
+      leading: CircleAvatar(child: Icon(run.kind == RunKind.treadmill ? Icons.home_outlined : Icons.directions_run)),
       title: Text('${formatKm(run.distanceM)} km'),
       subtitle: Text(
-        '${runTitle(run)}\n${formatDuration(Duration(seconds: run.durationS))} · ${formatPace(pace)} /km'
+        '${runTitle(run)}${run.kind == RunKind.treadmill ? ' · treadmill' : ''}\n'
+        '${formatDuration(Duration(seconds: run.durationS))} · ${formatPace(pace)} /km'
+        '${run.effort == null ? '' : ' · effort ${run.effort}/10'}'
         '${run.avgHr == null ? '' : ' · ♥ ${run.avgHr}'}',
       ),
       isThreeLine: true,
