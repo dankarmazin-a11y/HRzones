@@ -38,7 +38,18 @@ enum SoundChoice {
   chime('Chime'),
   click('Wood click'),
   buzz('Buzzer'),
-  whistle('Whistle');
+  whistle('Whistle'),
+  // Added 2026-11-06 (stored by name – order doesn't matter).
+  marimba('Marimba'),
+  sonar('Sonar ping'),
+  rising('Rising'),
+  falling('Falling'),
+  digital('Digital watch'),
+  gong('Gong'),
+  fanfare('Fanfare'),
+  drop('Water drop'),
+  triangle('Triangle'),
+  horn('Horn');
 
   const SoundChoice(this.label);
 

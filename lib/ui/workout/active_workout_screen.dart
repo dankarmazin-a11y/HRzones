@@ -156,9 +156,15 @@ class ActiveWorkoutScreen extends StatelessWidget {
                 ),
                 if (!session.editMode)
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: TextButton(
-                      style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    child: FilledButton(
+                      key: const Key('discardWorkout'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.red.shade700,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(48),
+                        textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
                       onPressed: () => _discard(context, session),
                       child: const Text('Discard workout'),
                     ),

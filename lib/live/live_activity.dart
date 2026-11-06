@@ -115,6 +115,9 @@ abstract class LiveActivity {
 
   @protected
   Future<void> send(String method, Map<String, Object?> args);
+
+  /// Why the card might not show (iPhone only; null elsewhere).
+  Future<Map<String, Object?>?> status() async => null;
 }
 
 class NativeLiveActivity extends LiveActivity {
@@ -130,6 +133,30 @@ class NativeLiveActivity extends LiveActivity {
       debugPrint('Live Activity $method failed: $e');
     }
   }
+
+  @override
+  Future<Map<String, Object?>?> status() async {
+    try {
+      return await _channel.invokeMapMethod<String, Object?>('status');
+    } catch (_) {
+      return {'old': true};
+    }
+  }
+}
+
+/// Plain-language summary of [LiveActivity.status] for Settings.
+String liveStatusText(Map<String, Object?>? m) {
+  if (m == null) return 'Only on the iPhone.';
+  if (m['old'] == true) return 'This build has no lock-screen card. Install the latest IPA.';
+  if (m['supported'] != true) return 'Needs iOS 16.2 or newer (this iPhone has iOS ${m['ios']}).';
+  if (m['extension'] != true) {
+    return 'The widget part of the app is missing – it was removed when the app was installed. '
+        'In Sideloadly, make sure "Remove app extensions" is NOT ticked, then install again.';
+  }
+  if (m['enabled'] != true) return 'Turned off: iPhone Settings › HR Zones › Live Activities → on.';
+  final err = m['lastError'];
+  if (err != null) return 'The iPhone refused the card: $err';
+  return 'Ready. iOS ${m['ios']}, ${m['running'] ?? 0} card(s) showing now.';
 }
 
 /// Web preview and tests: remembers what would have been sent.

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hrzones/beep/beeper.dart';
+import 'package:hrzones/beep/sounds.dart';
 import 'package:hrzones/data/database.dart';
 import 'package:hrzones/data/run_repository.dart';
 import 'package:hrzones/hr/hr_monitor.dart';
@@ -62,6 +63,30 @@ void main() {
     await s.session.discard();
     expect(live.calls.last.$1, 'end');
     await s.close();
+  });
+
+  test('Settings explains why the lock-screen card does not show', () {
+    expect(liveStatusText(null), 'Only on the iPhone.');
+    expect(liveStatusText({'old': true}), contains('latest IPA'));
+    expect(liveStatusText({'supported': false, 'ios': '15.8'}), contains('16.2'));
+    expect(liveStatusText({'supported': true, 'extension': false}), contains('Remove app extensions'));
+    expect(liveStatusText({'supported': true, 'extension': true, 'enabled': false}), contains('Live Activities'));
+    expect(
+      liveStatusText({'supported': true, 'extension': true, 'enabled': true, 'lastError': 'unsupportedTarget'}),
+      contains('unsupportedTarget'),
+    );
+    expect(
+      liveStatusText({'supported': true, 'extension': true, 'enabled': true, 'ios': '26.1', 'running': 0}),
+      startsWith('Ready'),
+    );
+  });
+
+  test('the new sounds are played by name', () async {
+    final beeper = SilentBeeper();
+    for (final c in [SoundChoice.marimba, SoundChoice.gong, SoundChoice.fanfare]) {
+      await beeper.preview(SoundEvent.zoneHigh, c);
+    }
+    expect(beeper.calls, ['sound marimbax3', 'sound gongx3', 'sound fanfarex3']);
   });
 
   group('run card', () {

@@ -254,6 +254,76 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
         let release: Double = min(1.0, (0.35 - t) * 30)
         return sin(2 * Double.pi * f * t) * 0.6 * attack * release
       }
+    case "marimba":
+      // Wooden bar: fundamental + a soft 4th harmonic, quick decay.
+      return synth(length: 0.45) { (t: Double) -> Double in
+        let a: Double = sin(2 * Double.pi * 784 * t) * exp(-9 * t)
+        let b: Double = sin(2 * Double.pi * 3136 * t) * 0.25 * exp(-25 * t)
+        return (a + b) * 0.8 * min(1.0, t / 0.002)
+      }
+    case "sonar":
+      // Submarine ping: pure tone with a long soft tail.
+      return synth(length: 0.9) { (t: Double) -> Double in
+        sin(2 * Double.pi * 1320 * t) * 0.7 * exp(-4.5 * t) * min(1.0, t / 0.003)
+      }
+    case "rising":
+      // Sweep up an octave.
+      return synth(length: 0.3) { (t: Double) -> Double in
+        let phase: Double = 2 * Double.pi * (600 * t + 1000 * t * t / 0.6)
+        return sin(phase) * 0.6 * min(1.0, t * 100) * min(1.0, (0.3 - t) * 40)
+      }
+    case "falling":
+      // Sweep down an octave.
+      return synth(length: 0.3) { (t: Double) -> Double in
+        let phase: Double = 2 * Double.pi * (1600 * t - 1000 * t * t / 0.6)
+        return sin(phase) * 0.6 * min(1.0, t * 100) * min(1.0, (0.3 - t) * 40)
+      }
+    case "digital":
+      // Sports-watch double chirp.
+      let chirp = synth(length: 0.06) { (t: Double) -> Double in
+        (sin(2 * Double.pi * 4000 * t) >= 0 ? 0.35 : -0.35) * min(1.0, (0.06 - t) * 200)
+      }
+      return concat([chirp, chirp], gap: 0.05)
+    case "gong":
+      // Deep metallic gong with a long fade.
+      return synth(length: 1.6) { (t: Double) -> Double in
+        let partials: [(Double, Double, Double)] = [(1.0, 0.5, 1.8), (1.48, 0.3, 2.4), (2.11, 0.2, 3.0), (2.9, 0.12, 4.0)]
+        var v = 0.0
+        for p in partials {
+          v += sin(2 * Double.pi * 180 * p.0 * t) * p.1 * exp(-p.2 * t)
+        }
+        return v * min(1.0, t / 0.01)
+      }
+    case "fanfare":
+      // Three notes going up (C6 E6 G6), the last one longer.
+      func note(_ f: Double, _ len: Double) -> AVAudioPCMBuffer {
+        synth(length: len) { (t: Double) -> Double in
+          let w: Double = sin(2 * Double.pi * f * t) + 0.3 * sin(2 * Double.pi * 2 * f * t)
+          return w * 0.45 * min(1.0, t * 150) * min(1.0, (len - t) * 25)
+        }
+      }
+      return concat([note(1046.5, 0.12), note(1318.5, 0.12), note(1568, 0.35)], gap: 0.02)
+    case "drop":
+      // Water drop: a fast upward blip.
+      return synth(length: 0.18) { (t: Double) -> Double in
+        let phase: Double = 2 * Double.pi * (500 * t + 4000 * t * t)
+        return sin(phase) * 0.7 * exp(-18 * t) * min(1.0, t / 0.002)
+      }
+    case "triangle":
+      // Orchestra triangle: high, shimmering, long ring.
+      return synth(length: 1.2) { (t: Double) -> Double in
+        let a: Double = sin(2 * Double.pi * 3520 * t) * 0.35
+        let b: Double = sin(2 * Double.pi * 5280 * t) * 0.2
+        let c: Double = sin(2 * Double.pi * 7040 * t) * 0.1
+        return (a + b + c) * exp(-3 * t) * min(1.0, t / 0.002)
+      }
+    case "horn":
+      // Short car-horn honk: two detuned saw-like tones.
+      return synth(length: 0.4) { (t: Double) -> Double in
+        func saw(_ f: Double) -> Double { 2 * (f * t - floor(f * t + 0.5)) }
+        let v: Double = (saw(415) + saw(440)) * 0.22
+        return v * min(1.0, t * 60) * min(1.0, (0.4 - t) * 30)
+      }
     default:
       return makeDing()
     }

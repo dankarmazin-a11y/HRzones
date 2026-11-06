@@ -258,7 +258,7 @@ class _Controls extends StatelessWidget {
     final choice = await showDialog<String>(
       context: context,
       builder: (c) => AlertDialog(
-        title: const Text('Finish run?'),
+        title: const Text('Finish run?', textAlign: TextAlign.center),
         content: Text(
           run.treadmill
               ? 'Treadmill run, ${formatDuration(run.moving)}. Next: the distance.'
@@ -266,10 +266,37 @@ class _Controls extends StatelessWidget {
               ? 'This run is shorter than 50 m. Save it anyway?'
               : '${formatKm(run.distanceM)} km in ${formatDuration(run.moving)}',
         ),
+        // One above the other, Save biggest and boldest.
         actions: [
-          TextButton(onPressed: () => Navigator.pop(c, 'discard'), child: const Text('Discard')),
-          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Keep going')),
-          FilledButton(onPressed: () => Navigator.pop(c, 'save'), child: const Text('Save')),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              FilledButton(
+                key: const Key('saveRun'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(60),
+                  textStyle: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+                ),
+                onPressed: () => Navigator.pop(c, 'save'),
+                child: const Text('Save'),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                onPressed: () => Navigator.pop(c),
+                child: const Text('Keep going'),
+              ),
+              const SizedBox(height: 6),
+              TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red.shade700,
+                  minimumSize: const Size.fromHeight(44),
+                ),
+                onPressed: () => Navigator.pop(c, 'discard'),
+                child: const Text('Discard'),
+              ),
+            ],
+          ),
         ],
       ),
     );
