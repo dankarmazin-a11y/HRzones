@@ -8,6 +8,10 @@ import Flutter
 /// Dart side: lib/run/motion_source.dart, channel "hrzones/motion".
 final class MotionPlugin: NSObject, FlutterPlugin {
   private let pedometer = CMPedometer()
+  /// Barometer: height change since start, much steadier than GPS height
+  /// (the climb on the run summary).
+  private let altimeter = CMAltimeter()
+  private var relativeAltitude: Double?
   private var steps = 0
   /// Steps per second as reported by iOS (nil until it has a value).
   private var cadence: Double?
@@ -20,8 +24,17 @@ final class MotionPlugin: NSObject, FlutterPlugin {
   func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     switch call.method {
     case "start":
+      relativeAltitude = nil
+      altimeter.stopRelativeAltitudeUpdates()
+      let hasBarometer = CMAltimeter.isRelativeAltitudeAvailable()
+      if hasBarometer {
+        altimeter.startRelativeAltitudeUpdates(to: .main) { [weak self] data, error in
+          guard let self, let data, error == nil else { return }
+          self.relativeAltitude = data.relativeAltitude.doubleValue
+        }
+      }
       guard CMPedometer.isStepCountingAvailable() else {
-        result(false)
+        result(hasBarometer)
         return
       }
       steps = 0
@@ -40,10 +53,12 @@ final class MotionPlugin: NSObject, FlutterPlugin {
       result(true)
     case "stop":
       pedometer.stopUpdates()
+      altimeter.stopRelativeAltitudeUpdates()
       result(nil)
     case "read":
       var out: [String: Any] = ["steps": steps]
       if let c = cadence { out["cadence"] = c * 60 }
+      if let a = relativeAltitude { out["altitude"] = a }
       result(out)
     default:
       result(FlutterMethodNotImplemented)

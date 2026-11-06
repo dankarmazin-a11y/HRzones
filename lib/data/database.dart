@@ -296,6 +296,11 @@ class Runs extends Table with SyncColumns {
   /// Average cadence, steps per minute of moving time.
   IntColumn get avgCadence => integer().nullable()();
 
+  /// Climb / descent in metres measured by the barometer during the run
+  /// (null = no barometer: computed from the GPS height instead).
+  RealColumn get elevGainM => real().nullable()();
+  RealColumn get elevLossM => real().nullable()();
+
   /// The planned run followed (null = free run) and its laps (JSON).
   TextColumn get planId => text().nullable()();
   TextColumn get lapsJson => text().nullable()();
@@ -410,7 +415,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -473,6 +478,10 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(runs, runs.lapsJson);
         }
         await m.createTable(runPlans);
+      }
+      if (from >= 7 && from < 14) {
+        await m.addColumn(runs, runs.elevGainM);
+        await m.addColumn(runs, runs.elevLossM);
       }
     },
     beforeOpen: (details) async {

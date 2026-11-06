@@ -121,11 +121,18 @@ class _Body extends StatelessWidget {
         ),
         Center(child: Text('Kilometres', style: text.titleMedium)),
         const SizedBox(height: 16),
-        Row(
-          children: [
-            tile(formatDuration(Duration(seconds: run.durationS)), 'Time'),
-            tile(formatPace(pace), 'Avg pace /km'),
-          ],
+        FutureBuilder<double?>(
+          future: Services.of(context).body.latest('weight'),
+          builder: (context, snap) {
+            final kcal = runCalories(run.distanceM, snap.data);
+            return Row(
+              children: [
+                tile(formatDuration(Duration(seconds: run.durationS)), 'Time'),
+                tile(formatPace(pace), 'Avg pace /km'),
+                tile(kcal == null ? '–' : '${kcal.round()}', kcal == null ? 'kcal (add weight)' : 'Calories'),
+              ],
+            );
+          },
         ),
         if (run.avgHr != null || run.maxHr != null)
           Row(
@@ -164,6 +171,12 @@ class _Body extends StatelessWidget {
     );
   }
 }
+
+/// Rough energy used running [distanceM]: about 1 kcal per kg of body
+/// weight per km (the usual estimate; pace barely changes it). Null
+/// without a body weight.
+double? runCalories(double distanceM, double? weightKg) =>
+    weightKg == null || weightKg <= 0 ? null : weightKg * distanceM / 1000 * 1.036;
 
 String _two(int n) => n.toString().padLeft(2, '0');
 
@@ -419,57 +432,75 @@ class _SplitsSectionState extends State<_SplitsSection> {
     final slowest = paces.isEmpty ? 1.0 : paces.reduce((a, b) => a > b ? a : b);
     final quickest = paces.isEmpty ? 1.0 : paces.reduce((a, b) => a < b ? a : b);
     final hasHr = splits.any((x) => x.avgHr != null);
-    final head = text.labelMedium?.copyWith(color: scheme.onSurfaceVariant);
+    final avg = paceSecPerKm(widget.run.distanceM, widget.run.durationS.toDouble());
+    final muted = text.bodySmall?.copyWith(color: scheme.onSurfaceVariant);
     return Card(
       key: const Key('splits'),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Splits', style: text.titleMedium),
-            const SizedBox(height: 8),
             Row(
               children: [
-                SizedBox(width: 48, child: Text('KM', style: head)),
-                SizedBox(width: 64, child: Text('PACE', style: head)),
-                const Expanded(child: SizedBox()),
-                if (hasHr)
-                  SizedBox(
-                    width: 44,
-                    child: Text('HR', textAlign: TextAlign.end, style: head),
-                  ),
+                Text('Splits', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                const Spacer(),
+                if (avg != null) Text('avg ${formatPace(avg)} /km', style: muted),
               ],
             ),
+            if (fastest != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text('Fastest: km ${fastest.km} in ${formatPace(fastest.pace)}', style: muted),
+              ),
+            const SizedBox(height: 12),
             for (final x in splits)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
+                padding: const EdgeInsets.symmetric(vertical: 3),
                 child: Row(
                   key: Key('split_${x.km}'),
                   children: [
-                    SizedBox(width: 48, child: Text(x.partial ? (x.distanceM / 1000).toStringAsFixed(2) : '${x.km}')),
                     SizedBox(
-                      width: 64,
+                      width: 40,
                       child: Text(
-                        formatPace(x.pace),
-                        style: TextStyle(fontWeight: x == fastest ? FontWeight.w900 : FontWeight.w500),
+                        x.partial ? (x.distanceM / 1000).toStringAsFixed(2) : '${x.km}',
+                        style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                       ),
                     ),
                     Expanded(
                       child: LayoutBuilder(
                         builder: (context, box) {
-                          // Faster = longer bar (the slowest still gets a third).
+                          // Faster = longer bar (the slowest still gets 40 %);
+                          // colour from green (fastest) to orange (slowest).
                           final p = x.pace ?? slowest;
                           final span = slowest - quickest;
-                          final f = span <= 0 ? 1.0 : 1 - (p - quickest) / span * 0.67;
+                          final t = span <= 0 ? 0.0 : ((p - quickest) / span).clamp(0.0, 1.0);
+                          final color = Color.lerp(const Color(0xFF2E9E5B), const Color(0xFFEF8A2C), t)!;
                           return Align(
                             alignment: Alignment.centerLeft,
                             child: Container(
-                              height: 10,
-                              width: box.maxWidth * f,
+                              height: 28,
+                              width: box.maxWidth * (1 - t * 0.6),
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              alignment: Alignment.centerLeft,
                               decoration: BoxDecoration(
-                                color: x == fastest ? scheme.primary : scheme.primary.withValues(alpha: 0.45),
-                                borderRadius: BorderRadius.circular(5),
+                                color: color,
+                                borderRadius: BorderRadius.circular(8),
+                                border: x == fastest ? Border.all(color: scheme.onSurface, width: 2) : null,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    formatPace(x.pace),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                      fontFeatures: [FontFeature.tabularFigures()],
+                                    ),
+                                  ),
+                                  if (x == fastest) const Icon(Icons.bolt, size: 16, color: Colors.white),
+                                ],
                               ),
                             ),
                           );
@@ -477,7 +508,17 @@ class _SplitsSectionState extends State<_SplitsSection> {
                       ),
                     ),
                     if (hasHr)
-                      SizedBox(width: 44, child: Text(x.avgHr == null ? '–' : '${x.avgHr}', textAlign: TextAlign.end)),
+                      SizedBox(
+                        width: 56,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            if (x.avgHr != null) Icon(Icons.favorite, size: 13, color: Colors.red.shade400),
+                            const SizedBox(width: 3),
+                            Text(x.avgHr == null ? '–' : '${x.avgHr}', style: text.bodyMedium),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -488,7 +529,7 @@ class _SplitsSectionState extends State<_SplitsSection> {
   }
 }
 
-/// Climb / descent (from the GPS altitude) and cadence; plus the height
+/// Climb / descent (barometer, or the GPS height on older runs) and cadence; plus the height
 /// profile along the route.
 class _ClimbAndCadence extends StatefulWidget {
   const _ClimbAndCadence({required this.run, required this.tile});
@@ -532,7 +573,11 @@ class _ClimbAndCadenceState extends State<_ClimbAndCadence> {
     final smooth = smoothAltitudes([for (final x in profile) x.$2]);
     if (!mounted) return;
     setState(() {
-      _elevation = elevationGainLoss([for (final p in withAlt) p.altitude!]);
+      // Barometer values when the phone measured them, else from GPS height.
+      final r = widget.run;
+      _elevation = r.elevGainM != null
+          ? (climb: r.elevGainM!, descent: r.elevLossM ?? 0)
+          : elevationGainLoss([for (final p in withAlt) p.altitude!]);
       _profile = [for (var i = 0; i < profile.length; i++) (profile[i].$1, smooth[i])];
     });
   }
@@ -559,6 +604,25 @@ class _ClimbAndCadenceState extends State<_ClimbAndCadence> {
   }
 }
 
+/// A round step (1, 2, 5, 10, 20, 50…) giving about [count] steps over [span].
+double niceStep(double span, int count) {
+  if (span <= 0) return 1;
+  final raw = span / count;
+  var mag = 1.0;
+  while (mag * 10 <= raw) {
+    mag *= 10;
+  }
+  while (mag > raw) {
+    mag /= 10;
+  }
+  for (final m in [1, 2, 5, 10]) {
+    if (m * mag >= raw) return m * mag;
+  }
+  return 10 * mag;
+}
+
+String _kmLabel(double v) => v == v.roundToDouble() ? '${v.round()}' : v.toStringAsFixed(1);
+
 class _ElevationChart extends StatelessWidget {
   const _ElevationChart({required this.profile});
 
@@ -572,17 +636,29 @@ class _ElevationChart extends StatelessWidget {
     final spots = [for (var i = 0; i < profile.length; i += step) FlSpot(profile[i].$1, profile[i].$2)];
     final minY = spots.map((p) => p.y).reduce((a, b) => a < b ? a : b);
     final maxY = spots.map((p) => p.y).reduce((a, b) => a > b ? a : b);
+    // Round numbers on both axes, only a few labels, none squeezed together.
+    final yStep = niceStep(maxY - minY + 4, 3);
+    final lo = ((minY - 2) / yStep).floor() * yStep, hi = ((maxY + 2) / yStep).ceil() * yStep;
+    final maxKm = spots.last.x;
+    final xStep = niceStep(maxKm, 5).clamp(0.5, double.infinity);
+    const label = TextStyle(fontSize: 11);
     return Card(
       key: const Key('elevationChart'),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 16, 16, 8),
+        padding: const EdgeInsets.fromLTRB(8, 16, 20, 8),
         child: SizedBox(
-          height: 140,
+          height: 150,
           child: LineChart(
             LineChartData(
-              minY: (minY - 5).floorToDouble(),
-              maxY: (maxY + 5).ceilToDouble(),
-              gridData: const FlGridData(show: false),
+              minY: lo,
+              maxY: hi,
+              minX: 0,
+              maxX: maxKm,
+              gridData: FlGridData(
+                drawVerticalLine: false,
+                horizontalInterval: yStep,
+                getDrawingHorizontalLine: (_) => FlLine(color: scheme.outlineVariant, strokeWidth: 0.5),
+              ),
               borderData: FlBorderData(show: false),
               lineTouchData: const LineTouchData(enabled: false),
               titlesData: FlTitlesData(
@@ -592,15 +668,24 @@ class _ElevationChart extends StatelessWidget {
                   sideTitles: SideTitles(
                     showTitles: true,
                     reservedSize: 40,
-                    getTitlesWidget: (v, meta) => Text('${v.round()} m', style: const TextStyle(fontSize: 10)),
+                    interval: yStep,
+                    getTitlesWidget: (v, meta) => SideTitleWidget(
+                      meta: meta,
+                      child: Text('${v.round()} m', style: label),
+                    ),
                   ),
                 ),
                 bottomTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
-                    reservedSize: 22,
-                    getTitlesWidget: (v, meta) =>
-                        Text('${v.toStringAsFixed(1)} km', style: const TextStyle(fontSize: 10)),
+                    reservedSize: 24,
+                    interval: xStep,
+                    minIncluded: true,
+                    maxIncluded: false,
+                    getTitlesWidget: (v, meta) => SideTitleWidget(
+                      meta: meta,
+                      child: Text(v == 0 ? '0 km' : _kmLabel(v), style: label),
+                    ),
                   ),
                 ),
               ),

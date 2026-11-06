@@ -130,7 +130,9 @@ Future<Uint8List> exportWorkbook(AppDatabase db) async {
     final bests = await runRepo.bestsFor(r);
     final points = await runRepo.points(r.id);
     final alts = [for (final p in points) ?p.altitude];
-    final climb = alts.length < 10 ? null : elevationGainLoss(alts);
+    final climb = r.elevGainM != null
+        ? (climb: r.elevGainM!, descent: r.elevLossM ?? 0)
+        : (alts.length < 10 ? null : elevationGainLoss(alts));
     runRows.add([
       r.startedAt,
       double.parse((r.distanceM / 1000).toStringAsFixed(2)),
