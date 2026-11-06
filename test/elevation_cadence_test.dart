@@ -20,6 +20,9 @@ import 'test_helpers.dart';
 class FakeMotion extends MotionSource {
   int steps = 0;
   double? cadence;
+
+  /// Barometer height since start (null = no barometer).
+  double? altitude;
   int starts = 0;
   bool available = true;
 
@@ -34,7 +37,7 @@ class FakeMotion extends MotionSource {
   Future<void> stop() async {}
 
   @override
-  Future<MotionReading?> read() async => available ? (steps: steps, cadence: cadence) : null;
+  Future<MotionReading?> read() async => available ? (steps: steps, cadence: cadence, altitude: altitude) : null;
 }
 
 void main() {
@@ -85,6 +88,48 @@ void main() {
     final r = (await repo.byId(id!))!;
     expect(r.steps, 1750);
     expect(r.avgCadence, 175, reason: '1750 steps in 10 moving minutes');
+  });
+
+  test('climb and descent from the barometer, continued across a pause', () async {
+    var clock = t0;
+    final motion = FakeMotion();
+    final repo = RunRepository(memoryDb());
+    final run = RunSession(
+      runs: repo,
+      hr: HrMonitor(beeper: SilentBeeper()),
+      location: FakeLocation(),
+      motion: motion,
+      clock: () => clock,
+    );
+    await run.start();
+    expect(run.baroElevation, isNull, reason: 'no reading yet');
+    for (final a in [0.0, 0.5, 5.0, 2.0]) {
+      motion.altitude = a;
+      await run.readMotion();
+    }
+    expect(run.baroElevation, (climb: 5.0, descent: 3.0), reason: '0.5 m is noise');
+    await run.pause(); // the barometer restarts from 0 after the pause
+    clock = t0.add(const Duration(minutes: 1));
+    motion.altitude = 0;
+    await run.resume();
+    await run.readMotion();
+    motion.altitude = 3;
+    await run.readMotion();
+    final id = await run.finish();
+    final r = (await repo.byId(id!))!;
+    expect(r.elevGainM, 8);
+    expect(r.elevLossM, 3);
+  });
+
+  test('calories: about 1 kcal per kg per km; none without a weight', () {
+    expect(runCalories(7900, 81)!.round(), 663);
+    expect(runCalories(5000, null), isNull);
+  });
+
+  test('round chart steps', () {
+    expect(niceStep(8.02, 5), 2);
+    expect(niceStep(14, 3), 5);
+    expect(niceStep(0.9, 5), 0.2);
   });
 
   test('no step counter: no steps or cadence saved', () async {

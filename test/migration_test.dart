@@ -70,6 +70,7 @@ const _shoes = ['DROP TABLE shoes'];
 const _v12Columns = ['runs DROP COLUMN steps', 'runs DROP COLUMN avg_cadence'];
 const _v13Changes = ['runs DROP COLUMN plan_id', 'runs DROP COLUMN laps_json', 'DROP TABLE run_plans'];
 const _plans = ['DROP TABLE run_plans'];
+const _v14Columns = ['runs DROP COLUMN elev_gain_m', 'runs DROP COLUMN elev_loss_m'];
 const _v4Changes = [
   'exercises DROP COLUMN hidden',
   'template_exercises DROP COLUMN sets_json',
@@ -96,14 +97,19 @@ void main() {
     (
       'v7 database is upgraded',
       7,
-      [..._v8Columns, ..._v9Columns, ..._v10Columns, ..._v11Changes, ..._v12Columns, ..._v13Changes],
+      [..._v8Columns, ..._v9Columns, ..._v10Columns, ..._v11Changes, ..._v12Columns, ..._v13Changes, ..._v14Columns],
     ),
-    ('v8 database is upgraded', 8, [..._v9Columns, ..._v10Columns, ..._v11Changes, ..._v12Columns, ..._v13Changes]),
-    ('v9 database is upgraded', 9, [..._v10Columns, ..._v11Changes, ..._v12Columns, ..._v13Changes]),
-    ('v10 database is upgraded', 10, [..._v11Changes, ..._v12Columns, ..._v13Changes]),
-    ('v11 database is upgraded', 11, [..._v12Columns, ..._v13Changes]),
-    ('v12 database is upgraded', 12, _v13Changes),
-    ('missing column/table is repaired', 13, [..._v2Columns, 'DROP TABLE goals']),
+    (
+      'v8 database is upgraded',
+      8,
+      [..._v9Columns, ..._v10Columns, ..._v11Changes, ..._v12Columns, ..._v13Changes, ..._v14Columns],
+    ),
+    ('v9 database is upgraded', 9, [..._v10Columns, ..._v11Changes, ..._v12Columns, ..._v13Changes, ..._v14Columns]),
+    ('v10 database is upgraded', 10, [..._v11Changes, ..._v12Columns, ..._v13Changes, ..._v14Columns]),
+    ('v11 database is upgraded', 11, [..._v12Columns, ..._v13Changes, ..._v14Columns]),
+    ('v12 database is upgraded', 12, [..._v13Changes, ..._v14Columns]),
+    ('v13 database is upgraded', 13, _v14Columns),
+    ('missing column/table is repaired', 14, [..._v2Columns, 'DROP TABLE goals']),
   ];
   for (final (label, version, drop) in cases) {
     test(label, () async {
@@ -142,6 +148,8 @@ void main() {
           'shoe_id',
           'steps',
           'avg_cadence',
+          'elev_gain_m',
+          'elev_loss_m',
         ]),
       );
       expect(await cols('run_plans'), containsAll(['name', 'spec_json', 'position']));

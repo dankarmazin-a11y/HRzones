@@ -1,8 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-/// Steps since [MotionSource.start] and the current cadence (steps/min).
-typedef MotionReading = ({int steps, double? cadence});
+/// Steps since [MotionSource.start], the current cadence (steps/min) and
+/// the height change since start in metres (barometer; null without one).
+typedef MotionReading = ({int steps, double? cadence, double? altitude});
 
 /// Step counter for cadence: the iPhone's motion chip (CMPedometer) or
 /// nothing (web preview, tests).
@@ -41,7 +42,11 @@ class NativeMotionSource extends MotionSource {
     try {
       final m = await _channel.invokeMapMethod<String, Object?>('read');
       if (m == null) return null;
-      return (steps: (m['steps'] as num?)?.toInt() ?? 0, cadence: (m['cadence'] as num?)?.toDouble());
+      return (
+        steps: (m['steps'] as num?)?.toInt() ?? 0,
+        cadence: (m['cadence'] as num?)?.toDouble(),
+        altitude: (m['altitude'] as num?)?.toDouble(),
+      );
     } catch (_) {
       return null;
     }

@@ -84,14 +84,59 @@ class RunSession extends ChangeNotifier {
   Future<void> _startSteps() async {
     _steps = 0;
     _stepSamples.clear();
+    _baroBase = null; // the barometer starts from 0 again
     _counting = await motion.start();
   }
+
+  // ── Barometer height ────────────────────────────────────────────────
+  /// Offset that turns the barometer's "height since start" into a height
+  /// continuing from the last known one (a new segment starts at 0 again).
+  double? _baroBase;
+
+  /// Latest height (barometer, continued over pauses); null without one.
+  double? _baroAlt;
+
+  /// Latest GPS height (the barometer's starting point).
+  double? _gpsAlt;
+
+  /// Climb / descent from the barometer (stored with the run).
+  double _gainM = 0, _lossM = 0;
+  double? _elevRef;
+  bool _hasBaro = false;
+
+  /// Moves less than this and it doesn't count (barometer noise).
+  static const elevStep = 1.0;
+
+  /// Climb and descent so far (null when the phone has no barometer).
+  ({double climb, double descent})? get baroElevation => _hasBaro ? (climb: _gainM, descent: _lossM) : null;
+
+  void _onBaro(double relative) {
+    _baroBase ??= (_baroAlt ?? _gpsAlt ?? 0) - relative;
+    final alt = _baroBase! + relative;
+    _baroAlt = alt;
+    _hasBaro = true;
+    final ref = _elevRef;
+    if (ref == null) {
+      _elevRef = alt;
+    } else if (alt - ref >= elevStep) {
+      _gainM += alt - ref;
+      _elevRef = alt;
+    } else if (ref - alt >= elevStep) {
+      _lossM += ref - alt;
+      _elevRef = alt;
+    }
+  }
+
+  /// Reads steps and the barometer now (tests; the run does it every 5 s).
+  @visibleForTesting
+  Future<void> readMotion() => _readSteps();
 
   /// Reads the step counter (every few seconds and before saving).
   Future<void> _readSteps() async {
     if (!_counting) return;
     final r = await motion.read();
     if (r == null) return;
+    if (r.altitude != null && !_treadmill) _onBaro(r.altitude!);
     _steps = r.steps;
     final t = now();
     _stepSamples.add((t, r.steps));
@@ -497,6 +542,9 @@ class RunSession extends ChangeNotifier {
     _treadmill = row.kind == RunKind.treadmill;
     _shoeId = row.shoeId;
     _stepsBefore = row.steps ?? 0;
+    _hasBaro = row.elevGainM != null;
+    _gainM = row.elevGainM ?? 0;
+    _lossM = row.elevLossM ?? 0;
     var segment = -1;
     for (final p in await runs.points(row.id)) {
       if (p.segment != segment) _tracker.newSegment();
@@ -515,6 +563,11 @@ class RunSession extends ChangeNotifier {
       );
     }
     _saved = _route.length;
+    if (_route.isNotEmpty) {
+      _baroAlt = _hasBaro ? _route.last.altitude : null;
+      _gpsAlt = _route.last.altitude;
+      _elevRef = _baroAlt;
+    }
     // The app was closed: don't draw a line across the gap.
     _segment = segment + 1;
     _tracker.newSegment();
@@ -643,13 +696,14 @@ class RunSession extends ChangeNotifier {
     final wasGood = gps == GpsStatus.good;
     _lastGoodAt = now();
     _tracker.add(fix);
+    if (fix.altitude != null) _gpsAlt = fix.altitude;
     _route.add(
       RoutePoint(
         time: fix.time,
         lat: fix.lat,
         lon: fix.lon,
         accuracy: fix.accuracy,
-        altitude: fix.altitude,
+        altitude: _hasBaro ? _baroAlt : fix.altitude,
         segment: _segment,
         hr: hr.running ? hr.bpm : null,
       ),
@@ -719,6 +773,8 @@ class RunSession extends ChangeNotifier {
         lapsJson: Value(laps),
         steps: Value(steps),
         avgCadence: Value(_avgCadence()),
+        elevGainM: Value(_hasBaro ? _gainM : null),
+        elevLossM: Value(_hasBaro ? _lossM : null),
         updatedAt: Value(now()),
       ),
     );
@@ -743,6 +799,13 @@ class RunSession extends ChangeNotifier {
     _stepsBefore = 0;
     _steps = 0;
     _counting = false;
+    _baroBase = null;
+    _baroAlt = null;
+    _gpsAlt = null;
+    _gainM = 0;
+    _lossM = 0;
+    _elevRef = null;
+    _hasBaro = false;
     _cadence = null;
     _stepSamples.clear();
     _segment = 0;

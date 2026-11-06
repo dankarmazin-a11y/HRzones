@@ -112,7 +112,20 @@ class RunMap extends StatelessWidget {
             if (current != null) _dot(current!, const Color(0xFF1E88E5), 'current', size: 20),
           ],
         ),
-        const SimpleAttributionWidget(source: Text('OpenStreetMap contributors')),
+        // Required credit for the map, kept small in the corner.
+        const Align(
+          alignment: Alignment.bottomRight,
+          child: Padding(
+            padding: EdgeInsets.all(4),
+            child: DecoratedBox(
+              decoration: BoxDecoration(color: Color(0xB3FFFFFF), borderRadius: BorderRadius.all(Radius.circular(4))),
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                child: Text('© OpenStreetMap', style: TextStyle(fontSize: 9, color: Colors.black87)),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }

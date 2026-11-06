@@ -5442,6 +5442,24 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _elevGainMMeta = const VerificationMeta('elevGainM');
+  @override
+  late final GeneratedColumn<double> elevGainM = GeneratedColumn<double>(
+    'elev_gain_m',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _elevLossMMeta = const VerificationMeta('elevLossM');
+  @override
+  late final GeneratedColumn<double> elevLossM = GeneratedColumn<double>(
+    'elev_loss_m',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _planIdMeta = const VerificationMeta('planId');
   @override
   late final GeneratedColumn<String> planId = GeneratedColumn<String>(
@@ -5482,6 +5500,8 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
     shoeId,
     steps,
     avgCadence,
+    elevGainM,
+    elevLossM,
     planId,
     lapsJson,
   ];
@@ -5553,6 +5573,12 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
     if (data.containsKey('avg_cadence')) {
       context.handle(_avgCadenceMeta, avgCadence.isAcceptableOrUnknown(data['avg_cadence']!, _avgCadenceMeta));
     }
+    if (data.containsKey('elev_gain_m')) {
+      context.handle(_elevGainMMeta, elevGainM.isAcceptableOrUnknown(data['elev_gain_m']!, _elevGainMMeta));
+    }
+    if (data.containsKey('elev_loss_m')) {
+      context.handle(_elevLossMMeta, elevLossM.isAcceptableOrUnknown(data['elev_loss_m']!, _elevLossMMeta));
+    }
     if (data.containsKey('plan_id')) {
       context.handle(_planIdMeta, planId.isAcceptableOrUnknown(data['plan_id']!, _planIdMeta));
     }
@@ -5590,6 +5616,8 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
       shoeId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}shoe_id']),
       steps: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}steps']),
       avgCadence: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}avg_cadence']),
+      elevGainM: attachedDatabase.typeMapping.read(DriftSqlType.double, data['${effectivePrefix}elev_gain_m']),
+      elevLossM: attachedDatabase.typeMapping.read(DriftSqlType.double, data['${effectivePrefix}elev_loss_m']),
       planId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}plan_id']),
       lapsJson: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}laps_json']),
     );
@@ -5648,6 +5676,11 @@ class Run extends DataClass implements Insertable<Run> {
   /// Average cadence, steps per minute of moving time.
   final int? avgCadence;
 
+  /// Climb / descent in metres measured by the barometer during the run
+  /// (null = no barometer: computed from the GPS height instead).
+  final double? elevGainM;
+  final double? elevLossM;
+
   /// The planned run followed (null = free run) and its laps (JSON).
   final String? planId;
   final String? lapsJson;
@@ -5672,6 +5705,8 @@ class Run extends DataClass implements Insertable<Run> {
     this.shoeId,
     this.steps,
     this.avgCadence,
+    this.elevGainM,
+    this.elevLossM,
     this.planId,
     this.lapsJson,
   });
@@ -5722,6 +5757,12 @@ class Run extends DataClass implements Insertable<Run> {
     if (!nullToAbsent || avgCadence != null) {
       map['avg_cadence'] = Variable<int>(avgCadence);
     }
+    if (!nullToAbsent || elevGainM != null) {
+      map['elev_gain_m'] = Variable<double>(elevGainM);
+    }
+    if (!nullToAbsent || elevLossM != null) {
+      map['elev_loss_m'] = Variable<double>(elevLossM);
+    }
     if (!nullToAbsent || planId != null) {
       map['plan_id'] = Variable<String>(planId);
     }
@@ -5753,6 +5794,8 @@ class Run extends DataClass implements Insertable<Run> {
       shoeId: shoeId == null && nullToAbsent ? const Value.absent() : Value(shoeId),
       steps: steps == null && nullToAbsent ? const Value.absent() : Value(steps),
       avgCadence: avgCadence == null && nullToAbsent ? const Value.absent() : Value(avgCadence),
+      elevGainM: elevGainM == null && nullToAbsent ? const Value.absent() : Value(elevGainM),
+      elevLossM: elevLossM == null && nullToAbsent ? const Value.absent() : Value(elevLossM),
       planId: planId == null && nullToAbsent ? const Value.absent() : Value(planId),
       lapsJson: lapsJson == null && nullToAbsent ? const Value.absent() : Value(lapsJson),
     );
@@ -5781,6 +5824,8 @@ class Run extends DataClass implements Insertable<Run> {
       shoeId: serializer.fromJson<String?>(json['shoeId']),
       steps: serializer.fromJson<int?>(json['steps']),
       avgCadence: serializer.fromJson<int?>(json['avgCadence']),
+      elevGainM: serializer.fromJson<double?>(json['elevGainM']),
+      elevLossM: serializer.fromJson<double?>(json['elevLossM']),
       planId: serializer.fromJson<String?>(json['planId']),
       lapsJson: serializer.fromJson<String?>(json['lapsJson']),
     );
@@ -5809,6 +5854,8 @@ class Run extends DataClass implements Insertable<Run> {
       'shoeId': serializer.toJson<String?>(shoeId),
       'steps': serializer.toJson<int?>(steps),
       'avgCadence': serializer.toJson<int?>(avgCadence),
+      'elevGainM': serializer.toJson<double?>(elevGainM),
+      'elevLossM': serializer.toJson<double?>(elevLossM),
       'planId': serializer.toJson<String?>(planId),
       'lapsJson': serializer.toJson<String?>(lapsJson),
     };
@@ -5835,6 +5882,8 @@ class Run extends DataClass implements Insertable<Run> {
     Value<String?> shoeId = const Value.absent(),
     Value<int?> steps = const Value.absent(),
     Value<int?> avgCadence = const Value.absent(),
+    Value<double?> elevGainM = const Value.absent(),
+    Value<double?> elevLossM = const Value.absent(),
     Value<String?> planId = const Value.absent(),
     Value<String?> lapsJson = const Value.absent(),
   }) => Run(
@@ -5858,6 +5907,8 @@ class Run extends DataClass implements Insertable<Run> {
     shoeId: shoeId.present ? shoeId.value : this.shoeId,
     steps: steps.present ? steps.value : this.steps,
     avgCadence: avgCadence.present ? avgCadence.value : this.avgCadence,
+    elevGainM: elevGainM.present ? elevGainM.value : this.elevGainM,
+    elevLossM: elevLossM.present ? elevLossM.value : this.elevLossM,
     planId: planId.present ? planId.value : this.planId,
     lapsJson: lapsJson.present ? lapsJson.value : this.lapsJson,
   );
@@ -5883,6 +5934,8 @@ class Run extends DataClass implements Insertable<Run> {
       shoeId: data.shoeId.present ? data.shoeId.value : this.shoeId,
       steps: data.steps.present ? data.steps.value : this.steps,
       avgCadence: data.avgCadence.present ? data.avgCadence.value : this.avgCadence,
+      elevGainM: data.elevGainM.present ? data.elevGainM.value : this.elevGainM,
+      elevLossM: data.elevLossM.present ? data.elevLossM.value : this.elevLossM,
       planId: data.planId.present ? data.planId.value : this.planId,
       lapsJson: data.lapsJson.present ? data.lapsJson.value : this.lapsJson,
     );
@@ -5911,6 +5964,8 @@ class Run extends DataClass implements Insertable<Run> {
           ..write('shoeId: $shoeId, ')
           ..write('steps: $steps, ')
           ..write('avgCadence: $avgCadence, ')
+          ..write('elevGainM: $elevGainM, ')
+          ..write('elevLossM: $elevLossM, ')
           ..write('planId: $planId, ')
           ..write('lapsJson: $lapsJson')
           ..write(')'))
@@ -5939,6 +5994,8 @@ class Run extends DataClass implements Insertable<Run> {
     shoeId,
     steps,
     avgCadence,
+    elevGainM,
+    elevLossM,
     planId,
     lapsJson,
   ]);
@@ -5966,6 +6023,8 @@ class Run extends DataClass implements Insertable<Run> {
           other.shoeId == this.shoeId &&
           other.steps == this.steps &&
           other.avgCadence == this.avgCadence &&
+          other.elevGainM == this.elevGainM &&
+          other.elevLossM == this.elevLossM &&
           other.planId == this.planId &&
           other.lapsJson == this.lapsJson);
 }
@@ -5991,6 +6050,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
   final Value<String?> shoeId;
   final Value<int?> steps;
   final Value<int?> avgCadence;
+  final Value<double?> elevGainM;
+  final Value<double?> elevLossM;
   final Value<String?> planId;
   final Value<String?> lapsJson;
   final Value<int> rowid;
@@ -6015,6 +6076,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
     this.shoeId = const Value.absent(),
     this.steps = const Value.absent(),
     this.avgCadence = const Value.absent(),
+    this.elevGainM = const Value.absent(),
+    this.elevLossM = const Value.absent(),
     this.planId = const Value.absent(),
     this.lapsJson = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -6040,6 +6103,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
     this.shoeId = const Value.absent(),
     this.steps = const Value.absent(),
     this.avgCadence = const Value.absent(),
+    this.elevGainM = const Value.absent(),
+    this.elevLossM = const Value.absent(),
     this.planId = const Value.absent(),
     this.lapsJson = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -6065,6 +6130,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
     Expression<String>? shoeId,
     Expression<int>? steps,
     Expression<int>? avgCadence,
+    Expression<double>? elevGainM,
+    Expression<double>? elevLossM,
     Expression<String>? planId,
     Expression<String>? lapsJson,
     Expression<int>? rowid,
@@ -6090,6 +6157,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
       if (shoeId != null) 'shoe_id': shoeId,
       if (steps != null) 'steps': steps,
       if (avgCadence != null) 'avg_cadence': avgCadence,
+      if (elevGainM != null) 'elev_gain_m': elevGainM,
+      if (elevLossM != null) 'elev_loss_m': elevLossM,
       if (planId != null) 'plan_id': planId,
       if (lapsJson != null) 'laps_json': lapsJson,
       if (rowid != null) 'rowid': rowid,
@@ -6117,6 +6186,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
     Value<String?>? shoeId,
     Value<int?>? steps,
     Value<int?>? avgCadence,
+    Value<double?>? elevGainM,
+    Value<double?>? elevLossM,
     Value<String?>? planId,
     Value<String?>? lapsJson,
     Value<int>? rowid,
@@ -6142,6 +6213,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
       shoeId: shoeId ?? this.shoeId,
       steps: steps ?? this.steps,
       avgCadence: avgCadence ?? this.avgCadence,
+      elevGainM: elevGainM ?? this.elevGainM,
+      elevLossM: elevLossM ?? this.elevLossM,
       planId: planId ?? this.planId,
       lapsJson: lapsJson ?? this.lapsJson,
       rowid: rowid ?? this.rowid,
@@ -6211,6 +6284,12 @@ class RunsCompanion extends UpdateCompanion<Run> {
     if (avgCadence.present) {
       map['avg_cadence'] = Variable<int>(avgCadence.value);
     }
+    if (elevGainM.present) {
+      map['elev_gain_m'] = Variable<double>(elevGainM.value);
+    }
+    if (elevLossM.present) {
+      map['elev_loss_m'] = Variable<double>(elevLossM.value);
+    }
     if (planId.present) {
       map['plan_id'] = Variable<String>(planId.value);
     }
@@ -6246,6 +6325,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
           ..write('shoeId: $shoeId, ')
           ..write('steps: $steps, ')
           ..write('avgCadence: $avgCadence, ')
+          ..write('elevGainM: $elevGainM, ')
+          ..write('elevLossM: $elevLossM, ')
           ..write('planId: $planId, ')
           ..write('lapsJson: $lapsJson, ')
           ..write('rowid: $rowid')
@@ -11001,6 +11082,8 @@ typedef $$RunsTableCreateCompanionBuilder = RunsCompanion Function({
   Value<String?> shoeId,
   Value<int?> steps,
   Value<int?> avgCadence,
+  Value<double?> elevGainM,
+  Value<double?> elevLossM,
   Value<String?> planId,
   Value<String?> lapsJson,
   Value<int> rowid,
@@ -11026,6 +11109,8 @@ typedef $$RunsTableUpdateCompanionBuilder = RunsCompanion Function({
   Value<String?> shoeId,
   Value<int?> steps,
   Value<int?> avgCadence,
+  Value<double?> elevGainM,
+  Value<double?> elevLossM,
   Value<String?> planId,
   Value<String?> lapsJson,
   Value<int> rowid,
@@ -11110,6 +11195,12 @@ class $$RunsTableFilterComposer extends Composer<_$AppDatabase, $RunsTable> {
 
   ColumnFilters<int> get avgCadence =>
       $composableBuilder(column: $table.avgCadence, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get elevGainM =>
+      $composableBuilder(column: $table.elevGainM, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get elevLossM =>
+      $composableBuilder(column: $table.elevLossM, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get planId =>
       $composableBuilder(column: $table.planId, builder: (column) => ColumnFilters(column));
@@ -11203,6 +11294,12 @@ class $$RunsTableOrderingComposer extends Composer<_$AppDatabase, $RunsTable> {
   ColumnOrderings<int> get avgCadence =>
       $composableBuilder(column: $table.avgCadence, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<double> get elevGainM =>
+      $composableBuilder(column: $table.elevGainM, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get elevLossM =>
+      $composableBuilder(column: $table.elevLossM, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get planId =>
       $composableBuilder(column: $table.planId, builder: (column) => ColumnOrderings(column));
 
@@ -11258,6 +11355,10 @@ class $$RunsTableAnnotationComposer extends Composer<_$AppDatabase, $RunsTable> 
   GeneratedColumn<int> get steps => $composableBuilder(column: $table.steps, builder: (column) => column);
 
   GeneratedColumn<int> get avgCadence => $composableBuilder(column: $table.avgCadence, builder: (column) => column);
+
+  GeneratedColumn<double> get elevGainM => $composableBuilder(column: $table.elevGainM, builder: (column) => column);
+
+  GeneratedColumn<double> get elevLossM => $composableBuilder(column: $table.elevLossM, builder: (column) => column);
 
   GeneratedColumn<String> get planId => $composableBuilder(column: $table.planId, builder: (column) => column);
 
@@ -11327,6 +11428,8 @@ class $$RunsTableTableManager
                 Value<String?> shoeId = const Value.absent(),
                 Value<int?> steps = const Value.absent(),
                 Value<int?> avgCadence = const Value.absent(),
+                Value<double?> elevGainM = const Value.absent(),
+                Value<double?> elevLossM = const Value.absent(),
                 Value<String?> planId = const Value.absent(),
                 Value<String?> lapsJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -11351,6 +11454,8 @@ class $$RunsTableTableManager
                 shoeId: shoeId,
                 steps: steps,
                 avgCadence: avgCadence,
+                elevGainM: elevGainM,
+                elevLossM: elevLossM,
                 planId: planId,
                 lapsJson: lapsJson,
                 rowid: rowid,
@@ -11377,6 +11482,8 @@ class $$RunsTableTableManager
                 Value<String?> shoeId = const Value.absent(),
                 Value<int?> steps = const Value.absent(),
                 Value<int?> avgCadence = const Value.absent(),
+                Value<double?> elevGainM = const Value.absent(),
+                Value<double?> elevLossM = const Value.absent(),
                 Value<String?> planId = const Value.absent(),
                 Value<String?> lapsJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -11401,6 +11508,8 @@ class $$RunsTableTableManager
                 shoeId: shoeId,
                 steps: steps,
                 avgCadence: avgCadence,
+                elevGainM: elevGainM,
+                elevLossM: elevLossM,
                 planId: planId,
                 lapsJson: lapsJson,
                 rowid: rowid,
