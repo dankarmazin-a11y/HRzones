@@ -23,12 +23,22 @@ struct WorkoutLiveActivity: Widget {
         DynamicIslandExpandedRegion(.bottom) {
           VStack(alignment: .leading, spacing: 2) {
             Text(context.state.title).font(.title3.bold()).lineLimit(1)
-            HStack {
+            if !context.state.detail.isEmpty {
               Text(context.state.detail).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-              Spacer()
-              if let hr = context.state.heartRate {
-                Label("\(hr)", systemImage: "heart.fill").font(.caption.bold()).foregroundStyle(.red)
+            }
+            if let metrics = context.state.metrics, !metrics.isEmpty {
+              HStack(spacing: 0) {
+                ForEach(metrics, id: \.label) { m in
+                  VStack(alignment: .leading, spacing: 0) {
+                    Text(m.value).font(.headline.monospacedDigit())
+                      .foregroundStyle(m.label == "Heart rate" ? .red : .primary)
+                    Text(m.label).font(.caption2).foregroundStyle(.secondary)
+                  }
+                  .frame(maxWidth: .infinity, alignment: .leading)
+                }
               }
+            } else if let hr = context.state.heartRate {
+              Label("\(hr)", systemImage: "heart.fill").font(.caption.bold()).foregroundStyle(.red)
             }
             if let end = context.state.countdownEnd, end > Date() {
               Countdown(label: context.state.countdownLabel, end: end).font(.caption.bold())
@@ -91,28 +101,51 @@ private struct LockScreenView: View {
   let state: WorkoutAttributes.ContentState
 
   var body: some View {
-    HStack(alignment: .center, spacing: 12) {
-      Image(systemName: icon(attributes))
-        .font(.title2)
-        .foregroundStyle(state.paused ? .orange : .green)
-        .frame(width: 32)
-      VStack(alignment: .leading, spacing: 2) {
+    VStack(alignment: .leading, spacing: 8) {
+      // Name + clock
+      HStack(spacing: 8) {
+        Image(systemName: icon(attributes))
+          .font(.title3.bold())
+          .foregroundStyle(state.paused ? .orange : .green)
         Text(state.paused ? "\(attributes.name) · paused" : attributes.name)
-          .font(.caption).foregroundStyle(.white.opacity(0.7)).lineLimit(1)
-        Text(state.title).font(.title2.bold()).foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.7)
-        Text(state.detail).font(.caption).foregroundStyle(.white.opacity(0.8)).lineLimit(1)
-        if let end = state.countdownEnd, end > Date() {
-          Countdown(label: state.countdownLabel, end: end).font(.callout.bold())
-        }
+          .font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.75)).lineLimit(1)
+        Spacer(minLength: 4)
+        Clock(state: state)
+          .font(.title2.monospacedDigit().bold()).foregroundStyle(.white)
       }
-      Spacer(minLength: 4)
-      VStack(alignment: .trailing, spacing: 4) {
-        Clock(state: state).font(.title2.monospacedDigit().bold()).foregroundStyle(.white)
-        if let hr = state.heartRate {
-          Label("\(hr)", systemImage: "heart.fill").font(.callout.bold()).foregroundStyle(.red)
+      // Distance / exercise, big
+      Text(state.title)
+        .font(.system(size: 34, weight: .heavy, design: .rounded))
+        .foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.6)
+      if !state.detail.isEmpty {
+        Text(state.detail).font(.subheadline).foregroundStyle(.white.opacity(0.85)).lineLimit(1)
+      }
+      if let end = state.countdownEnd, end > Date() {
+        Countdown(label: state.countdownLabel, end: end).font(.title3.bold())
+      }
+      // Pace · avg pace · heart rate (or sets done · heart rate)
+      if let metrics = state.metrics, !metrics.isEmpty {
+        HStack(alignment: .bottom, spacing: 0) {
+          ForEach(metrics, id: \.label) { m in
+            VStack(alignment: .leading, spacing: 0) {
+              HStack(spacing: 3) {
+                if m.label == "Heart rate" {
+                  Image(systemName: "heart.fill").font(.title3).foregroundStyle(.red)
+                }
+                Text(m.value)
+                  .font(.system(size: 26, weight: .bold, design: .rounded).monospacedDigit())
+                  .foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.6)
+              }
+              Text(m.label).font(.caption2).foregroundStyle(.white.opacity(0.65))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+          }
         }
+      } else if let hr = state.heartRate {
+        Label("\(hr)", systemImage: "heart.fill").font(.title3.bold()).foregroundStyle(.red)
       }
     }
-    .padding(16)
+    .padding(.horizontal, 18)
+    .padding(.vertical, 14)
   }
 }

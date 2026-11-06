@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 
 import '../goals_section.dart';
 import '../measurements_section.dart';
@@ -31,6 +32,8 @@ class ProfileScreen extends StatelessWidget {
         ],
       ),
       body: ListView(
+        // Keep cards that load data built off-screen (no jumping while scrolling).
+        scrollCacheExtent: const ScrollCacheExtent.pixels(4000),
         padding: const EdgeInsets.all(16),
         children: [
           const StreakCard(editable: true),

@@ -84,13 +84,29 @@ class RunSummaryScreen extends StatelessWidget {
   }
 }
 
-class _Body extends StatelessWidget {
+class _Body extends StatefulWidget {
   const _Body({required this.run});
 
   final Run run;
 
   @override
+  State<_Body> createState() => _BodyState();
+}
+
+class _BodyState extends State<_Body> {
+  Future<double?>? _weight;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Once: a new future on every rebuild (typing a note saves the run)
+    // made the calories flicker.
+    _weight ??= Services.of(context).body.latest('weight');
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final run = widget.run;
     final text = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
     final pace = paceSecPerKm(run.distanceM, run.durationS.toDouble());
@@ -107,67 +123,74 @@ class _Body extends StatelessWidget {
         ),
       ),
     );
-    return ListView(
+    // Not a lazy ListView: its cards load their numbers when first built, so
+    // building them only on scrolling made the page jump while scrolling
+    // (and again on the way back, after they were thrown away).
+    return SingleChildScrollView(
+      key: const Key('runSummaryList'),
       padding: const EdgeInsets.all(16),
-      children: [
-        _RouteCard(run: run),
-        const SizedBox(height: 16),
-        Center(
-          child: Text(
-            formatKm(run.distanceM),
-            key: const Key('summaryDistance'),
-            style: text.displayLarge?.copyWith(fontWeight: FontWeight.w900, color: scheme.primary),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _RouteCard(run: run),
+          const SizedBox(height: 16),
+          Center(
+            child: Text(
+              formatKm(run.distanceM),
+              key: const Key('summaryDistance'),
+              style: text.displayLarge?.copyWith(fontWeight: FontWeight.w900, color: scheme.primary),
+            ),
           ),
-        ),
-        Center(child: Text('Kilometres', style: text.titleMedium)),
-        const SizedBox(height: 16),
-        FutureBuilder<double?>(
-          future: Services.of(context).body.latest('weight'),
-          builder: (context, snap) {
-            final kcal = runCalories(run.distanceM, snap.data);
-            return Row(
+          Center(child: Text('Kilometres', style: text.titleMedium)),
+          const SizedBox(height: 16),
+          FutureBuilder<double?>(
+            future: _weight,
+            builder: (context, snap) {
+              final kcal = runCalories(run.distanceM, snap.data);
+              return Row(
+                children: [
+                  tile(formatDuration(Duration(seconds: run.durationS)), 'Time'),
+                  tile(formatPace(pace), 'Avg pace /km'),
+                  tile(kcal == null ? '–' : '${kcal.round()}', kcal == null ? 'kcal (add weight)' : 'Calories'),
+                ],
+              );
+            },
+          ),
+          if (run.avgHr != null || run.maxHr != null)
+            Row(
               children: [
-                tile(formatDuration(Duration(seconds: run.durationS)), 'Time'),
-                tile(formatPace(pace), 'Avg pace /km'),
-                tile(kcal == null ? '–' : '${kcal.round()}', kcal == null ? 'kcal (add weight)' : 'Calories'),
+                tile(run.avgHr == null ? '–' : '${run.avgHr}', 'Avg HR'),
+                tile(run.maxHr == null ? '–' : '${run.maxHr}', 'Max HR'),
               ],
-            );
-          },
-        ),
-        if (run.avgHr != null || run.maxHr != null)
-          Row(
-            children: [
-              tile(run.avgHr == null ? '–' : '${run.avgHr}', 'Avg HR'),
-              tile(run.maxHr == null ? '–' : '${run.maxHr}', 'Max HR'),
-            ],
+            ),
+          _ClimbAndCadence(run: run, tile: tile),
+          if (run.hrPresetId != null)
+            FutureBuilder<HrPreset?>(
+              future: Services.of(context).presets.byId(run.hrPresetId),
+              builder: (context, snap) => snap.data == null
+                  ? const SizedBox.shrink()
+                  : ListTile(
+                      leading: const Icon(Icons.monitor_heart_outlined),
+                      title: Text('${snap.data!.name} · ${presetRange(snap.data!)}'),
+                    ),
+            ),
+          const SizedBox(height: 8),
+          ListTile(
+            leading: const Icon(Icons.schedule),
+            title: Text(_timeRange(run)),
+            subtitle: run.endedAt == null
+                ? null
+                : Text('Total ${formatDuration(run.endedAt!.difference(run.startedAt))}'),
           ),
-        _ClimbAndCadence(run: run, tile: tile),
-        if (run.hrPresetId != null)
-          FutureBuilder<HrPreset?>(
-            future: Services.of(context).presets.byId(run.hrPresetId),
-            builder: (context, snap) => snap.data == null
-                ? const SizedBox.shrink()
-                : ListTile(
-                    leading: const Icon(Icons.monitor_heart_outlined),
-                    title: Text('${snap.data!.name} · ${presetRange(snap.data!)}'),
-                  ),
-          ),
-        const SizedBox(height: 8),
-        ListTile(
-          leading: const Icon(Icons.schedule),
-          title: Text(_timeRange(run)),
-          subtitle: run.endedAt == null
-              ? null
-              : Text('Total ${formatDuration(run.endedAt!.difference(run.startedAt))}'),
-        ),
-        const SizedBox(height: 8),
-        RunShoeRow(runId: run.id, shoeId: run.shoeId),
-        RunFeelCard(key: ValueKey('feel_${run.id}'), run: run),
-        LapsCard(run: run),
-        RunCompareCard(key: ValueKey('compare_${run.id}'), run: run),
-        RunBestsCard(run: run),
-        _SplitsSection(run: run),
-      ],
+          const SizedBox(height: 8),
+          RunShoeRow(runId: run.id, shoeId: run.shoeId),
+          RunFeelCard(key: ValueKey('feel_${run.id}'), run: run),
+          LapsCard(run: run),
+          RunCompareCard(key: ValueKey('compare_${run.id}'), run: run),
+          RunBestsCard(run: run),
+          _SplitsSection(run: run),
+        ],
+      ),
     );
   }
 }
@@ -488,19 +511,22 @@ class _SplitsSectionState extends State<_SplitsSection> {
                                 borderRadius: BorderRadius.circular(8),
                                 border: x == fastest ? Border.all(color: scheme.onSurface, width: 2) : null,
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    formatPace(x.pace),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w800,
-                                      fontFeatures: [FontFeature.tabularFigures()],
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      formatPace(x.pace),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w800,
+                                        fontFeatures: [FontFeature.tabularFigures()],
+                                      ),
                                     ),
-                                  ),
-                                  if (x == fastest) const Icon(Icons.bolt, size: 16, color: Colors.white),
-                                ],
+                                    if (x == fastest) const Icon(Icons.bolt, size: 16, color: Colors.white),
+                                  ],
+                                ),
                               ),
                             ),
                           );
@@ -509,13 +535,18 @@ class _SplitsSectionState extends State<_SplitsSection> {
                     ),
                     if (hasHr)
                       SizedBox(
-                        width: 56,
+                        width: 64,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             if (x.avgHr != null) Icon(Icons.favorite, size: 13, color: Colors.red.shade400),
                             const SizedBox(width: 3),
-                            Text(x.avgHr == null ? '–' : '${x.avgHr}', style: text.bodyMedium),
+                            Flexible(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(x.avgHr == null ? '–' : '${x.avgHr}', style: text.bodyMedium),
+                              ),
+                            ),
                           ],
                         ),
                       ),

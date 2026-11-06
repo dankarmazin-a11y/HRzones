@@ -200,12 +200,17 @@ class RunSession extends ChangeNotifier {
         countdownEnd = clockStart.add(Duration(milliseconds: (end * 1000).round()));
       }
     } else if (_treadmill) {
-      detail = 'Treadmill · moving time';
+      detail = 'Treadmill';
     } else {
-      final cp = currentPace, ap = avgPace;
-      detail = [if (cp != null) 'Pace ${formatPace(cp)} /km', if (ap != null) 'avg ${formatPace(ap)} /km'].join(' · ');
-      if (detail.isEmpty) detail = gps == GpsStatus.searching ? 'Finding GPS…' : '';
+      detail = gps == GpsStatus.searching ? 'Finding GPS…' : '';
     }
+    final bpm = hr.running ? hr.bpm : null;
+    final cp = currentPace, ap = avgPace;
+    final metrics = <(String, String)>[
+      if (!_treadmill) ('Pace', paused || cp == null ? '–' : formatPace(cp)),
+      if (!_treadmill) ('Avg pace', ap == null ? '–' : formatPace(ap)),
+      ('Heart rate', bpm == null ? '–' : '$bpm'),
+    ];
     return LiveCard(
       title: _treadmill ? 'Treadmill run' : '${formatKm(distanceM)} km',
       detail: paused ? 'Paused' : detail,
@@ -215,6 +220,7 @@ class RunSession extends ChangeNotifier {
       countdownEnd: paused ? null : countdownEnd,
       countdownLabel: step?.label,
       paused: paused,
+      metrics: metrics,
     );
   }
 

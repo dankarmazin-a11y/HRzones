@@ -88,7 +88,10 @@ final class LiveActivityPlugin: NSObject, FlutterPlugin {
       elapsed: (m["elapsed"] as? NSNumber)?.intValue ?? 0,
       countdownEnd: date("countdownEnd"),
       countdownLabel: m["countdownLabel"] as? String,
-      paused: m["paused"] as? Bool ?? false)
+      paused: m["paused"] as? Bool ?? false,
+      metrics: (m["metrics"] as? [[String: Any]])?.map {
+        WorkoutMetric(label: $0["label"] as? String ?? "", value: $0["value"] as? String ?? "")
+      })
   }
 }
 

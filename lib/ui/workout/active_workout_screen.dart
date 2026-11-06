@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/services.dart';
 
 import '../../app_services.dart';
@@ -102,18 +103,23 @@ class ActiveWorkoutScreen extends StatelessWidget {
                 ),
           body: _withKeyboardBar(
             context,
+            // The progress line stays at the top while the exercises scroll.
+            header: session.editMode
+                ? null
+                : Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
+                    child: LinearProgressIndicator(
+                      key: const Key('workoutProgress'),
+                      value: session.progress,
+                      minHeight: 8,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
             ListView(
+              // Keep cards that load data built off-screen (no jumping while scrolling).
+              scrollCacheExtent: const ScrollCacheExtent.pixels(4000),
               padding: const EdgeInsets.only(bottom: 120),
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-                  child: LinearProgressIndicator(
-                    key: const Key('workoutProgress'),
-                    value: session.progress,
-                    minHeight: 8,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
                 if ((!session.editMode || session.templateMode) && Services.of(context).zonesEnabled.value)
                   PresetRow(presetId: w.hrPresetId, onChanged: session.applyPreset),
                 for (final (i, e) in w.exercises.indexed) _ExerciseCard(key: ValueKey(e.id), index: i, entry: e),
@@ -427,10 +433,11 @@ class ActiveWorkoutScreen extends StatelessWidget {
   }
 
   /// The list, plus Next/Done right above the keyboard while it is open.
-  static Widget _withKeyboardBar(BuildContext context, Widget list) {
+  static Widget _withKeyboardBar(BuildContext context, Widget list, {Widget? header}) {
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     return Column(
       children: [
+        ?header,
         Expanded(child: list),
         if (keyboardOpen) const KeyboardBar(),
       ],
@@ -793,22 +800,24 @@ class _ExerciseCard extends StatelessWidget {
               _HeaderRow(
                 tracking: tracking,
                 showRpe: !e.exercise.isStretch && Services.of(context).level.value.showsAdvancedSetOptions,
+                pairs: e.sets.any((x) => x.side != null),
               ),
             for (final (i, s) in e.sets.indexed)
-              Dismissible(
-                key: ValueKey(s.id),
-                direction: DismissDirection.endToStart,
-                background: Container(
-                  color: Colors.red,
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.only(right: 16),
-                  child: const Icon(Icons.delete),
+              if (!_isRightOfPair(e.sets, i))
+                Dismissible(
+                  key: ValueKey(s.id),
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    color: Colors.red,
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.only(right: 16),
+                    child: const Icon(Icons.delete),
+                  ),
+                  onDismissed: (_) => session.removeSet(e, s),
+                  child: e.exercise.isInterval
+                      ? IntervalRow(entry: e, set: s, index: i)
+                      : SetRow(entry: e, set: s, index: i, partner: _partnerOf(e.sets, i)),
                 ),
-                onDismissed: (_) => session.removeSet(e, s),
-                child: e.exercise.isInterval
-                    ? IntervalRow(entry: e, set: s, index: i)
-                    : SetRow(entry: e, set: s, index: i),
-              ),
             TextButton.icon(
               onPressed: isSession ? addStretches : () => session.addSet(e),
               icon: const Icon(Icons.add),
@@ -823,11 +832,26 @@ class _ExerciseCard extends StatelessWidget {
 
 const _setW = 32.0, _prevW = 80.0, _rpeW = 40.0, _doneW = 44.0, _kgW = 56.0, _secW = 64.0;
 
+/// One-sided exercises: two ticks (L, R) in one row.
+const _pairDoneW = 76.0;
+
+/// A one-sided set is stored as a left + right pair; it shows as one row
+/// (shared values, a tick per side). Stretch rows keep one row per side.
+LoggedSet? _partnerOf(List<LoggedSet> sets, int i) =>
+    sets[i].side == Side.left && sets[i].subExercise == null && i + 1 < sets.length && sets[i + 1].side == Side.right
+    ? sets[i + 1]
+    : null;
+
+bool _isRightOfPair(List<LoggedSet> sets, int i) => i > 0 && _partnerOf(sets, i - 1) != null;
+
 class _HeaderRow extends StatelessWidget {
-  const _HeaderRow({required this.tracking, required this.showRpe});
+  const _HeaderRow({required this.tracking, required this.showRpe, this.pairs = false});
 
   final TrackingType tracking;
   final bool showRpe;
+
+  /// One-sided exercise: the tick column holds L and R.
+  final bool pairs;
 
   @override
   Widget build(BuildContext context) {
@@ -851,8 +875,12 @@ class _HeaderRow extends StatelessWidget {
           ],
           if (showRpe) SizedBox(width: _rpeW, child: cell('RPE')),
           SizedBox(
-            width: _doneW,
-            child: SessionScope.of(context).templateMode ? null : const Icon(Icons.check, size: 16),
+            width: pairs ? _pairDoneW : _doneW,
+            child: SessionScope.of(context).templateMode
+                ? null
+                : (pairs && tracking != TrackingType.duration
+                      ? Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [cell('L'), cell('R')])
+                      : const Icon(Icons.check, size: 16)),
           ),
         ],
       ),
@@ -885,11 +913,15 @@ class _StretchHeaderRow extends StatelessWidget {
 /// One set: type label, previous values (tap to copy), inputs, RPE, done.
 /// In a Stretching card: stretch name, optional assisting weight, seconds, ▶.
 class SetRow extends StatefulWidget {
-  const SetRow({super.key, required this.entry, required this.set, required this.index});
+  const SetRow({super.key, required this.entry, required this.set, required this.index, this.partner});
 
   final LoggedExercise entry;
   final LoggedSet set;
   final int index;
+
+  /// The right side of a one-sided set ([set] is the left): one row, the
+  /// values apply to both sides, a tick for each.
+  final LoggedSet? partner;
 
   @override
   State<SetRow> createState() => _SetRowState();
@@ -927,11 +959,13 @@ class _SetRowState extends State<SetRow> {
 
   String _label() {
     final s = widget.set;
-    final side = switch (s.side) {
-      Side.left => 'L',
-      Side.right => 'R',
-      null => '',
-    };
+    final side = widget.partner != null
+        ? ''
+        : switch (s.side) {
+            Side.left => 'L',
+            Side.right => 'R',
+            null => '',
+          };
     final sets = widget.entry.sets;
     if (s.subExercise != null) {
       // Stretch rows: a left + right pair shares one number.
@@ -978,16 +1012,72 @@ class _SetRowState extends State<SetRow> {
   void _fillFromPrevious(WorkoutSet? p) {
     if (p == null) return;
     final session = SessionScope.of(context);
-    if (p.weightKg != null) session.setWeight(widget.set, p.weightKg);
-    if (p.reps != null) session.setReps(widget.set, p.reps);
-    if (p.durationS != null) session.setDuration(widget.set, p.durationS);
-    if (p.distanceM != null) session.setDistance(widget.set, p.distanceM);
+    for (final x in _sides) {
+      if (p.weightKg != null) session.setWeight(x, p.weightKg);
+      if (p.reps != null) session.setReps(x, p.reps);
+      if (p.durationS != null) session.setDuration(x, p.durationS);
+      if (p.distanceM != null) session.setDistance(x, p.distanceM);
+    }
     setState(() {
       _metres.text = widget.set.distanceM == null ? '' : formatKg(widget.set.distanceM);
       _weight.text = formatKg(widget.set.weightKg);
       _reps.text = widget.set.reps?.toString() ?? '';
       _secs.text = widget.set.durationS?.toString() ?? '';
     });
+  }
+
+  /// The set and, for a one-sided set, its right side.
+  List<LoggedSet> get _sides => [widget.set, ?widget.partner];
+
+  /// ✓ L and ✓ R in one row (one-sided sets); a timed hold gets one ▶ that
+  /// runs left, "switch sides", right.
+  Widget _pairButtons(WorkoutSession session, TrackingType tracking) {
+    final l = widget.set, r = widget.partner!;
+    if (session.templateMode) return const SizedBox.shrink();
+    if (tracking == TrackingType.duration && !session.editMode) {
+      final t = session.timer;
+      final running = t?.kind == TimerKind.setTimer && (t?.set == l || t?.set == r);
+      if (l.done && r.done && !running) {
+        return IconButton(
+          tooltip: 'Undo',
+          icon: const Icon(Icons.check_box, color: Colors.green),
+          onPressed: () {
+            session.toggleDone(widget.entry, r);
+            session.toggleDone(widget.entry, l);
+          },
+        );
+      }
+      return IconButton(
+        key: Key('pairTimer_${widget.index}'),
+        tooltip: running ? 'Stop' : 'Start timer',
+        icon: Icon(running ? Icons.stop_circle : Icons.play_circle, color: timedColor(context)),
+        onPressed: () {
+          FocusScope.of(context).unfocus();
+          running ? session.stopTimer() : session.startSetTimer(widget.entry, l.done ? r : l);
+        },
+      );
+    }
+    Widget tick(LoggedSet x, String letter) => InkWell(
+      key: Key('tick${letter}_${widget.index}'),
+      borderRadius: BorderRadius.circular(8),
+      onTap: () async {
+        FocusScope.of(context).unfocus();
+        session.toggleDone(widget.entry, x);
+        if (!x.done) return;
+        final record = await session.isRecord(widget.entry, x);
+        record ? HapticFeedback.heavyImpact() : HapticFeedback.lightImpact();
+      },
+      child: SizedBox(
+        width: 36,
+        height: 44,
+        child: Icon(
+          x.done ? Icons.check_box : Icons.check_box_outline_blank,
+          color: x.done ? Colors.green : null,
+          semanticLabel: '$letter side',
+        ),
+      ),
+    );
+    return Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [tick(l, 'L'), tick(r, 'R')]);
   }
 
   /// ✓ for weight/reps sets. Timed sets get ▶ (start countdown) / ■ (stop).
@@ -1068,7 +1158,11 @@ class _SetRowState extends State<SetRow> {
         ),
       ),
     );
-    if (t != null) session.setSetType(widget.set, t);
+    if (t != null) {
+      for (final x in _sides) {
+        session.setSetType(x, t);
+      }
+    }
   }
 
   Future<void> _pickRpe() async {
@@ -1087,7 +1181,9 @@ class _SetRowState extends State<SetRow> {
       ),
     );
     if (v == null) return;
-    session.setRpe(widget.set, v < 0 ? null : v);
+    for (final x in _sides) {
+      session.setRpe(x, v < 0 ? null : v);
+    }
   }
 
   @override
@@ -1097,7 +1193,16 @@ class _SetRowState extends State<SetRow> {
     final prev = widget.entry.previousFor(widget.index);
     final tracking = widget.entry.exercise.trackingType;
     final scheme = Theme.of(context).colorScheme;
-    final running = session.timer?.kind == TimerKind.setTimer && session.timer?.set == s;
+    final partner = widget.partner;
+    final running =
+        session.timer?.kind == TimerKind.setTimer &&
+        (session.timer?.set == s || (partner != null && session.timer?.set == partner));
+    // Typing a value fills both sides of a one-sided set.
+    void both(void Function(LoggedSet x) f) {
+      for (final x in _sides) {
+        f(x);
+      }
+    }
 
     Widget field(TextEditingController c, String hint, ValueChanged<String> onChanged, {bool decimal = false}) =>
         Padding(
@@ -1106,8 +1211,12 @@ class _SetRowState extends State<SetRow> {
         );
 
     String hintOf(num? v) => v == null ? '' : (v is double ? formatKg(v) : '$v');
-    Widget weightField(String hint) =>
-        field(_weight, hint, (v) => session.setWeight(s, double.tryParse(v.replaceAll(',', '.'))), decimal: true);
+    Widget weightField(String hint) => field(
+      _weight,
+      hint,
+      (v) => both((x) => session.setWeight(x, double.tryParse(v.replaceAll(',', '.')))),
+      decimal: true,
+    );
     Widget secondsCell() => running
         ? Center(
             child: ListenableBuilder(
@@ -1121,7 +1230,7 @@ class _SetRowState extends State<SetRow> {
         : field(
             _secs,
             hintOf(prev?.durationS ?? WorkoutSession.defaultSetSeconds),
-            (v) => session.setDuration(s, int.tryParse(v)),
+            (v) => both((x) => session.setDuration(x, int.tryParse(v))),
           );
 
     final sub = s.subExercise;
@@ -1160,7 +1269,12 @@ class _SetRowState extends State<SetRow> {
               width: _setW,
               child: InkWell(
                 // Set types (warm-up/drop/failure) are hidden for beginners.
-                onTap: Services.of(context).level.value.showsAdvancedSetOptions ? () => session.cycleSetType(s) : null,
+                onTap: Services.of(context).level.value.showsAdvancedSetOptions
+                    ? () {
+                        session.cycleSetType(s);
+                        if (partner != null) session.setSetType(partner, s.type);
+                      }
+                    : null,
                 onLongPress: Services.of(context).level.value.showsAdvancedSetOptions
                     ? () => _pickSetType(session)
                     : null,
@@ -1217,14 +1331,22 @@ class _SetRowState extends State<SetRow> {
                 child: field(
                   _metres,
                   hintOf(prev?.distanceM),
-                  (v) => session.setDistance(s, double.tryParse(v.replaceAll(',', '.'))),
+                  (v) => both((x) => session.setDistance(x, double.tryParse(v.replaceAll(',', '.')))),
                   decimal: true,
                 ),
               ),
-              Expanded(child: field(_secs, hintOf(prev?.durationS), (v) => session.setDuration(s, int.tryParse(v)))),
+              Expanded(
+                child: field(
+                  _secs,
+                  hintOf(prev?.durationS),
+                  (v) => both((x) => session.setDuration(x, int.tryParse(v))),
+                ),
+              ),
             ] else ...[
               Expanded(child: weightField(hintOf(prev?.weightKg))),
-              Expanded(child: field(_reps, hintOf(prev?.reps), (v) => session.setReps(s, int.tryParse(v)))),
+              Expanded(
+                child: field(_reps, hintOf(prev?.reps), (v) => both((x) => session.setReps(x, int.tryParse(v)))),
+              ),
             ],
             if (!widget.entry.exercise.isStretch && Services.of(context).level.value.showsAdvancedSetOptions)
               SizedBox(
@@ -1241,11 +1363,16 @@ class _SetRowState extends State<SetRow> {
                   ),
                 ),
               ),
-            SizedBox(width: _doneW, child: _doneButton(session, s, tracking)),
+            partner != null
+                ? SizedBox(width: _pairDoneW, child: _pairButtons(session, tracking))
+                : SizedBox(width: _doneW, child: _doneButton(session, s, tracking)),
           ];
 
+    final allDone = _sides.every((x) => x.done), someDone = _sides.any((x) => x.done);
     return Container(
-      color: s.done ? Colors.green.withValues(alpha: 0.18) : (running ? Colors.teal.withValues(alpha: 0.18) : null),
+      color: allDone
+          ? Colors.green.withValues(alpha: 0.18)
+          : (running ? Colors.teal.withValues(alpha: 0.18) : (someDone ? Colors.green.withValues(alpha: 0.08) : null)),
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(children: children),
     );

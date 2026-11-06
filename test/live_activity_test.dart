@@ -55,7 +55,8 @@ void main() {
     final state = stateOf(live.calls.last);
     expect(state['countdownLabel'], 'Rest');
     expect(state['countdownEnd'], isNotNull);
-    expect(state['detail'], contains('1/${e.sets.length} sets done'));
+    expect(state['metrics'], contains(equals({'label': 'Sets done', 'value': '1/${e.sets.length} sets'})));
+    expect(state['metrics'], contains(equals({'label': 'Heart rate', 'value': '–'})));
 
     s.session.stopTimer();
     expect(stateOf(live.calls.last)['countdownEnd'], isNull);
@@ -119,7 +120,7 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       final card = run.liveCard;
       expect(card.title, '0.30 km');
-      expect(card.detail, 'Pace 5:33 /km · avg 5:33 /km');
+      expect(card.metrics, [('Pace', '5:33'), ('Avg pace', '5:33'), ('Heart rate', '–')]);
       expect(card.clockStart, t0);
 
       clock = t0.add(const Duration(seconds: 100));

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 
 import '../../app_services.dart';
 import '../../data/shoe_repository.dart';
@@ -124,6 +125,8 @@ class ShoesScreen extends StatelessWidget {
             );
           }
           return ListView(
+            // Keep cards that load data built off-screen (no jumping while scrolling).
+            scrollCacheExtent: const ScrollCacheExtent.pixels(4000),
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
             children: [
               for (final x in list)
