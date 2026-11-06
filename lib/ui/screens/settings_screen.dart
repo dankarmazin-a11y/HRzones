@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app_services.dart';
+import '../../live/live_activity.dart';
 import '../../run/run_voice.dart';
 import '../run/pace_alert.dart';
 import '../../beep/sounds.dart';
@@ -111,6 +112,9 @@ class SettingsScreen extends StatelessWidget {
           const Divider(height: 32),
           Text('Running', style: text.titleMedium),
           const RunVoiceSettings(),
+          const Divider(height: 32),
+          Text('Lock screen', style: text.titleMedium),
+          const LockScreenCardCheck(),
           const Divider(height: 32),
           Text('Sounds', style: text.titleMedium),
           Text('Pick the sound for each moment. Tap ▷ to hear it.', style: text.bodySmall),
@@ -362,6 +366,84 @@ class _RunVoiceSettingsState extends State<RunVoiceSettings> {
           ),
           const PaceAlertRow(),
         ],
+      ],
+    );
+  }
+}
+
+/// Settings › Lock screen: is the workout card working, and why not.
+class LockScreenCardCheck extends StatefulWidget {
+  const LockScreenCardCheck({super.key});
+
+  @override
+  State<LockScreenCardCheck> createState() => _LockScreenCardCheckState();
+}
+
+class _LockScreenCardCheckState extends State<LockScreenCardCheck> {
+  Map<String, Object?>? _status;
+  bool _loaded = false, _testing = false;
+  LiveActivity? _live;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _live = Services.of(context).live;
+    if (!_loaded) {
+      _loaded = true;
+      _refresh();
+    }
+  }
+
+  Future<void> _refresh() async {
+    final m = await Services.of(context).live.status();
+    if (mounted) setState(() => _status = m);
+  }
+
+  Future<void> _test() async {
+    final s = Services.of(context);
+    if (s.run.active || s.session.active != null) return; // the real card is up
+    final live = s.live;
+    if (_testing) {
+      await live.end();
+    } else {
+      await live.start(
+        'strength',
+        'Test card',
+        LiveCard(title: 'Lock the phone to see me', detail: 'HR Zones', clockStart: DateTime.now()),
+      );
+    }
+    setState(() => _testing = !_testing);
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    await _refresh();
+  }
+
+  @override
+  void dispose() {
+    if (_testing) _live?.end();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Services.of(context);
+    final busy = s.run.active || s.session.active != null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.lock_outline),
+          title: const Text('Workout card on the lock screen'),
+          subtitle: Text(_loaded ? liveStatusText(_status) : '…', key: const Key('liveStatus')),
+          trailing: IconButton(tooltip: 'Check again', icon: const Icon(Icons.refresh), onPressed: _refresh),
+        ),
+        if (_status != null && !busy)
+          OutlinedButton.icon(
+            key: const Key('testLiveCard'),
+            icon: Icon(_testing ? Icons.close : Icons.play_arrow),
+            label: Text(_testing ? 'Remove test card' : 'Show a test card'),
+            onPressed: _test,
+          ),
       ],
     );
   }
