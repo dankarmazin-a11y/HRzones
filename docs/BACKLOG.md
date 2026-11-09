@@ -4,7 +4,7 @@ First thing when GitHub is back: merge PR #37 (scroll-jump fix, one row per one-
 set with ✓L ✓R, pinned progress line, "Run" button at the bottom, bigger lock-screen card),
 then work through this list. Run ONE iOS build at a time (no parallel macOS runs).
 
-## Done (PR after #38): A1–A4, B8, B11 – marked ✅
+## Done: A1–A4, B8, B11 (PR #39); B5, B7, B9, B10 (PR after #39) – marked ✅
 
 ## A. Bugs (from the owner's strength workouts, 9 Nov)
 1. ✅ **Workout clock freezes.** The big clock in the workout header only ticks while a
@@ -26,17 +26,17 @@ then work through this list. Run ONE iOS build at a time (no parallel macOS runs
    "Timer ·" label so they can't be mistaken for the stretching card.
 
 ## B. Strength workout improvements
-5. **Home › Strength (quick workout) offers templates**: a sheet with "Empty workout" plus
+5. ✅ **Home › Strength (quick workout) offers templates**: a sheet with "Empty workout" plus
    the templates (folders), like the Strength tab.
 6. **Tick sets from the lock screen**: a ✓ button on the lock-screen card / Dynamic Island
    for the current set (interactive Live Activity, App Intents, iOS 17+). Also "Skip rest".
-7. **One-sided sets (on top of PR #37):** the left side is the full row; the right side is
+7. ✅ **One-sided sets (on top of PR #37):** the left side is the full row; the right side is
    a collapsed line under it that copies the left values. Tap its weight/reps to give the
    right side a different number.
 8. ✅ **Small yellow label next to the exercise name** when it has a permanent note.
-9. **Repeat cycles for timed exercises / stretches**: set the number of rounds (e.g. run
+9. ✅ **Repeat cycles for timed exercises / stretches**: set the number of rounds (e.g. run
    the whole stretch list 3×, or a timed hold 3 × 30 s) and ▶ chains through all of them.
-10. **Reorder like the owner's video (Hevy-style):** hold an exercise name → all cards
+10. ✅ **Reorder like the owner's video (Hevy-style):** hold an exercise name → all cards
    collapse in place to a compact list → drag → release → cards expand again (no
    separate sheet).
 11. ✅ **Full-screen timer end:** keep the big ✓, then close by itself after ~1.5 s and go

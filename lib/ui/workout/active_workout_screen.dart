@@ -115,67 +115,74 @@ class ActiveWorkoutScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
-            ListView(
-              // Keep cards that load data built off-screen (no jumping while scrolling).
-              scrollCacheExtent: const ScrollCacheExtent.pixels(4000),
-              padding: const EdgeInsets.only(bottom: 120),
-              children: [
-                if ((!session.editMode || session.templateMode) && Services.of(context).zonesEnabled.value)
-                  PresetRow(presetId: w.hrPresetId, onChanged: session.applyPreset),
-                for (final (i, e) in w.exercises.indexed) _ExerciseCard(key: ValueKey(e.id), index: i, entry: e),
-                if (w.exercises.length > 1)
+            ValueListenableBuilder<bool>(
+              valueListenable: session.reorderMode,
+              builder: (context, reordering, cards) => AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                child: reordering ? InPlaceReorder(session: session) : cards,
+              ),
+              child: ListView(
+                // Keep cards that load data built off-screen (no jumping while scrolling).
+                scrollCacheExtent: const ScrollCacheExtent.pixels(4000),
+                padding: const EdgeInsets.only(bottom: 120),
+                children: [
+                  if ((!session.editMode || session.templateMode) && Services.of(context).zonesEnabled.value)
+                    PresetRow(presetId: w.hrPresetId, onChanged: session.applyPreset),
+                  for (final (i, e) in w.exercises.indexed) _ExerciseCard(key: ValueKey(e.id), index: i, entry: e),
+                  if (w.exercises.length > 1)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        'Tip: hold an exercise name to reorder',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
                   Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      'Tip: hold an exercise name to reorder',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodySmall,
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: FilledButton.tonalIcon(
+                            icon: const Icon(Icons.add),
+                            label: const Text('Exercises'),
+                            onPressed: () async {
+                              final picked = await ExerciseLibraryScreen.pick(context);
+                              if (picked != null) await session.addExercises(picked);
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: FilledButton.tonalIcon(
+                            icon: const Icon(Icons.self_improvement),
+                            label: const Text('Stretching'),
+                            onPressed: () async {
+                              final picked = await ExerciseLibraryScreen.pick(context, group: ExerciseGroup.stretching);
+                              if (picked != null) await session.addExercises(picked);
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: FilledButton.tonalIcon(
-                          icon: const Icon(Icons.add),
-                          label: const Text('Exercises'),
-                          onPressed: () async {
-                            final picked = await ExerciseLibraryScreen.pick(context);
-                            if (picked != null) await session.addExercises(picked);
-                          },
+                  if (!session.editMode)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                      child: FilledButton(
+                        key: const Key('discardWorkout'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.red.shade700,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size.fromHeight(48),
+                          textStyle: const TextStyle(fontWeight: FontWeight.w700),
                         ),
+                        onPressed: () => _discard(context, session),
+                        child: const Text('Discard workout'),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: FilledButton.tonalIcon(
-                          icon: const Icon(Icons.self_improvement),
-                          label: const Text('Stretching'),
-                          onPressed: () async {
-                            final picked = await ExerciseLibraryScreen.pick(context, group: ExerciseGroup.stretching);
-                            if (picked != null) await session.addExercises(picked);
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (!session.editMode)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                    child: FilledButton(
-                      key: const Key('discardWorkout'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.red.shade700,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size.fromHeight(48),
-                        textStyle: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      onPressed: () => _discard(context, session),
-                      child: const Text('Discard workout'),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
           bottomNavigationBar: session.timer == null || session.editMode ? null : TimerBar(session: session),
@@ -672,10 +679,7 @@ class _ExerciseCard extends StatelessWidget {
                         : () =>
                               Navigator.of(context)
                                   .push(MaterialPageRoute(builder: (_) => ExerciseDetailScreen(exercise: e.exercise))),
-                    onLongPress: () {
-                      HapticFeedback.mediumImpact();
-                      showReorderSheet(context, session);
-                    },
+                    onLongPress: () => startReorder(session),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       child: Text.rich(
@@ -722,7 +726,7 @@ class _ExerciseCard extends StatelessWidget {
                           );
                         }
                       case 'reorder':
-                        if (context.mounted) await showReorderSheet(context, session);
+                        startReorder(session);
                       case 'sides':
                         await session.setUnilateral(e, !e.exercise.unilateral);
                       case 'workoutNote':
@@ -773,13 +777,42 @@ class _ExerciseCard extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.only(left: 2, bottom: 2),
-              child: Text(
-                [
-                  if (group != null) 'Superset',
-                  'Rest ${formatRest(e.restSeconds)}',
-                  if (isSession) 'tap ▶ and the stretches run one after another',
-                ].join(' · '),
-                style: text.labelSmall,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      [
+                        if (group != null) 'Superset',
+                        'Rest ${formatRest(e.restSeconds)}',
+                        if (isSession) 'tap ▶ and the stretches run one after another',
+                      ].join(' · '),
+                      style: text.labelSmall,
+                    ),
+                  ),
+                  // Rounds: the stretch list (or a timed hold) runs N times.
+                  if ((isSession || (e.exercise.isTimed && !e.exercise.isInterval)) && e.sets.isNotEmpty)
+                    ActionChip(
+                      key: Key('rounds_${e.id}'),
+                      visualDensity: VisualDensity.compact,
+                      avatar: const Icon(Icons.repeat, size: 16),
+                      label: Text(
+                        '${isSession ? WorkoutSession.stretchRounds(e) : WorkoutSession.setCount(e)}× '
+                        '${isSession ? 'rounds' : 'sets'}',
+                      ),
+                      onPressed: () async {
+                        final current = isSession ? WorkoutSession.stretchRounds(e) : WorkoutSession.setCount(e);
+                        final v = await promptNumber(
+                          context,
+                          title: isSession ? 'How many rounds of the stretches?' : 'How many times?',
+                          initial: current,
+                          min: 1,
+                          max: 20,
+                        );
+                        if (v == null) return;
+                        isSession ? session.setStretchRounds(e, v.round()) : session.setSetCount(e, v.round());
+                      },
+                    ),
+                ],
               ),
             ),
             if (e.exercise.hasNote && !e.noteHidden)
@@ -852,9 +885,6 @@ class _ExerciseCard extends StatelessWidget {
 
 const _setW = 32.0, _prevW = 80.0, _rpeW = 40.0, _doneW = 44.0, _kgW = 56.0, _secW = 64.0;
 
-/// One-sided exercises: two ticks (L, R) in one row.
-const _pairDoneW = 76.0;
-
 /// A one-sided set is stored as a left + right pair; it shows as one row
 /// (shared values, a tick per side). Stretch rows keep one row per side.
 LoggedSet? _partnerOf(List<LoggedSet> sets, int i) =>
@@ -895,12 +925,8 @@ class _HeaderRow extends StatelessWidget {
           ],
           if (showRpe) SizedBox(width: _rpeW, child: cell('RPE')),
           SizedBox(
-            width: pairs ? _pairDoneW : _doneW,
-            child: SessionScope.of(context).templateMode
-                ? null
-                : (pairs && tracking != TrackingType.duration
-                      ? Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [cell('L'), cell('R')])
-                      : const Icon(Icons.check, size: 16)),
+            width: _doneW,
+            child: SessionScope.of(context).templateMode ? null : const Icon(Icons.check, size: 16),
           ),
         ],
       ),
@@ -1097,7 +1123,125 @@ class _SetRowState extends State<SetRow> {
         ),
       ),
     );
-    return Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [tick(l, 'L'), tick(r, 'R')]);
+    return tick(l, 'L');
+  }
+
+  /// The right side, collapsed under the left: it copies the left values;
+  /// tap a number to give the right side its own (usually it's the same).
+  Widget _rightRow(WorkoutSession session, TrackingType tracking) {
+    final l = widget.set, r = widget.partner!;
+    final scheme = Theme.of(context).colorScheme;
+    final (String a, String b) = switch (tracking) {
+      TrackingType.duration => ('+KG', 'SECONDS'),
+      TrackingType.distance => ('METRES', 'SECONDS'),
+      _ => (tracking == TrackingType.bodyweightReps ? '+KG' : 'KG', 'REPS'),
+    };
+    num? first(LoggedSet x) => tracking == TrackingType.distance ? x.distanceM : x.weightKg;
+    num? second(LoggedSet x) =>
+        tracking == TrackingType.duration || tracking == TrackingType.distance ? x.durationS : x.reps;
+    String show(num? v) => v == null ? '–' : (v is double ? formatKg(v) : '$v');
+    Widget cell(
+      String key,
+      String label,
+      num? mine,
+      num? left,
+      Future<void> Function(num v) set, {
+      bool decimal = false,
+    }) {
+      final own = mine != left;
+      return Expanded(
+        child: InkWell(
+          key: Key('right${key}_${widget.index}'),
+          borderRadius: BorderRadius.circular(8),
+          onTap: () async {
+            final v = await promptNumber(
+              context,
+              title: 'Right side · ${label.toLowerCase()}',
+              initial: mine ?? left,
+              decimal: decimal,
+            );
+            if (v != null) await set(v);
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Text(
+              show(mine),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: own ? FontWeight.w800 : FontWeight.w400,
+                color: own ? scheme.primary : scheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    Future<void> setFirst(num v) async => tracking == TrackingType.distance
+        ? session.setDistance(r, v.toDouble())
+        : session.setWeightOnly(r, v.toDouble());
+    Future<void> setSecond(num v) async => tracking == TrackingType.duration || tracking == TrackingType.distance
+        ? session.setDuration(r, v.round())
+        : session.setReps(r, v.round());
+
+    final showRpe = !widget.entry.exercise.isStretch && Services.of(context).level.value.showsAdvancedSetOptions;
+    final timed = tracking == TrackingType.duration;
+    return Row(
+      key: Key('rightRow_${widget.index}'),
+      children: [
+        SizedBox(
+          width: _setW,
+          child: Text(
+            'R',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+          ),
+        ),
+        SizedBox(
+          width: _prevW,
+          child: Text(
+            'right side',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+          ),
+        ),
+        cell('First', a, first(r), first(l), setFirst, decimal: true),
+        cell('Second', b, second(r), second(l), setSecond),
+        if (showRpe) const SizedBox(width: _rpeW),
+        SizedBox(
+          width: _doneW,
+          child: session.templateMode
+              ? null
+              : timed && !session.editMode
+              ? Icon(
+                  r.done ? Icons.check_box : Icons.check_box_outline_blank,
+                  size: 20,
+                  color: r.done ? Colors.green : scheme.outline,
+                )
+              : InkWell(
+                  key: Key('tickR_${widget.index}'),
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () async {
+                    FocusScope.of(context).unfocus();
+                    session.toggleDone(widget.entry, r);
+                    if (!r.done) return;
+                    final record = await session.isRecord(widget.entry, r);
+                    record ? HapticFeedback.heavyImpact() : HapticFeedback.lightImpact();
+                  },
+                  child: SizedBox(
+                    height: 36,
+                    child: Icon(
+                      r.done ? Icons.check_box : Icons.check_box_outline_blank,
+                      size: 22,
+                      color: r.done ? Colors.green : null,
+                      semanticLabel: 'R side',
+                    ),
+                  ),
+                ),
+        ),
+      ],
+    );
   }
 
   /// ✓ for weight/reps sets. Timed sets get ▶ (start countdown) / ■ (stop).
@@ -1217,11 +1361,13 @@ class _SetRowState extends State<SetRow> {
     final running =
         session.timer?.kind == TimerKind.setTimer &&
         (session.timer?.set == s || (partner != null && session.timer?.set == partner));
-    // Typing a value fills both sides of a one-sided set.
-    void both(void Function(LoggedSet x) f) {
-      for (final x in _sides) {
-        f(x);
-      }
+    // Typing a value on the left also sets the right side, unless the right
+    // side was given its own number.
+    void both(num? Function(LoggedSet x) value, void Function(LoggedSet x) f) {
+      final old = value(s);
+      f(s);
+      final p = partner;
+      if (p != null && (value(p) == null || value(p) == old)) f(p);
     }
 
     Widget field(TextEditingController c, String hint, ValueChanged<String> onChanged, {bool decimal = false}) =>
@@ -1234,7 +1380,7 @@ class _SetRowState extends State<SetRow> {
     Widget weightField(String hint) => field(
       _weight,
       hint,
-      (v) => both((x) => session.setWeight(x, double.tryParse(v.replaceAll(',', '.')))),
+      (v) => both((x) => x.weightKg, (x) => session.setWeight(x, double.tryParse(v.replaceAll(',', '.')))),
       decimal: true,
     );
     Widget secondsCell() => running
@@ -1250,7 +1396,7 @@ class _SetRowState extends State<SetRow> {
         : field(
             _secs,
             hintOf(prev?.durationS ?? WorkoutSession.defaultSetSeconds),
-            (v) => both((x) => session.setDuration(x, int.tryParse(v))),
+            (v) => both((x) => x.durationS, (x) => session.setDuration(x, int.tryParse(v))),
           );
 
     final sub = s.subExercise;
@@ -1351,7 +1497,8 @@ class _SetRowState extends State<SetRow> {
                 child: field(
                   _metres,
                   hintOf(prev?.distanceM),
-                  (v) => both((x) => session.setDistance(x, double.tryParse(v.replaceAll(',', '.')))),
+                  (v) =>
+                      both((x) => x.distanceM, (x) => session.setDistance(x, double.tryParse(v.replaceAll(',', '.')))),
                   decimal: true,
                 ),
               ),
@@ -1359,13 +1506,17 @@ class _SetRowState extends State<SetRow> {
                 child: field(
                   _secs,
                   hintOf(prev?.durationS),
-                  (v) => both((x) => session.setDuration(x, int.tryParse(v))),
+                  (v) => both((x) => x.durationS, (x) => session.setDuration(x, int.tryParse(v))),
                 ),
               ),
             ] else ...[
               Expanded(child: weightField(hintOf(prev?.weightKg))),
               Expanded(
-                child: field(_reps, hintOf(prev?.reps), (v) => both((x) => session.setReps(x, int.tryParse(v)))),
+                child: field(
+                  _reps,
+                  hintOf(prev?.reps),
+                  (v) => both((x) => x.reps, (x) => session.setReps(x, int.tryParse(v))),
+                ),
               ),
             ],
             if (!widget.entry.exercise.isStretch && Services.of(context).level.value.showsAdvancedSetOptions)
@@ -1384,7 +1535,7 @@ class _SetRowState extends State<SetRow> {
                 ),
               ),
             partner != null
-                ? SizedBox(width: _pairDoneW, child: _pairButtons(session, tracking))
+                ? SizedBox(width: _doneW, child: _pairButtons(session, tracking))
                 : SizedBox(width: _doneW, child: _doneButton(session, s, tracking)),
           ];
 
@@ -1394,7 +1545,15 @@ class _SetRowState extends State<SetRow> {
           ? Colors.green.withValues(alpha: 0.18)
           : (running ? Colors.teal.withValues(alpha: 0.18) : (someDone ? Colors.green.withValues(alpha: 0.08) : null)),
       padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(children: children),
+      child: partner == null
+          ? Row(children: children)
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(children: children),
+                _rightRow(session, tracking),
+              ],
+            ),
     );
   }
 }

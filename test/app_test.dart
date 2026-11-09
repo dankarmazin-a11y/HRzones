@@ -82,7 +82,7 @@ void main() {
     await tearDownApp(tester, s);
   });
 
-  testWidgets('hold an exercise name → compact list → drag to reorder', (tester) async {
+  testWidgets('hold an exercise name → cards shrink in place → drag → cards open again', (tester) async {
     final s = (await tester.runAsync(testServices))!;
     await tester.runAsync(() async {
       await s.session.startEmpty();
@@ -112,8 +112,9 @@ void main() {
     await gesture.up();
     await settle(tester);
     expect(s.session.active!.exercises.map((e) => e.exercise.name), ['Pullups', 'Barbell Bench Press']);
-    await tester.tap(find.text('Done'));
-    await settle(tester);
+    expect(find.text('Drag to reorder'), findsNothing, reason: 'let go → the cards open again');
+    expect(find.byKey(const Key('reorderList')), findsNothing);
+    expect(find.byKey(const Key('discardWorkout'), skipOffstage: false), findsOneWidget);
     await tester.runAsync(s.session.discard);
     await tearDownApp(tester, s);
   });

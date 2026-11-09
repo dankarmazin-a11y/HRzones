@@ -755,6 +755,72 @@ class WorkoutSession extends ChangeNotifier {
     _changed();
   }
 
+  // ── Rounds (owner, 2026-11-09): run a stretch list / a timed hold N times ──
+
+  /// Rows grouped so a left + right pair is one unit.
+  static List<List<LoggedSet>> _units(LoggedExercise e) {
+    final out = <List<LoggedSet>>[];
+    for (final s in e.sets) {
+      if (s.side == Side.right && out.isNotEmpty && out.last.length == 1 && out.last.first.side == Side.left) {
+        out.last.add(s);
+      } else {
+        out.add([s]);
+      }
+    }
+    return out;
+  }
+
+  /// How many times the stretch list repeats in a Stretching card (the
+  /// smallest repeating pattern of stretches).
+  static int stretchRounds(LoggedExercise e) {
+    final ids = [for (final u in _units(e)) u.first.subExercise?.id];
+    final n = ids.length;
+    for (var p = 1; p <= n; p++) {
+      if (n % p != 0) continue;
+      var ok = true;
+      for (var i = p; i < n && ok; i++) {
+        ok = ids[i] == ids[i % p];
+      }
+      if (ok) return n ~/ p;
+    }
+    return 1;
+  }
+
+  /// The stretch list runs [rounds] times (▶ chains through all of them).
+  /// Rows already in the card keep their values; new rounds copy round 1.
+  void setStretchRounds(LoggedExercise e, int rounds) {
+    if (rounds < 1 || e.sets.isEmpty) return;
+    final units = _units(e);
+    final per = units.length ~/ stretchRounds(e);
+    final base = units.take(per).toList();
+    e.sets
+      ..clear()
+      ..addAll([
+        for (var r = 0; r < rounds; r++)
+          for (var j = 0; j < per; j++)
+            ...(r * per + j < units.length ? units[r * per + j] : [for (final x in base[j]) x.copy()]),
+      ]);
+    _changed();
+  }
+
+  /// Sets of an exercise, a left + right pair counting once.
+  static int setCount(LoggedExercise e) => _units(e).length;
+
+  /// Timed exercises: run the hold [n] times (adds sets like the last one;
+  /// removes sets from the end that aren't done yet).
+  void setSetCount(LoggedExercise e, int n) {
+    if (n < 1) return;
+    while (setCount(e) < n) {
+      addSet(e);
+    }
+    while (setCount(e) > n) {
+      final last = _units(e).last;
+      if (last.any((x) => x.done)) break;
+      removeSet(e, last.first);
+    }
+    _changed();
+  }
+
   void removeSet(LoggedExercise e, LoggedSet s) {
     // A side never stays alone: removing left or right removes the pair.
     final i = e.sets.indexOf(s);
@@ -774,6 +840,12 @@ class WorkoutSession extends ChangeNotifier {
   /// exercise that aren't done yet – if they are empty or still hold the old
   /// value (so a pyramid typed by hand isn't overwritten). Warm-up sets only
   /// copy to warm-up sets, working sets to working sets.
+  /// Just this set (the right side of a one-sided set given its own weight).
+  void setWeightOnly(LoggedSet s, double? v) {
+    s.weightKg = v;
+    _changed();
+  }
+
   void setWeight(LoggedSet s, double? v) {
     final old = s.weightKg;
     s.weightKg = v;
@@ -987,6 +1059,9 @@ class WorkoutSession extends ChangeNotifier {
   /// Seconds shown by the running timer; changes once per second. Listen to
   /// this (not the session) for clock displays.
   final ticks = ValueNotifier<int>(0);
+
+  /// The workout screen shows compact rows to drag (hold an exercise name).
+  final reorderMode = ValueNotifier<bool>(false);
 
   void _tick() {
     final t = _timer;
@@ -1322,6 +1397,7 @@ class WorkoutSession extends ChangeNotifier {
     _setRunTicker?.cancel();
     _setRunSub?.cancel();
     ticks.dispose();
+    reorderMode.dispose();
     _saveTimer?.cancel();
     _ticker?.cancel();
     super.dispose();
