@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 
 import '../../app_services.dart';
 import '../../data/exercise_repository.dart';
@@ -17,6 +18,8 @@ class ToolsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Tools')),
       body: ListView(
+        // Keep cards that load data built off-screen (no jumping while scrolling).
+        scrollCacheExtent: const ScrollCacheExtent.pixels(4000),
         padding: const EdgeInsets.all(16),
         children: [
           ValueListenableBuilder<bool>(

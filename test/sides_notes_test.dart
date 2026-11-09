@@ -5,6 +5,7 @@ import 'package:hrzones/beep/beeper.dart';
 import 'package:hrzones/data/database.dart';
 import 'package:hrzones/data/template_repository.dart';
 import 'package:hrzones/ui/workout/running_workout_bar.dart';
+import 'package:hrzones/ui/workout/active_workout_screen.dart';
 import 'package:hrzones/workout/template_update.dart';
 import 'package:hrzones/workout/workout_session.dart';
 
@@ -149,6 +150,43 @@ void main() {
     await tester.tap(find.byTooltip('Hide for this workout'));
     await settle(tester);
     expect(find.byKey(const Key('stickyNote')), findsNothing);
+    await tester.runAsync(s.session.discard);
+    await tearDownApp(tester, s);
+  });
+
+  testWidgets('a one-sided set is one row: values fill both sides, a tick for each side', (tester) async {
+    final s = (await tester.runAsync(() async {
+      final s = await testServices();
+      await s.session.startEmpty();
+      await s.session.addExercises([(await s.exercises.byId('Barbell_Bench_Press'))!]);
+      final e = s.session.active!.exercises.single;
+      await s.session.setUnilateral(e, true);
+      return s;
+    }))!;
+    await tester.pumpWidget(HrZonesApp(services: s));
+    await settle(tester);
+    await tester.tap(find.byType(RunningWorkoutBar));
+    await settle(tester);
+    final e = s.session.active!.exercises.single;
+    final pairs = e.sets.length ~/ 2;
+    expect(find.byType(SetRow), findsNWidgets(pairs), reason: 'one row per L+R pair');
+    expect(find.text('1L'), findsNothing);
+
+    await tester.enterText(find.byType(SetNumberField).first, '20');
+    await tester.pump();
+    expect(e.sets[0].weightKg, 20);
+    expect(e.sets[1].weightKg, 20, reason: 'the right side gets the same weight');
+
+    await tester.tap(find.byKey(const Key('tickL_0')));
+    await settle(tester);
+    expect(e.sets[0].done, isTrue);
+    expect(e.sets[1].done, isFalse);
+    expect(s.session.timer, isNull, reason: 'no rest after the left side');
+    await tester.tap(find.byKey(const Key('tickR_0')));
+    await settle(tester);
+    expect(e.sets[1].done, isTrue);
+    expect(s.session.restRemaining, isNotNull, reason: 'rest after the right side');
+    s.session.stopTimer();
     await tester.runAsync(s.session.discard);
     await tearDownApp(tester, s);
   });

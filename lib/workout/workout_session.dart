@@ -1260,17 +1260,17 @@ class WorkoutSession extends ChangeNotifier {
         for (final s in e.sets)
           if (!s.done) (e, s),
     ].firstOrNull;
-    final progress = '$done/${all.length} sets done';
+    final progress = '$done/${all.length} sets';
     String title, detail;
     if (current == null) {
       title = all.isEmpty ? w.name : 'All sets done';
-      detail = all.isEmpty ? 'Add an exercise' : progress;
+      detail = all.isEmpty ? 'Add an exercise' : 'Great work!';
     } else {
       final (e, s) = current;
       final same = e.sets.where((x) => x.side == s.side).toList();
       final side = s.side == null ? '' : (s.side == Side.left ? 'L' : 'R');
       title = (s.subExercise ?? e.exercise).name;
-      detail = 'Set ${same.indexOf(s) + 1}$side of ${same.length}${_setTarget(s)} · $progress';
+      detail = 'Set ${same.indexOf(s) + 1}$side of ${same.length}${_setTarget(s)}';
     }
     final countdownEnd = t != null && t.countsDown
         ? t.startedAt.add(Duration(seconds: t.total)) // + pauses: none for workout timers
@@ -1279,6 +1279,7 @@ class WorkoutSession extends ChangeNotifier {
       title: title,
       detail: detail,
       heartRate: hr.running ? hr.bpm : null,
+      metrics: [('Sets done', progress), ('Heart rate', hr.running && hr.bpm != null ? '${hr.bpm}' : '–')],
       clockStart: w.startedAt,
       elapsed: DateTime.now().difference(w.startedAt),
       countdownEnd: countdownEnd,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 
 import '../../app_services.dart';
 import '../../data/database.dart';
@@ -90,6 +91,8 @@ class WorkoutSummaryScreen extends StatelessWidget {
         ],
       ),
       body: ListView(
+        // Keep cards that load data built off-screen (no jumping while scrolling).
+        scrollCacheExtent: const ScrollCacheExtent.pixels(4000),
         padding: const EdgeInsets.all(16),
         children: [
           if (justFinished) Text(s.workout.name, style: text.headlineSmall),

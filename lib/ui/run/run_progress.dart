@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 
 import '../../app_services.dart';
 import '../../data/database.dart';
@@ -23,6 +24,8 @@ class RunProgressScreen extends StatelessWidget {
           if (runs == null) return const Center(child: CircularProgressIndicator());
           if (runs.isEmpty) return const Center(child: Text('Run a few times to see your progress here.'));
           return ListView(
+            // Keep cards that load data built off-screen (no jumping while scrolling).
+            scrollCacheExtent: const ScrollCacheExtent.pixels(4000),
             padding: const EdgeInsets.all(16),
             children: [
               _ChartCard(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 
 import '../../app_services.dart';
 import '../../data/database.dart';
@@ -33,29 +34,34 @@ class RunScreen extends StatelessWidget {
           ),
         ],
       ),
+      // The big Run button sits at the bottom, always in reach.
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: ListenableBuilder(
+            listenable: s.run,
+            builder: (context, _) => SizedBox(
+              height: 64,
+              child: FilledButton.icon(
+                key: const Key('startRun'),
+                icon: Icon(s.run.active ? Icons.directions_run : Icons.play_arrow, size: 32),
+                label: const Text('Run', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
+                onPressed: () => startRun(context),
+              ),
+            ),
+          ),
+        ),
+      ),
       body: StreamBuilder<List<Run>>(
         stream: s.runs.watchFinished(),
         builder: (context, snap) {
           final runs = snap.data ?? const <Run>[];
           return ListView(
+            // Keep cards that load data built off-screen (no jumping while scrolling).
+            scrollCacheExtent: const ScrollCacheExtent.pixels(4000),
             padding: const EdgeInsets.all(16),
             children: [
-              ListenableBuilder(
-                listenable: s.run,
-                builder: (context, _) => SizedBox(
-                  height: 72,
-                  child: FilledButton.icon(
-                    key: const Key('startRun'),
-                    icon: Icon(s.run.active ? Icons.directions_run : Icons.play_arrow, size: 32),
-                    label: Text(
-                      s.run.active ? 'Back to your run' : 'Start run',
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-                    ),
-                    onPressed: () => startRun(context),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.monitor_heart_outlined),

@@ -14,7 +14,11 @@ class LiveCard {
     this.countdownEnd,
     this.countdownLabel,
     this.paused = false,
+    this.metrics = const [],
   });
+
+  /// Big numbers under the title: (label, value), e.g. ("Pace", "5:12").
+  final List<(String, String)> metrics;
 
   /// Big line: "5.24 km" / "Bench Press · set 3 of 4".
   final String title;
@@ -42,6 +46,9 @@ class LiveCard {
     'countdownEnd': countdownEnd?.millisecondsSinceEpoch,
     'countdownLabel': countdownLabel,
     'paused': paused,
+    'metrics': [
+      for (final (label, value) in metrics) {'label': label, 'value': value},
+    ],
   };
 
   // The frozen clock only matters while paused (it ticks by itself otherwise).
@@ -55,7 +62,8 @@ class LiveCard {
       (!paused || other.elapsed.inSeconds == elapsed.inSeconds) &&
       other.countdownEnd?.millisecondsSinceEpoch == countdownEnd?.millisecondsSinceEpoch &&
       other.countdownLabel == countdownLabel &&
-      other.paused == paused;
+      other.paused == paused &&
+      listEquals(other.metrics, metrics);
 
   @override
   int get hashCode => Object.hash(title, detail, heartRate, clockStart, countdownEnd, countdownLabel, paused);

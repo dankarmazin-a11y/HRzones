@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 
 import '../../app_services.dart';
 import '../../data/database.dart';
@@ -30,6 +31,8 @@ class TimersScreen extends StatelessWidget {
         builder: (context, snap) {
           final list = snap.data ?? const <IntervalPreset>[];
           return ListView(
+            // Keep cards that load data built off-screen (no jumping while scrolling).
+            scrollCacheExtent: const ScrollCacheExtent.pixels(4000),
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
             children: [
               Text('Quick', style: text.titleMedium),

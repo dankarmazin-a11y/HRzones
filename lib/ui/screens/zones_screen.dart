@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 
 import '../../app_services.dart';
 import '../../hr/hr_monitor.dart';
@@ -21,6 +22,8 @@ class ZonesScreen extends StatelessWidget {
       body: ValueListenableBuilder<bool>(
         valueListenable: s.zonesEnabled,
         builder: (context, on, _) => ListView(
+          // Keep cards that load data built off-screen (no jumping while scrolling).
+          scrollCacheExtent: const ScrollCacheExtent.pixels(4000),
           padding: const EdgeInsets.all(16),
           children: [
             Card(
