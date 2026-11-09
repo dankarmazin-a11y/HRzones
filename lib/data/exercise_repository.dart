@@ -44,7 +44,17 @@ const equipmentTypes = [
 const exerciseImageBase = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
 
 /// Bump when assets/exercises.json changes so existing installs re-seed.
-const exerciseSeedVersion = '6';
+const exerciseSeedVersion = '7';
+
+/// Seed 7 moved these from "stretching" to strength: old installs still log
+/// them by time (the stretch default) – switch them to reps once.
+const _nowRepExercises = [
+  'Scissor_Kick',
+  'Split_Squats',
+  'Sit_Squats',
+  'Crossover_Reverse_Lunge',
+  'Pelvic_Tilt_Into_Bridge',
+];
 
 /// How many popular exercises are listed before the A–Z list.
 const popularCount = 5;
@@ -112,6 +122,12 @@ class ExerciseRepository {
         ),
       );
     });
+    final before = int.tryParse(current ?? '');
+    if (before != null && before < 7) {
+      await (db.update(db.exercises)
+            ..where((e) => e.id.isIn(_nowRepExercises) & e.trackingType.equalsValue(TrackingType.duration)))
+          .write(const ExercisesCompanion(trackingType: Value(TrackingType.bodyweightReps)));
+    }
     await db.setSetting('exerciseSeedVersion', exerciseSeedVersion);
     _cache = null;
   }

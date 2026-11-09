@@ -299,6 +299,17 @@ HIDDEN = {
 DURATION_IDS = {'Plank', 'hz_side_plank', 'hz_wall_sit', 'hz_dead_hang'}
 
 # Logged as metres + time (hybrid / HYROX stations). hz_run can use GPS.
+# free-exercise-db files these strength moves under "stretching", so they
+# landed in the Stretching card (owner, 2026-11-09). id → (category, tracking).
+RECATEGORIZE = {
+    'Superman': ('strength', 'duration'),
+    'Scissor_Kick': ('strength', None),
+    'Split_Squats': ('plyometrics', None),
+    'Sit_Squats': ('strength', None),
+    'Crossover_Reverse_Lunge': ('strength', None),
+    'Pelvic_Tilt_Into_Bridge': ('strength', None),
+}
+
 DISTANCE_IDS = {'hz_run', 'hz_ski_erg', 'Rowing_Stationary', 'Sled_Push', 'hz_sled_pull', 'hz_burpee_broad_jump',
                 'Farmers_Walk', 'hz_sandbag_lunge'}
 
@@ -435,6 +446,12 @@ def main():
         by_id[id]['tracking'] = 'duration'
     for id in DISTANCE_IDS:
         by_id[id]['tracking'] = 'distance'
+    for id, (category, tracking) in RECATEGORIZE.items():
+        e = by_id[id]
+        e['category'] = category
+        e['equipment'] = e.get('equipment') or 'body only'
+        if tracking:
+            e['tracking'] = tracking
     for id, instead in HIDDEN.items():
         assert instead in by_id and instead not in HIDDEN, id
         by_id[id]['hidden'] = True

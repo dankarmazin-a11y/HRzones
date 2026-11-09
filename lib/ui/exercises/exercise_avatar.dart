@@ -17,7 +17,10 @@ class ExerciseAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final path = exercise.imagePath;
-    final fallback = exercise.isStretch
+    // An interval timer must not look like the Stretching card.
+    final fallback = exercise.isInterval
+        ? Icon(Icons.timer_outlined, size: radius)
+        : exercise.isStretch
         ? Icon(Icons.self_improvement, size: radius)
         : Text(exercise.name.isEmpty ? '?' : exercise.name[0], style: TextStyle(fontSize: radius * 0.8));
     final dpr = MediaQuery.devicePixelRatioOf(context);
