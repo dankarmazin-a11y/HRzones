@@ -83,7 +83,7 @@ class ActiveWorkoutScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _ElapsedText(since: w.startedAt),
+                        _ElapsedText(key: const Key('workoutClock'), since: w.startedAt),
                         Text(w.name, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall),
                       ],
                     ),
@@ -523,7 +523,7 @@ class ActiveWorkoutScreen extends StatelessWidget {
 
 /// The workout's running time (big, in the header).
 class _ElapsedText extends StatefulWidget {
-  const _ElapsedText({required this.since});
+  const _ElapsedText({super.key, required this.since});
 
   final DateTime since;
 
@@ -532,7 +532,15 @@ class _ElapsedText extends StatefulWidget {
 }
 
 class _ElapsedTextState extends State<_ElapsedText> {
-  late final Timer _t = Timer.periodic(const Duration(seconds: 1), (_) => setState(() {}));
+  // Started in initState: a `late` field was only created in dispose(), so
+  // the clock never ticked by itself (it froze between rest timers).
+  late final Timer _t;
+
+  @override
+  void initState() {
+    super.initState();
+    _t = Timer.periodic(const Duration(seconds: 1), (_) => setState(() {}));
+  }
 
   @override
   void dispose() {
@@ -670,8 +678,20 @@ class _ExerciseCard extends StatelessWidget {
                     },
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Text(
-                        e.exercise.name,
+                      child: Text.rich(
+                        TextSpan(
+                          children: [
+                            // Interval timers: "Timer · Stretching", not a second "Stretching" card.
+                            if (e.exercise.isInterval) const TextSpan(text: 'Timer · '),
+                            TextSpan(text: e.exercise.name),
+                            // A saved permanent note: a small yellow label, so you know to look.
+                            if (e.exercise.hasNote)
+                              const WidgetSpan(
+                                alignment: PlaceholderAlignment.middle,
+                                child: Padding(padding: EdgeInsets.only(left: 6), child: NoteBadge()),
+                              ),
+                          ],
+                        ),
                         style: text.titleMedium?.copyWith(color: Theme.of(context).colorScheme.primary),
                       ),
                     ),
@@ -1711,4 +1731,28 @@ class IntervalRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Small yellow "Note" label next to an exercise name that has a permanent
+/// note.
+class NoteBadge extends StatelessWidget {
+  const NoteBadge({super.key});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const Key('noteBadge'),
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+    decoration: BoxDecoration(color: const Color(0xFFFFD54F), borderRadius: BorderRadius.circular(6)),
+    child: const Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.push_pin, size: 12, color: Colors.black87),
+        SizedBox(width: 2),
+        Text(
+          'Note',
+          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.black87),
+        ),
+      ],
+    ),
+  );
 }

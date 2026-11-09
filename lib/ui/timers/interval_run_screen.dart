@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../workout/interval_runner.dart';
@@ -15,15 +17,30 @@ class IntervalRunScreen extends StatefulWidget {
 }
 
 class _IntervalRunScreenState extends State<IntervalRunScreen> {
+  /// How long the big ✓ shows before the screen closes by itself.
+  static const closeAfter = Duration(milliseconds: 1800);
+  Timer? _close;
+
   @override
   void initState() {
     super.initState();
     widget.runner.start();
+    widget.runner.addListener(_closeWhenDone);
     keepScreenOn(true);
+  }
+
+  /// Finished: show ✓, then go back (to the workout) without a tap.
+  void _closeWhenDone() {
+    if (!widget.runner.finished || _close != null) return;
+    _close = Timer(closeAfter, () {
+      if (mounted) Navigator.of(context).maybePop();
+    });
   }
 
   @override
   void dispose() {
+    _close?.cancel();
+    widget.runner.removeListener(_closeWhenDone);
     keepScreenOn(false);
     widget.runner.dispose();
     super.dispose();
@@ -44,7 +61,7 @@ class _IntervalRunScreenState extends State<IntervalRunScreen> {
             : r.gettingReady
             ? TimerStyle.readyAccent
             : (step!.work ? TimerStyle.workAccent : TimerStyle.restAccent);
-        final label = r.finished ? 'Done 🎉' : (r.gettingReady ? 'Get ready' : step!.label);
+        final label = r.finished ? 'Done' : (r.gettingReady ? 'Get ready' : step!.label);
         final white = Theme.of(context).textTheme.apply(bodyColor: Colors.white, displayColor: Colors.white);
         return Scaffold(
           backgroundColor: color,
@@ -81,7 +98,7 @@ class _IntervalRunScreenState extends State<IntervalRunScreen> {
                     flex: 4,
                     child: FittedBox(
                       child: Text(
-                        r.finished ? '0:00' : formatDuration(Duration(seconds: r.remaining)),
+                        r.finished ? '✓' : formatDuration(Duration(seconds: r.remaining)),
                         style: TimerStyle.digits,
                       ),
                     ),

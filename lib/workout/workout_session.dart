@@ -691,6 +691,24 @@ class WorkoutSession extends ChangeNotifier {
   }
 
   /// Changes how [e] is logged; also saved for future workouts.
+  /// The exercise was changed elsewhere (its page: note, tracking type, each
+  /// side): every card of it in this workout uses the new version. Before,
+  /// the cards kept their old copy – a saved permanent note never showed.
+  void refreshExercise(Exercise updated) {
+    final w = _active;
+    if (w == null) return;
+    var changed = false;
+    for (final e in w.exercises) {
+      if (e.exercise.id != updated.id) continue;
+      final sidesChanged = e.exercise.unilateral != updated.unilateral;
+      if (e.exercise.note != updated.note) e.noteHidden = false;
+      e.exercise = updated;
+      if (sidesChanged) _matchSides(e);
+      changed = true;
+    }
+    if (changed) _changed();
+  }
+
   Future<void> setTrackingType(LoggedExercise e, TrackingType type) async {
     e.exercise = await exercises.setTrackingType(e.exercise.id, type);
     _changed();

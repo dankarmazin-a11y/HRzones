@@ -170,6 +170,22 @@ void main() {
     await settle(tester);
     s.session.stopTimer();
     s.session.stopTimer();
+
+    // When the last timer ends: ✓, then it closes by itself.
+    s.session.startCountdown(2);
+    await tester.pump();
+    await tester.tap(find.byTooltip('Full screen'));
+    await settle(tester);
+    expect(find.byKey(const Key('closeFullScreen')), findsOneWidget);
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 2100))); // timers use real time
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(milliseconds: 250));
+    }
+    expect(s.session.timer, isNull);
+    expect(find.text('✓'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 2));
+    await settle(tester);
+    expect(find.byKey(const Key('closeFullScreen')), findsNothing, reason: 'back to the workout');
     await tester.runAsync(s.session.discard);
     await tearDownApp(tester, s);
   });

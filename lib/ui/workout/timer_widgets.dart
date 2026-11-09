@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -138,15 +140,36 @@ class FullScreenTimer extends StatefulWidget {
 }
 
 class _FullScreenTimerState extends State<FullScreenTimer> {
+  /// How long the big ✓ shows before going back to the workout.
+  static const closeAfter = Duration(milliseconds: 1800);
+  Timer? _close;
+
   @override
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     keepScreenOn(true);
+    widget.session.addListener(_closeWhenDone);
+  }
+
+  /// The chain is over (no timer left): show ✓, then close by itself. A
+  /// timer that starts again in the meantime keeps the screen open.
+  void _closeWhenDone() {
+    if (widget.session.timer != null) {
+      _close?.cancel();
+      _close = null;
+      return;
+    }
+    _close ??= Timer(closeAfter, () {
+      _close = null;
+      if (mounted && widget.session.timer == null) Navigator.of(context).maybePop();
+    });
   }
 
   @override
   void dispose() {
+    _close?.cancel();
+    widget.session.removeListener(_closeWhenDone);
     keepScreenOn(false);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();

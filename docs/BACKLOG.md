@@ -4,22 +4,24 @@ First thing when GitHub is back: merge PR #37 (scroll-jump fix, one row per one-
 set with ✓L ✓R, pinned progress line, "Run" button at the bottom, bigger lock-screen card),
 then work through this list. Run ONE iOS build at a time (no parallel macOS runs).
 
+## Done (PR after #38): A1–A4, B8, B11 – marked ✅
+
 ## A. Bugs (from the owner's strength workouts, 9 Nov)
-1. **Workout clock freezes.** The big clock in the workout header only ticks while a
+1. ✅ **Workout clock freezes.** The big clock in the workout header only ticks while a
    rest/set timer runs (`session.ticks` changes only then); after "Rest 00:01" ended it
    stayed at 18:55. Give the header its own 1 s ticker while a workout is open.
-2. **Permanent (sticky) notes don't stick.** The note is saved, but the exercise page is
+2. ✅ **Permanent (sticky) notes don't stick.** The note is saved, but the exercise page is
    opened with the workout card's old copy of the exercise (`widget.exercise`) and the
    card keeps that copy too – so the note looks erased and never shows in the workout.
    Re-read the exercise from the DB when the page opens and refresh the card's exercise
    after editing (also for tracking type / each-side changes).
-3. **Strength moves filed as "stretching"** in free-exercise-db land in the Stretching
+3. ✅ **Strength moves filed as "stretching"** in free-exercise-db land in the Stretching
    card: Superman, Scissor Kick, Split Squats, Sit Squats, Crossover Reverse Lunge,
    Pelvic Tilt Into Bridge, Front / Rear / Side Leg Raises, One Handed Hang, Shoulder
    Raise, Windmills. Re-categorise them in `tool/build_exercises.py` (strength, timed
    where it fits) and bump `exerciseSeedVersion`. Foam-roll exercises → their own
    "Mobility" group instead of stretches.
-4. **Two "Stretching" cards** in one workout: one is an interval timer preset named
+4. ✅ **Two "Stretching" cards** in one workout: one is an interval timer preset named
    "Stretching" (Timers type). Show interval-timer exercises with a timer icon and a
    "Timer ·" label so they can't be mistaken for the stretching card.
 
@@ -31,13 +33,13 @@ then work through this list. Run ONE iOS build at a time (no parallel macOS runs
 7. **One-sided sets (on top of PR #37):** the left side is the full row; the right side is
    a collapsed line under it that copies the left values. Tap its weight/reps to give the
    right side a different number.
-8. **Small yellow label next to the exercise name** when it has a permanent note.
+8. ✅ **Small yellow label next to the exercise name** when it has a permanent note.
 9. **Repeat cycles for timed exercises / stretches**: set the number of rounds (e.g. run
    the whole stretch list 3×, or a timed hold 3 × 30 s) and ▶ chains through all of them.
 10. **Reorder like the owner's video (Hevy-style):** hold an exercise name → all cards
    collapse in place to a compact list → drag → release → cards expand again (no
    separate sheet).
-11. **Full-screen timer end:** keep the big ✓, then close by itself after ~1.5 s and go
+11. ✅ **Full-screen timer end:** keep the big ✓, then close by itself after ~1.5 s and go
    back to the workout. **Remove the confetti 🎉** everywhere (interval "Done" screen too).
 
 ## C. Running (done already – for the record)

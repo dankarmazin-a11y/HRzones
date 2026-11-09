@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hrzones/app.dart';
+import 'package:hrzones/app_services.dart';
+import 'package:hrzones/ui/exercises/exercise_detail_screen.dart';
 import 'package:hrzones/beep/beeper.dart';
 import 'package:hrzones/data/database.dart';
 import 'package:hrzones/data/template_repository.dart';
@@ -145,6 +147,7 @@ void main() {
     await settle(tester);
     expect(find.byKey(const Key('stickyNote')), findsOneWidget);
     expect(find.text('Seat on 4, grip outside the rings'), findsOneWidget);
+    expect(find.byKey(const Key('noteBadge')), findsOneWidget, reason: 'yellow label next to the name');
     expect(find.textContaining('Note from '), findsOneWidget);
     expect(find.text('Felt the left shoulder'), findsOneWidget);
     await tester.tap(find.byTooltip('Hide for this workout'));
@@ -187,6 +190,56 @@ void main() {
     expect(e.sets[1].done, isTrue);
     expect(s.session.restRemaining, isNotNull, reason: 'rest after the right side');
     s.session.stopTimer();
+    await tester.runAsync(s.session.discard);
+    await tearDownApp(tester, s);
+  });
+
+  testWidgets('the workout clock keeps ticking with no rest timer running', (tester) async {
+    final s = (await tester.runAsync(() async {
+      final s = await testServices();
+      await s.session.startEmpty();
+      return s;
+    }))!;
+    await tester.pumpWidget(HrZonesApp(services: s));
+    await settle(tester);
+    await tester.tap(find.byType(RunningWorkoutBar));
+    await settle(tester);
+    String clock() => tester
+        .widget<Text>(find.descendant(of: find.byKey(const Key('workoutClock')), matching: find.byType(Text)))
+        .data!;
+    final before = clock();
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 1100))); // real time passes
+    await tester.pump(const Duration(seconds: 1)); // the clock's own 1 s timer
+    expect(s.session.timer, isNull);
+    expect(clock(), isNot(before), reason: 'the clock must tick on its own');
+    await tester.runAsync(s.session.discard);
+    await tearDownApp(tester, s);
+  });
+
+  testWidgets('a permanent note added on the exercise page stays and shows in the workout', (tester) async {
+    final s = (await tester.runAsync(() async {
+      final s = await testServices();
+      await s.session.startEmpty();
+      await s.session.addExercises([(await s.exercises.byId('Barbell_Bench_Press'))!]);
+      return s;
+    }))!;
+    final card = s.session.active!.exercises.single;
+    final stale = card.exercise; // what the workout card hands to the page
+    // Saved on the page (as the page does it).
+    final updated = (await tester.runAsync(() => s.exercises.setNote(stale.id, 'Seat 3, 50 degrees')))!;
+    s.session.refreshExercise(updated);
+    expect(card.exercise.note, 'Seat 3, 50 degrees', reason: 'the workout card shows it now');
+
+    // Opening the page again with the old copy still shows the saved note.
+    await tester.pumpWidget(
+      Services(
+        services: s,
+        child: MaterialApp(home: ExerciseDetailScreen(exercise: stale)),
+      ),
+    );
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+    await tester.pump();
+    expect(find.text('Seat 3, 50 degrees'), findsOneWidget);
     await tester.runAsync(s.session.discard);
     await tearDownApp(tester, s);
   });

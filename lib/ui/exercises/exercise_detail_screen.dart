@@ -18,6 +18,25 @@ class ExerciseDetailScreen extends StatefulWidget {
 
 class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
   late Exercise _exercise = widget.exercise;
+  bool _loaded = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_loaded) return;
+    _loaded = true;
+    // The caller may hold an old copy (a workout card): show the saved one.
+    Services.of(context).exercises.byId(widget.exercise.id).then((fresh) {
+      if (fresh != null && mounted) setState(() => _exercise = fresh);
+    });
+  }
+
+  /// Shows [updated] here and on every card of it in the running workout.
+  void _apply(Exercise updated) {
+    if (!mounted) return;
+    setState(() => _exercise = updated);
+    Services.of(context).session.refreshExercise(updated);
+  }
 
   Future<void> _editNote() async {
     final t = await askNote(
@@ -28,17 +47,17 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
     );
     if (t == null || !mounted) return;
     final updated = await Services.of(context).exercises.setNote(_exercise.id, t);
-    if (mounted) setState(() => _exercise = updated);
+    _apply(updated);
   }
 
   Future<void> _setUnilateral(bool on) async {
     final updated = await Services.of(context).exercises.setUnilateral(_exercise.id, on);
-    if (mounted) setState(() => _exercise = updated);
+    _apply(updated);
   }
 
   Future<void> _setTracking(TrackingType t) async {
     final updated = await Services.of(context).exercises.setTrackingType(_exercise.id, t);
-    if (mounted) setState(() => _exercise = updated);
+    _apply(updated);
   }
 
   @override
