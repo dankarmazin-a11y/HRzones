@@ -53,6 +53,7 @@ class AppServices {
     session.locationFor = () => run.location;
     session.live = live;
     run.live = live;
+    live.onAction = session.handleCardAction;
   }
 
   /// The workout card on the lock screen / Dynamic Island (strength or run).

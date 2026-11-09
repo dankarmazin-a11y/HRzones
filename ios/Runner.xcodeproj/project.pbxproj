@@ -14,6 +14,7 @@
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
 		49CC389825E94AA33AC2EA41 /* WorkoutWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A5586E2E3DC90446158FEE0D /* WorkoutWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		4BDAEE9D8A3C3857DA7E352D /* WorkoutIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F04BBC4A37273EB6955E0744 /* WorkoutIntents.swift */; };
 		563FB1E31A3475A670528563 /* WorkoutAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CC895549632026A13D91026 /* WorkoutAttributes.swift */; };
 		7032726AF1D6173639DFA785 /* WorkoutLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EB2192DD0A148DA26E92D27 /* WorkoutLiveActivity.swift */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
@@ -25,6 +26,7 @@
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
+		D680512721DBEFA71BBB826A /* WorkoutIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F04BBC4A37273EB6955E0744 /* WorkoutIntents.swift */; };
 		F607735F32C59B1F7CD7A3A2 /* LiveActivityPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDD1C982943C6476C0BC3686 /* LiveActivityPlugin.swift */; };
 /* End PBXBuildFile section */
 
@@ -95,6 +97,7 @@
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A5586E2E3DC90446158FEE0D /* WorkoutWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = WorkoutWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		F04BBC4A37273EB6955E0744 /* WorkoutIntents.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutIntents.swift; sourceTree = "<group>"; };
 		F1826C26CC42FF612F687321 /* WorkoutWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutWidgetBundle.swift; sourceTree = "<group>"; };
 		FDD1C982943C6476C0BC3686 /* LiveActivityPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LiveActivityPlugin.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -205,6 +208,7 @@
 				F1826C26CC42FF612F687321 /* WorkoutWidgetBundle.swift */,
 				0EB2192DD0A148DA26E92D27 /* WorkoutLiveActivity.swift */,
 				4EF09EDF4B1F9CA7D923E48E /* Info.plist */,
+				F04BBC4A37273EB6955E0744 /* WorkoutIntents.swift */,
 			);
 			name = WorkoutWidget;
 			path = WorkoutWidget;
@@ -393,6 +397,7 @@
 				2F1736DE135973FDD776D42B /* WorkoutAttributes.swift in Sources */,
 				8C4F7A5BFB89C210C7138BE1 /* WorkoutWidgetBundle.swift in Sources */,
 				7032726AF1D6173639DFA785 /* WorkoutLiveActivity.swift in Sources */,
+				4BDAEE9D8A3C3857DA7E352D /* WorkoutIntents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -407,6 +412,7 @@
 				7884E86C2EC3CC0700C636F2 /* MotionPlugin.swift in Sources */,
 				F607735F32C59B1F7CD7A3A2 /* LiveActivityPlugin.swift in Sources */,
 				563FB1E31A3475A670528563 /* WorkoutAttributes.swift in Sources */,
+				D680512721DBEFA71BBB826A /* WorkoutIntents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -516,6 +522,8 @@
 					"$(inherited)",
 					"-weak_framework",
 					ActivityKit,
+					"-weak_framework",
+					AppIntents,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.hrzones.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -757,6 +765,8 @@
 					"$(inherited)",
 					"-weak_framework",
 					ActivityKit,
+					"-weak_framework",
+					AppIntents,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.hrzones.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -784,6 +794,8 @@
 					"$(inherited)",
 					"-weak_framework",
 					ActivityKit,
+					"-weak_framework",
+					AppIntents,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.hrzones.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
