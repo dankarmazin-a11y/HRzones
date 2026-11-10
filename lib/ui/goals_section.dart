@@ -83,6 +83,101 @@ class GoalsSection extends StatelessWidget {
   }
 }
 
+/// Home: the goal you're closest to (not achieved yet), big, live.
+class ClosestGoalCard extends StatelessWidget {
+  const ClosestGoalCard({super.key});
+
+  /// The unfinished goal with the most progress (null when there is none).
+  static GoalProgress? pick(List<GoalProgress> all) {
+    GoalProgress? best;
+    for (final g in all) {
+      if (g.achieved) continue;
+      if (best == null || g.progress > best.progress) best = g;
+    }
+    return best;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Services.of(context);
+    // Re-read when anything a goal depends on changes.
+    return StreamBuilder<List<WorkoutListItem>>(
+      stream: s.workouts.watchFinished(),
+      builder: (context, _) => StreamBuilder<List<Run>>(
+        stream: s.runs.watchFinished(),
+        builder: (context, _) => StreamBuilder<List<BodyMeasurement>>(
+          stream: s.body.watchAll(),
+          builder: (context, _) => StreamBuilder<List<Goal>>(
+            stream: s.goals.watchAll(),
+            builder: (context, snap) => FutureBuilder<List<GoalProgress>>(
+              future: Future.wait((snap.data ?? const <Goal>[]).map(s.goals.progress)),
+              builder: (context, p) {
+                final g = pick(p.data ?? const []);
+                if (g == null) return const SizedBox.shrink();
+                return _ClosestGoal(progress: g);
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ClosestGoal extends StatelessWidget {
+  const _ClosestGoal({required this.progress});
+
+  final GoalProgress progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final g = progress;
+    final text = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    final pct = (g.progress * 100).round();
+    return Card(
+      key: const Key('closestGoal'),
+      color: scheme.primaryContainer,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => editGoal(context, g),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.flag, size: 18, color: scheme.onPrimaryContainer),
+                  const SizedBox(width: 6),
+                  Text('Closest goal', style: text.labelLarge?.copyWith(color: scheme.onPrimaryContainer)),
+                  const Spacer(),
+                  Text(
+                    '$pct%',
+                    style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w900, color: scheme.onPrimaryContainer),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(g.title, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 10),
+              LinearProgressIndicator(value: g.progress, minHeight: 12, borderRadius: BorderRadius.circular(6)),
+              const SizedBox(height: 6),
+              Text(
+                [
+                  if (g.current != null) 'Now ${_value(g, g.current!)}',
+                  'Target ${_value(g, g.goal.target)}',
+                ].join(' · '),
+                style: text.bodyMedium,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _GoalTile extends StatelessWidget {
   const _GoalTile({required this.progress, required this.compact});
 
@@ -116,7 +211,7 @@ class _GoalTile extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       g.achieved
-                          ? 'Achieved! 🎉'
+                          ? 'Achieved!'
                           : [
                               '$pct%',
                               if (g.current != null) 'now ${_value(g, g.current!)}',

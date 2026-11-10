@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../abs/ab_workouts_screen.dart';
+
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 
 import '../../app_services.dart';
@@ -41,6 +44,15 @@ class ToolsScreen extends StatelessWidget {
             title: 'Timers',
             subtitle: 'Intervals (Tabata, EMOM…), your own timers and quick countdowns',
             onTap: () => open(const TimersScreen()),
+          ),
+          const SizedBox(height: 12),
+          _ToolBox(
+            key: const Key('toolAbs'),
+            icon: Icons.self_improvement,
+            color: Colors.deepOrange,
+            title: 'Ab workouts',
+            subtitle: 'Ready-made 5–20 min ab workouts to follow along: picture, timer and "next up"',
+            onTap: () => open(const AbWorkoutsScreen()),
           ),
           const SizedBox(height: 12),
           _ToolBox(

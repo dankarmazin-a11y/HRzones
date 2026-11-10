@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hrzones/app.dart';
+import 'package:hrzones/ui/screens/tools_screen.dart';
 import 'package:hrzones/beep/beeper.dart';
 import 'package:hrzones/data/database.dart';
 import 'package:hrzones/data/exercise_repository.dart';
@@ -65,7 +66,7 @@ void main() {
     }))!;
     await tester.pumpWidget(HrZonesApp(services: s));
     await settle(tester);
-    expect(find.byKey(const Key('addGoalHome')), findsOneWidget);
+    expect(find.byKey(const Key('addGoalHome'), skipOffstage: false), findsOneWidget);
     await tearDownApp(tester, s);
   });
 
@@ -75,8 +76,13 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('Tools').last);
     await settle(tester);
+    await tester.scrollUntilVisible(
+      find.text('How the tools work'),
+      200,
+      scrollable: find.descendant(of: find.byType(ToolsScreen), matching: find.byType(Scrollable)).first,
+    );
     expect(find.text('How the tools work'), findsOneWidget);
-    expect(find.textContaining('3 high beeps'), findsWidgets); // open the first time
+    expect(find.textContaining('3 high beeps', skipOffstage: false), findsWidgets); // open the first time
     await tester.tap(find.text('How the tools work'));
     await settle(tester);
     expect(await tester.runAsync(() => s.db.getSetting('toolsGuideClosed')), '1');
