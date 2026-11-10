@@ -221,6 +221,19 @@ class AppServices {
     await run.restore();
   }
 
+  /// First launch: show the setup walk-through (level, place, age, …).
+  /// Setting `onboarded`; only checked for the real app database.
+  final needsOnboarding = ValueNotifier<bool>(false);
+
+  /// The walk-through was finished or skipped.
+  Future<void> finishOnboarding() async {
+    needsOnboarding.value = false;
+    await db.setSetting('onboarded', '1');
+  }
+
+  /// "What do you train?" from the walk-through: strength, running or both.
+  Future<void> setFocus(String focus) => db.setSetting('focus', focus);
+
   /// Workouts per week for the streak (setting `weeklyTarget`, default 3).
   final weeklyTarget = ValueNotifier<int>(3);
 
@@ -260,6 +273,17 @@ class AppServices {
     onStep?.call('Loading settings');
     await s._loadSettings();
     s.session.zonesEnabled = s.zonesEnabled.value;
+    // A new user gets the walk-through; someone who already logged
+    // workouts (from before it existed) doesn't.
+    if (db == null && await s.db.getSetting('onboarded') != '1') {
+      final hasHistory =
+          (await s.workouts.watchFinished().first).isNotEmpty || (await s.runs.watchFinished().first).isNotEmpty;
+      if (hasHistory) {
+        await s.db.setSetting('onboarded', '1');
+      } else {
+        s.needsOnboarding.value = true;
+      }
+    }
     onStep?.call('Restoring your workout');
     await s.session.restore();
     await s.run.restore();
