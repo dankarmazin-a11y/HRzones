@@ -337,6 +337,23 @@ class RunPlans extends Table with SyncColumns {
   Set<Column> get primaryKey => {id};
 }
 
+/// The owner's own running plan by weeks (one active at a time): which run
+/// on which day. The app tracks it; it doesn't coach.
+class TrainingPlans extends Table with SyncColumns {
+  TextColumn get name => text()();
+
+  /// Monday of week 1.
+  DateTimeColumn get startDate => dateTime()();
+  IntColumn get weeks => integer()();
+
+  /// The runs per day (`lib/run/training_plan.dart`, JSON).
+  TextColumn get daysJson => text().withDefault(const Constant('[]'))();
+  BoolColumn get active => boolean().withDefault(const Constant(true))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// One GPS fix of a run (about one per second while moving).
 class RunPoints extends Table with SyncColumns {
   TextColumn get runId => text().references(Runs, #id, onDelete: KeyAction.cascade)();
@@ -409,13 +426,14 @@ const defaultUnilateral = [
     RunPoints,
     Shoes,
     RunPlans,
+    TrainingPlans,
   ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -483,6 +501,7 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(runs, runs.elevGainM);
         await m.addColumn(runs, runs.elevLossM);
       }
+      if (from < 15) await m.createTable(trainingPlans);
     },
     beforeOpen: (details) async {
       await _addMissingColumns();

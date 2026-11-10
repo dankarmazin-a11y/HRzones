@@ -9,6 +9,7 @@ import 'data/database.dart';
 import 'data/goal_repository.dart';
 import 'data/preset_repository.dart';
 import 'data/run_plan_repository.dart';
+import 'data/training_plan_repository.dart';
 import 'data/run_repository.dart';
 import 'data/shoe_repository.dart';
 import 'workout/training_level.dart';
@@ -35,6 +36,7 @@ class AppServices {
       runs = RunRepository(db),
       shoes = ShoeRepository(db),
       runPlans = RunPlanRepository(db),
+      trainingPlans = TrainingPlanRepository(db),
       templates = TemplateRepository(db),
       body = BodyRepository(db),
       presets = HrPresetRepository(db),
@@ -62,6 +64,9 @@ class AppServices {
   final RunRepository runs;
   final ShoeRepository shoes;
   final RunPlanRepository runPlans;
+
+  /// The weekly running plan (Run tab, Home "Today's run").
+  final TrainingPlanRepository trainingPlans;
 
   /// Target pace range in s/km for pace beeps (setting `runPaceAlert`,
   /// "330-350"; empty = off).

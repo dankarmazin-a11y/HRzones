@@ -71,6 +71,7 @@ const _v12Columns = ['runs DROP COLUMN steps', 'runs DROP COLUMN avg_cadence'];
 const _v13Changes = ['runs DROP COLUMN plan_id', 'runs DROP COLUMN laps_json', 'DROP TABLE run_plans'];
 const _plans = ['DROP TABLE run_plans'];
 const _v14Columns = ['runs DROP COLUMN elev_gain_m', 'runs DROP COLUMN elev_loss_m'];
+const _v15 = ['DROP TABLE training_plans'];
 const _v4Changes = [
   'exercises DROP COLUMN hidden',
   'template_exercises DROP COLUMN sets_json',
@@ -83,33 +84,65 @@ void main() {
     (
       'v1 database is upgraded',
       1,
-      [..._v2Columns, ..._v3Columns, ..._v4Changes, ..._v5Changes, ..._v6Columns, ..._v7Changes, ..._shoes, ..._plans],
+      [
+        ..._v2Columns,
+        ..._v3Columns,
+        ..._v4Changes,
+        ..._v5Changes,
+        ..._v6Columns,
+        ..._v7Changes,
+        ..._shoes,
+        ..._plans,
+        ..._v15,
+      ],
     ),
     (
       'v2 database is upgraded',
       2,
-      [..._v3Columns, ..._v4Changes, ..._v5Changes, ..._v6Columns, ..._v7Changes, ..._shoes, ..._plans],
+      [..._v3Columns, ..._v4Changes, ..._v5Changes, ..._v6Columns, ..._v7Changes, ..._shoes, ..._plans, ..._v15],
     ),
-    ('v3 database is upgraded', 3, [..._v4Changes, ..._v5Changes, ..._v6Columns, ..._v7Changes, ..._shoes, ..._plans]),
-    ('v4 database is upgraded', 4, [..._v5Changes, ..._v6Columns, ..._v7Changes, ..._v9Columns, ..._shoes, ..._plans]),
-    ('v5 database is upgraded', 5, [..._v6Columns, ..._v7Changes, ..._v9Columns, ..._shoes, ..._plans]),
-    ('v6 database is upgraded', 6, [..._v7Changes, ..._v9Columns, ..._shoes, ..._plans]),
+    (
+      'v3 database is upgraded',
+      3,
+      [..._v4Changes, ..._v5Changes, ..._v6Columns, ..._v7Changes, ..._shoes, ..._plans, ..._v15],
+    ),
+    (
+      'v4 database is upgraded',
+      4,
+      [..._v5Changes, ..._v6Columns, ..._v7Changes, ..._v9Columns, ..._shoes, ..._plans, ..._v15],
+    ),
+    ('v5 database is upgraded', 5, [..._v6Columns, ..._v7Changes, ..._v9Columns, ..._shoes, ..._plans, ..._v15]),
+    ('v6 database is upgraded', 6, [..._v7Changes, ..._v9Columns, ..._shoes, ..._plans, ..._v15]),
     (
       'v7 database is upgraded',
       7,
-      [..._v8Columns, ..._v9Columns, ..._v10Columns, ..._v11Changes, ..._v12Columns, ..._v13Changes, ..._v14Columns],
+      [
+        ..._v8Columns,
+        ..._v9Columns,
+        ..._v10Columns,
+        ..._v11Changes,
+        ..._v12Columns,
+        ..._v13Changes,
+        ..._v14Columns,
+        ..._v15,
+      ],
     ),
     (
       'v8 database is upgraded',
       8,
-      [..._v9Columns, ..._v10Columns, ..._v11Changes, ..._v12Columns, ..._v13Changes, ..._v14Columns],
+      [..._v9Columns, ..._v10Columns, ..._v11Changes, ..._v12Columns, ..._v13Changes, ..._v14Columns, ..._v15],
     ),
-    ('v9 database is upgraded', 9, [..._v10Columns, ..._v11Changes, ..._v12Columns, ..._v13Changes, ..._v14Columns]),
-    ('v10 database is upgraded', 10, [..._v11Changes, ..._v12Columns, ..._v13Changes, ..._v14Columns]),
-    ('v11 database is upgraded', 11, [..._v12Columns, ..._v13Changes, ..._v14Columns]),
-    ('v12 database is upgraded', 12, [..._v13Changes, ..._v14Columns]),
-    ('v13 database is upgraded', 13, _v14Columns),
-    ('missing column/table is repaired', 14, [..._v2Columns, 'DROP TABLE goals']),
+    (
+      'v9 database is upgraded',
+      9,
+      [..._v10Columns, ..._v11Changes, ..._v12Columns, ..._v13Changes, ..._v14Columns, ..._v15],
+    ),
+    ('v10 database is upgraded', 10, [..._v11Changes, ..._v12Columns, ..._v13Changes, ..._v14Columns, ..._v15]),
+    ('v11 database is upgraded', 11, [..._v12Columns, ..._v13Changes, ..._v14Columns, ..._v15]),
+    ('v12 database is upgraded', 12, [..._v13Changes, ..._v14Columns, ..._v15]),
+    ('v13 database is upgraded', 13, [..._v14Columns, ..._v15]),
+    ('v14 database is upgraded', 14, _v15),
+    ('missing column/table is repaired', 15, [..._v2Columns, 'DROP TABLE goals']),
   ];
   for (final (label, version, drop) in cases) {
     test(label, () async {
@@ -153,6 +186,7 @@ void main() {
         ]),
       );
       expect(await cols('run_plans'), containsAll(['name', 'spec_json', 'position']));
+      expect(await cols('training_plans'), containsAll(['name', 'start_date', 'weeks', 'days_json', 'active']));
       expect(await cols('shoes'), containsAll(['name', 'start_km', 'limit_km', 'retired', 'is_default']));
       expect(await cols('run_points'), containsAll(['run_id', 'lat', 'lon', 'segment', 'hr']));
       if (version < 6) {

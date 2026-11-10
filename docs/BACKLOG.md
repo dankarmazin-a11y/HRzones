@@ -49,7 +49,7 @@ cleaner height chart, small map credit – all merged. Splits chart may still ge
 polish later.
 
 ## D. New features (later)
-12. **Custom running plan by weeks**: build a plan of N weeks, choose the run for each day
+12. ✅ **Custom running plan by weeks**: build a plan of N weeks, choose the run for each day
    (easy / long / intervals / rest, distance or time, can use the planned runs), see
    "today's run", tick days off as runs are recorded. Owner's own plan – the app doesn't
    coach.
