@@ -55,7 +55,7 @@ polish later.
    coach.
 13. ✅ **Closest goal on Home**: the goal nearest to completion (or the next date-bound one)
    shown at the top of Home and updated live.
-14. **Onboarding walk-through for new users**: level, where you train, goals, heart-rate
+14. ✅ **Onboarding walk-through for new users**: level, where you train, goals, heart-rate
    zones (age / max HR), weekly target, units – sets everything up on first launch.
 15. ✅ **Ready-made ab workouts with a follow-along timer** (like YouTube ab videos):
    exercise + countdown + "next up", pictures, rest between.

@@ -119,6 +119,18 @@ class SettingsScreen extends StatelessWidget {
           Text('Lock screen', style: text.titleMedium),
           const LockScreenCardCheck(),
           const Divider(height: 32),
+          ListTile(
+            key: const Key('rerunSetup'),
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.restart_alt),
+            title: const Text('Run the setup again'),
+            subtitle: const Text('Level, where you train, age, workouts per week, weight'),
+            onTap: () {
+              Navigator.of(context).popUntil((r) => r.isFirst);
+              s.needsOnboarding.value = true;
+            },
+          ),
+          const Divider(height: 32),
           Text('Sounds', style: text.titleMedium),
           Text('Pick the sound for each moment. Tap ▷ to hear it.', style: text.bodySmall),
           const SizedBox(height: 4),

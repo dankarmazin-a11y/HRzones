@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'ui/onboarding/onboarding_screen.dart';
+
 import 'app_services.dart';
 import 'app_shell.dart';
 import 'hr/hr_monitor.dart';
@@ -36,7 +38,11 @@ class HrZonesApp extends StatelessWidget {
             theme: theme(Brightness.light),
             darkTheme: theme(Brightness.dark),
             themeMode: mode,
-            home: const HomeShell(),
+            // First launch: the setup walk-through, then the app.
+            home: ValueListenableBuilder<bool>(
+              valueListenable: services.needsOnboarding,
+              builder: (context, show, _) => show ? const OnboardingScreen() : const HomeShell(),
+            ),
           ),
         ),
       ),
