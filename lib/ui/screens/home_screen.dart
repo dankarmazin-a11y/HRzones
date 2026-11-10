@@ -37,6 +37,7 @@ class HomeScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           const BackupReminder(),
+          const ClosestGoalCard(),
           const StreakCard(),
           const SizedBox(height: 8),
           Text('Start', style: text.titleMedium),
