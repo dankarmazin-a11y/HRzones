@@ -181,14 +181,30 @@ void main() {
     expect(e.sets[1].weightKg, 20, reason: 'the right side gets the same weight');
 
     expect(find.byKey(const Key('rightRow_0')), findsOneWidget, reason: 'the right side, collapsed under the left');
-    // Tap the right side's weight to give it its own number.
+    // Tap the right side's weight: it opens as a normal full-size field.
     await tester.tap(find.byKey(const Key('rightFirst_0')));
     await settle(tester);
-    await tester.enterText(find.byType(TextField).last, '17.5');
-    await tester.tap(find.text('OK'));
-    await settle(tester);
+    expect(find.byKey(const Key('rightFirstField_0')), findsOneWidget);
+    expect(find.byKey(const Key('rightSecondField_0')), findsOneWidget);
+    await tester.enterText(find.byKey(const Key('rightFirstField_0')), '17.5');
+    await tester.pump();
     expect(e.sets[1].weightKg, 17.5);
     expect(e.sets[0].weightKg, 20, reason: 'left unchanged');
+    // Leaving the field folds the right side back into its small line.
+    FocusManager.instance.primaryFocus?.unfocus();
+    await settle(tester);
+    expect(find.byKey(const Key('rightFirstField_0')), findsNothing);
+    expect(find.byKey(const Key('rightFirst_0')), findsOneWidget);
+
+    // Only the right side failed: tap R.
+    await tester.tap(find.byKey(const Key('rightType_0')));
+    await settle(tester);
+    expect(e.sets[1].type, SetType.failure);
+    expect(e.sets[0].type, SetType.normal, reason: 'left stays a normal set');
+    expect(find.text('FR'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('rightType_0')));
+    await settle(tester);
+    expect(e.sets[1].type, SetType.normal);
     // Typing on the left again doesn't overwrite the right side's own number.
     await tester.enterText(find.byType(SetNumberField).first, '22');
     await tester.pump();
