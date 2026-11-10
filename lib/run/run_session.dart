@@ -187,7 +187,7 @@ class RunSession extends ChangeNotifier {
     final p = plan, step = p?.current;
     final secs = moving.inMilliseconds / 1000;
     String detail;
-    DateTime? countdownEnd;
+    DateTime? countdownStart, countdownEnd;
     if (p != null && step != null) {
       final left = p.left(distanceM, secs);
       detail = [
@@ -198,6 +198,7 @@ class RunSession extends ChangeNotifier {
       final end = p.stepEndSeconds;
       if (end != null && clockStart != null) {
         countdownEnd = clockStart.add(Duration(milliseconds: (end * 1000).round()));
+        countdownStart = clockStart.add(Duration(milliseconds: (p.stepStartSeconds * 1000).round()));
       }
     } else if (_treadmill) {
       detail = 'Treadmill';
@@ -217,6 +218,7 @@ class RunSession extends ChangeNotifier {
       heartRate: hr.running ? hr.bpm : null,
       clockStart: clockStart,
       elapsed: moving,
+      countdownStart: paused ? null : countdownStart,
       countdownEnd: paused ? null : countdownEnd,
       countdownLabel: step?.label,
       paused: paused,

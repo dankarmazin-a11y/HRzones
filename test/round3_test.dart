@@ -67,7 +67,7 @@ void main() {
       final info = weeklyStreak(w, target: 2, now: now);
       expect(info.weeks, 2); // this week not reached yet, but doesn't break the streak
       expect(info.thisWeek, 1);
-      expect(info.daysThisWeek, [true, false, false, false, false, false, false]);
+      expect(info.daysThisWeek, [false, true, false, false, false, false, false], reason: 'Sun, Mon (2 Nov), …');
       expect(weeklyStreak([...w, d(2026, 11, 3)], target: 2, now: now).weeks, 3);
     });
 

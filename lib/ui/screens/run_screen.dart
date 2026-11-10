@@ -5,6 +5,7 @@ import '../../app_services.dart';
 import '../../data/database.dart';
 import '../../run/geo.dart';
 import '../../workout/stats.dart';
+import '../../workout/streak.dart';
 import '../run/edit_run_screen.dart';
 import '../run/run_plans.dart';
 import '../run/weekly_plan.dart';
@@ -123,8 +124,7 @@ class _Totals extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final now = DateTime.now();
-    final monday = DateTime(now.year, now.month, now.day - (now.weekday - 1));
-    final week = runs.where((r) => !r.startedAt.isBefore(monday));
+    final week = runs.where((r) => !r.startedAt.isBefore(weekStart(now)));
     final km = week.fold(0.0, (a, r) => a + r.distanceM);
     final secs = week.fold(0, (a, r) => a + r.durationS);
     return Card(

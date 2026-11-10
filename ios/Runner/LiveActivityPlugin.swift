@@ -100,6 +100,7 @@ final class LiveActivityPlugin: NSObject, FlutterPlugin {
       heartRate: (m["heartRate"] as? NSNumber)?.intValue,
       clockStart: date("clockStart"),
       elapsed: (m["elapsed"] as? NSNumber)?.intValue ?? 0,
+      countdownStart: date("countdownStart"),
       countdownEnd: date("countdownEnd"),
       countdownLabel: m["countdownLabel"] as? String,
       paused: m["paused"] as? Bool ?? false,

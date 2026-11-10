@@ -342,7 +342,7 @@ class RunPlans extends Table with SyncColumns {
 class TrainingPlans extends Table with SyncColumns {
   TextColumn get name => text()();
 
-  /// Monday of week 1.
+  /// Sunday of week 1 (older plans may hold a Monday – read with weekStart).
   DateTimeColumn get startDate => dateTime()();
   IntColumn get weeks => integer()();
 

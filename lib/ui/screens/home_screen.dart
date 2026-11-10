@@ -119,9 +119,9 @@ class _ThisWeek extends StatelessWidget {
         builder: (context, runSnap) {
           final list = snap.data ?? const <WorkoutListItem>[];
           final runs = runSnap.data ?? const <Run>[];
-          final monday = weekStart(DateTime.now());
-          final week = list.where((i) => !i.workout.startedAt.isBefore(monday)).toList();
-          final weekRuns = runs.where((r) => !r.startedAt.isBefore(monday)).toList();
+          final sunday = weekStart(DateTime.now());
+          final week = list.where((i) => !i.workout.startedAt.isBefore(sunday)).toList();
+          final weekRuns = runs.where((r) => !r.startedAt.isBefore(sunday)).toList();
           final volume = week.fold(0.0, (v, i) => v + i.volume);
           final sets = week.fold(0, (v, i) => v + i.setCount);
           final km = weekRuns.fold(0.0, (v, r) => v + r.distanceM);

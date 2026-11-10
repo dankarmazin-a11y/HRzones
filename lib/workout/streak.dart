@@ -1,5 +1,15 @@
-/// Monday 00:00 of the week containing [d].
-DateTime weekStart(DateTime d) => DateTime(d.year, d.month, d.day).subtract(Duration(days: d.weekday - 1));
+/// Weeks start on Sunday (owner, 2026-11-10).
+/// Sunday 00:00 of the week containing [d].
+DateTime weekStart(DateTime d) => DateTime(d.year, d.month, d.day - d.weekday % 7);
+
+/// Position of [weekday] (1 = Monday … 7 = Sunday) in a week: Sunday = 0.
+int dayIndex(int weekday) => weekday % 7;
+
+/// Weekdays (1 = Monday … 7 = Sunday) in week order: Sunday first.
+const weekdayOrder = [7, 1, 2, 3, 4, 5, 6];
+
+/// One letter per day in week order.
+const weekLetters = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 class StreakInfo {
   const StreakInfo({required this.weeks, required this.thisWeek, required this.daysThisWeek, required this.target});
@@ -10,7 +20,7 @@ class StreakInfo {
   /// Workouts so far this week.
   final int thisWeek;
 
-  /// Mon..Sun: did a workout that day?
+  /// Sun..Sat: did a workout that day?
   final List<bool> daysThisWeek;
   final int target;
 

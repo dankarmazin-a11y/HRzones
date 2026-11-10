@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../run/training_plan.dart';
+import '../workout/streak.dart';
 import 'database.dart';
 
 /// The owner's weekly running plans; one is active (shown on the Run tab and
@@ -38,7 +39,7 @@ class TrainingPlanRepository {
             TrainingPlansCompanion.insert(
               id: Value(planId),
               name: name,
-              startDate: mondayOf(start),
+              startDate: weekStart(start),
               weeks: weeks,
               daysJson: Value(
                 encodePlanDays([

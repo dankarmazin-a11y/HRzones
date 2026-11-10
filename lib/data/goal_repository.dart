@@ -101,12 +101,12 @@ class GoalRepository {
         );
   }
 
-  /// Km run since Monday.
+  /// Km run since Sunday (start of the week).
   Future<double> kmThisWeek() async {
-    final monday = weekStart(DateTime.now());
+    final sunday = weekStart(DateTime.now());
     final list = await (db.select(
       db.runs,
-    )..where((r) => r.endedAt.isNotNull() & r.startedAt.isBiggerOrEqualValue(monday))).get();
+    )..where((r) => r.endedAt.isNotNull() & r.startedAt.isBiggerOrEqualValue(sunday))).get();
     return list.fold<double>(0, (a, r) => a + r.distanceM) / 1000;
   }
 
