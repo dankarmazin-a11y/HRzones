@@ -11,6 +11,7 @@ class LiveCard {
     this.heartRate,
     this.clockStart,
     this.elapsed = Duration.zero,
+    this.countdownStart,
     this.countdownEnd,
     this.countdownLabel,
     this.paused = false,
@@ -36,7 +37,9 @@ class LiveCard {
   final DateTime? clockStart;
   final Duration elapsed;
 
-  /// A countdown (rest, timed set) ending at this time.
+  /// A countdown (rest, timed set) from [countdownStart] (for the bar) to
+  /// [countdownEnd].
+  final DateTime? countdownStart;
   final DateTime? countdownEnd;
   final String? countdownLabel;
   final bool paused;
@@ -47,6 +50,7 @@ class LiveCard {
     'heartRate': heartRate,
     'clockStart': clockStart?.millisecondsSinceEpoch,
     'elapsed': elapsed.inSeconds,
+    'countdownStart': countdownStart?.millisecondsSinceEpoch,
     'countdownEnd': countdownEnd?.millisecondsSinceEpoch,
     'countdownLabel': countdownLabel,
     'paused': paused,
@@ -65,6 +69,7 @@ class LiveCard {
       other.heartRate == heartRate &&
       other.clockStart?.millisecondsSinceEpoch == clockStart?.millisecondsSinceEpoch &&
       (!paused || other.elapsed.inSeconds == elapsed.inSeconds) &&
+      other.countdownStart?.millisecondsSinceEpoch == countdownStart?.millisecondsSinceEpoch &&
       other.countdownEnd?.millisecondsSinceEpoch == countdownEnd?.millisecondsSinceEpoch &&
       other.countdownLabel == countdownLabel &&
       other.paused == paused &&

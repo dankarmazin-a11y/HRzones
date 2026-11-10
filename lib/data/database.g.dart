@@ -7666,7 +7666,7 @@ class TrainingPlan extends DataClass implements Insertable<TrainingPlan> {
   final DateTime updatedAt;
   final String name;
 
-  /// Monday of week 1.
+  /// Sunday of week 1 (older plans may hold a Monday – read with weekStart).
   final DateTime startDate;
   final int weeks;
 

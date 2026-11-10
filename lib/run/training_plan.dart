@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../workout/streak.dart';
 import 'run_plan.dart';
 
 /// What kind of run a plan day is.
@@ -101,9 +102,6 @@ List<PlanDay> decodePlanDays(String? json) {
   }
 }
 
-/// Monday of the week [d] is in (local date, no time).
-DateTime mondayOf(DateTime d) => DateTime(d.year, d.month, d.day - (d.weekday - 1));
-
 DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
 
 /// How a plan day is going.
@@ -111,16 +109,17 @@ enum DayStatus { done, missed, today, upcoming }
 
 /// A plan with its days and the dates you ran on: what's today, what's done.
 class WeeklyPlan {
-  WeeklyPlan({required this.start, required this.weeks, required this.days, required Iterable<DateTime> runDates})
-    : _ran = {for (final r in runDates) _dateOnly(r)};
+  WeeklyPlan({required DateTime start, required this.weeks, required this.days, required Iterable<DateTime> runDates})
+    : start = weekStart(start),
+      _ran = {for (final r in runDates) _dateOnly(r)};
 
-  /// Monday of week 1.
+  /// Sunday of week 1 (weeks run Sunday … Saturday).
   final DateTime start;
   final int weeks;
   final List<PlanDay> days;
   final Set<DateTime> _ran;
 
-  DateTime dateOf(PlanDay d) => DateTime(start.year, start.month, start.day + d.week * 7 + d.weekday - 1);
+  DateTime dateOf(PlanDay d) => DateTime(start.year, start.month, start.day + d.week * 7 + dayIndex(d.weekday));
 
   /// Done = you recorded (or logged) any run that day.
   DayStatus status(PlanDay d, DateTime now) {
@@ -149,7 +148,8 @@ class WeeklyPlan {
     return upcoming.firstOrNull;
   }
 
-  List<PlanDay> week(int w) => days.where((d) => d.week == w).toList()..sort((a, b) => a.weekday - b.weekday);
+  List<PlanDay> week(int w) =>
+      days.where((d) => d.week == w).toList()..sort((a, b) => dayIndex(a.weekday) - dayIndex(b.weekday));
 
   /// (done, planned) runs in week [w].
   (int, int) weekProgress(int w, DateTime now) {

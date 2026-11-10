@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app_services.dart';
 import '../../data/database.dart';
 import '../../run/training_plan.dart';
+import '../../workout/streak.dart';
 import '../number_input.dart';
 import 'run_start.dart';
 
@@ -183,7 +184,7 @@ class _WeekStrip extends StatelessWidget {
     final days = plan.week(week);
     return Row(
       children: [
-        for (var wd = 1; wd <= 7; wd++)
+        for (final wd in weekdayOrder)
           Expanded(
             child: Builder(
               builder: (context) {
@@ -326,7 +327,7 @@ class WeeklyPlanEditor extends StatefulWidget {
 
 class _WeeklyPlanEditorState extends State<WeeklyPlanEditor> {
   late final _name = TextEditingController(text: widget.existing?.name ?? 'My running plan');
-  late DateTime _start = widget.existing?.startDate ?? mondayOf(DateTime.now());
+  late DateTime _start = widget.existing?.startDate ?? weekStart(DateTime.now());
   late int _weeks = widget.existing?.weeks ?? 4;
   late List<PlanDay> _days = decodePlanDays(widget.existing?.daysJson);
   int _week = 0;
@@ -409,7 +410,7 @@ class _WeeklyPlanEditorState extends State<WeeklyPlanEditor> {
               Expanded(
                 child: OutlinedButton.icon(
                   icon: const Icon(Icons.event),
-                  label: Text('Starts Mon ${_short(_start)}'),
+                  label: Text('Starts Sun ${_short(_start)}'),
                   onPressed: () async {
                     final d = await showDatePicker(
                       context: context,
@@ -417,7 +418,7 @@ class _WeeklyPlanEditorState extends State<WeeklyPlanEditor> {
                       firstDate: DateTime.now().subtract(const Duration(days: 365)),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
                     );
-                    if (d != null) setState(() => _start = mondayOf(d));
+                    if (d != null) setState(() => _start = weekStart(d));
                   },
                 ),
               ),
@@ -454,7 +455,7 @@ class _WeeklyPlanEditorState extends State<WeeklyPlanEditor> {
             ),
           ),
           const SizedBox(height: 8),
-          for (var wd = 1; wd <= 7; wd++)
+          for (final wd in weekdayOrder)
             Card(
               child: ListTile(
                 key: Key('planDay_$wd'),

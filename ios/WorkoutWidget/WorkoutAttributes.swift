@@ -21,7 +21,9 @@ struct WorkoutAttributes: ActivityAttributes {
     /// The clock counts up from here (nil while paused → [elapsed] is shown).
     var clockStart: Date?
     var elapsed: Int
-    /// A countdown (rest, timed set) ending at this time.
+    /// A countdown (rest, timed set) ending at this time; the bar runs
+    /// from countdownStart.
+    var countdownStart: Date?
     var countdownEnd: Date?
     var countdownLabel: String?
     var paused: Bool

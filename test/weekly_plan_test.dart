@@ -10,7 +10,7 @@ import 'test_helpers.dart';
 
 void main() {
   test('plan days: dates, today, done / missed, next', () {
-    final start = DateTime(2026, 11, 2); // a Monday
+    final start = DateTime(2026, 11, 1); // a Sunday: weeks start on Sunday
     const easy = PlanDay(week: 0, weekday: 1, kind: PlanDayKind.easy, distanceM: 5000);
     const long = PlanDay(week: 0, weekday: 6, kind: PlanDayKind.long, durationS: 3600);
     const tempo = PlanDay(week: 1, weekday: 3, kind: PlanDayKind.tempo, distanceM: 6500);
@@ -23,7 +23,7 @@ void main() {
     final saturday = DateTime(2026, 11, 7, 9);
     expect(plan.dateOf(plan.days[1]), DateTime(2026, 11, 7));
     expect(plan.weekIndex(saturday), 0);
-    expect(plan.weekIndex(DateTime(2026, 11, 1)), -1, reason: 'the day before the start');
+    expect(plan.weekIndex(DateTime(2026, 10, 31)), -1, reason: 'the day before the start');
     expect(plan.status(plan.days[0], saturday), DayStatus.done);
     expect(plan.status(plan.days[1], saturday), DayStatus.today);
     expect(plan.today(saturday)!.describe, 'Long run · 60 min');
@@ -37,7 +37,7 @@ void main() {
   test('saving a plan makes it the active one', () async {
     final s = await testServices();
     final first = await s.trainingPlans.save(name: 'A', start: DateTime(2026, 11, 4), weeks: 2, days: const []);
-    expect((await s.trainingPlans.active())!.startDate, DateTime(2026, 11, 2), reason: 'starts on a Monday');
+    expect((await s.trainingPlans.active())!.startDate, DateTime(2026, 11, 1), reason: 'starts on a Sunday');
     await s.trainingPlans.save(name: 'B', start: DateTime(2026, 11, 9), weeks: 3, days: const []);
     expect((await s.trainingPlans.active())!.name, 'B');
     await s.trainingPlans.delete((await s.trainingPlans.active())!.id);

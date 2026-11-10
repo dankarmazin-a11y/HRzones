@@ -1408,6 +1408,7 @@ class WorkoutSession extends ChangeNotifier {
       actions: cardActions,
       clockStart: w.startedAt,
       elapsed: DateTime.now().difference(w.startedAt),
+      countdownStart: countdownEnd == null ? null : t!.startedAt,
       countdownEnd: countdownEnd,
       countdownLabel: t == null ? null : (t.kind == TimerKind.setTimer ? 'Hold' : t.label),
     );

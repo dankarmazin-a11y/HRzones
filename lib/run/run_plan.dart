@@ -199,6 +199,9 @@ class PlanRunner {
 
   /// Moving seconds at which the current time step ends (null for a
   /// distance step or when done) – for the countdown on the lock screen.
+  /// Moving seconds when the current step started.
+  double get stepStartSeconds => _startS;
+
   double? get stepEndSeconds {
     final s = current;
     return s == null || s.byDistance ? null : _startS + s.value;

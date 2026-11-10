@@ -31,7 +31,7 @@ class StreakCard extends StatelessWidget {
               ...(snap.data ?? const []).map((w) => w.workout.startedAt),
               ...(runSnap.data ?? const <Run>[]).map((r) => r.startedAt),
             ], target: target);
-            final today = DateTime.now().weekday - 1;
+            final today = dayIndex(DateTime.now().weekday);
             return Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -69,7 +69,7 @@ class StreakCard extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        for (final (i, d) in const ['M', 'T', 'W', 'T', 'F', 'S', 'S'].indexed)
+                        for (final (i, d) in weekLetters.indexed)
                           Column(
                             children: [
                               Container(
