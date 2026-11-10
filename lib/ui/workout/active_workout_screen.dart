@@ -979,6 +979,12 @@ class _SetRowState extends State<SetRow> {
   late final _secs = TextEditingController(text: widget.set.durationS?.toString() ?? '');
   late final _metres = TextEditingController(text: widget.set.distanceM == null ? '' : formatKg(widget.set.distanceM));
 
+  /// The right side's own fields, shown full size while it is being edited
+  /// (`_editRight` = which one was tapped: 'First' / 'Second').
+  final _rFirst = TextEditingController();
+  final _rSecond = TextEditingController();
+  String? _editRight;
+
   @override
   void didUpdateWidget(SetRow old) {
     super.didUpdateWidget(old);
@@ -1000,6 +1006,8 @@ class _SetRowState extends State<SetRow> {
     _reps.dispose();
     _secs.dispose();
     _metres.dispose();
+    _rFirst.dispose();
+    _rSecond.dispose();
     super.dispose();
   }
 
@@ -1131,37 +1139,38 @@ class _SetRowState extends State<SetRow> {
   Widget _rightRow(WorkoutSession session, TrackingType tracking) {
     final l = widget.set, r = widget.partner!;
     final scheme = Theme.of(context).colorScheme;
-    final (String a, String b) = switch (tracking) {
-      TrackingType.duration => ('+KG', 'SECONDS'),
-      TrackingType.distance => ('METRES', 'SECONDS'),
-      _ => (tracking == TrackingType.bodyweightReps ? '+KG' : 'KG', 'REPS'),
-    };
     num? first(LoggedSet x) => tracking == TrackingType.distance ? x.distanceM : x.weightKg;
     num? second(LoggedSet x) =>
         tracking == TrackingType.duration || tracking == TrackingType.distance ? x.durationS : x.reps;
     String show(num? v) => v == null ? '–' : (v is double ? formatKg(v) : '$v');
-    Widget cell(
-      String key,
-      String label,
-      num? mine,
-      num? left,
-      Future<void> Function(num v) set, {
-      bool decimal = false,
-    }) {
+    String text(num? v) => v == null ? '' : (v is double ? formatKg(v) : '$v');
+    final editing = _editRight != null;
+    Widget cell(String key, num? mine, num? left, ValueChanged<String> onChanged, {bool decimal = false}) {
+      if (editing) {
+        return Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 3),
+            child: SetNumberField(
+              key: Key('right${key}Field_${widget.index}'),
+              controller: key == 'First' ? _rFirst : _rSecond,
+              hint: text(left),
+              decimal: decimal,
+              autofocus: _editRight == key,
+              onChanged: onChanged,
+            ),
+          ),
+        );
+      }
       final own = mine != left;
       return Expanded(
         child: InkWell(
           key: Key('right${key}_${widget.index}'),
           borderRadius: BorderRadius.circular(8),
-          onTap: () async {
-            final v = await promptNumber(
-              context,
-              title: 'Right side · ${label.toLowerCase()}',
-              initial: mine ?? left,
-              decimal: decimal,
-            );
-            if (v != null) await set(v);
-          },
+          onTap: () => setState(() {
+            _rFirst.text = text(first(r));
+            _rSecond.text = text(second(r));
+            _editRight = key;
+          }),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: Text(
@@ -1178,36 +1187,59 @@ class _SetRowState extends State<SetRow> {
       );
     }
 
-    Future<void> setFirst(num v) async => tracking == TrackingType.distance
-        ? session.setDistance(r, v.toDouble())
-        : session.setWeightOnly(r, v.toDouble());
-    Future<void> setSecond(num v) async => tracking == TrackingType.duration || tracking == TrackingType.distance
-        ? session.setDuration(r, v.round())
-        : session.setReps(r, v.round());
+    void setFirst(String v) {
+      final n = double.tryParse(v.replaceAll(',', '.'));
+      tracking == TrackingType.distance ? session.setDistance(r, n) : session.setWeightOnly(r, n);
+    }
+
+    void setSecond(String v) {
+      final n = int.tryParse(v);
+      tracking == TrackingType.duration || tracking == TrackingType.distance
+          ? session.setDuration(r, n)
+          : session.setReps(r, n);
+    }
+
+    // Only the right side failed: tap R to mark it F (and back). Warm-up and
+    // drop set come from the main row and apply to both sides.
+    final rightFailed = r.type == SetType.failure && l.type != SetType.failure;
 
     final showRpe = !widget.entry.exercise.isStretch && Services.of(context).level.value.showsAdvancedSetOptions;
     final timed = tracking == TrackingType.duration;
-    return Row(
+    final row = Row(
       key: Key('rightRow_${widget.index}'),
       children: [
         SizedBox(
           width: _setW,
-          child: Text(
-            'R',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+          child: InkWell(
+            key: Key('rightType_${widget.index}'),
+            borderRadius: BorderRadius.circular(8),
+            onTap: l.type == SetType.failure
+                ? null
+                : () => session.setSetType(r, rightFailed ? l.type : SetType.failure),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Text(
+                rightFailed ? 'FR' : 'R',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: rightFailed ? FontWeight.bold : null,
+                  color: rightFailed ? Colors.red : scheme.onSurfaceVariant,
+                ),
+              ),
+            ),
           ),
         ),
         SizedBox(
           width: _prevW,
           child: Text(
-            'right side',
+            editing ? 'right side' : (rightFailed ? 'failure' : 'right side'),
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
           ),
         ),
-        cell('First', a, first(r), first(l), setFirst, decimal: true),
-        cell('Second', b, second(r), second(l), setSecond),
+        cell('First', first(r), first(l), setFirst, decimal: true),
+        cell('Second', second(r), second(l), setSecond),
         if (showRpe) const SizedBox(width: _rpeW),
         SizedBox(
           width: _doneW,
@@ -1241,6 +1273,17 @@ class _SetRowState extends State<SetRow> {
                 ),
         ),
       ],
+    );
+    if (!editing) return row;
+    // Full-size fields while editing; back to the small line once the
+    // keyboard leaves both of them.
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onFocusChange: (has) {
+        if (!has && mounted) setState(() => _editRight = null);
+      },
+      child: Padding(padding: const EdgeInsets.only(top: 3), child: row),
     );
   }
 
@@ -1583,12 +1626,14 @@ class SetNumberField extends StatefulWidget {
     required this.hint,
     required this.onChanged,
     this.decimal = false,
+    this.autofocus = false,
   });
 
   final TextEditingController controller;
   final String hint;
   final ValueChanged<String> onChanged;
   final bool decimal;
+  final bool autofocus;
 
   @override
   State<SetNumberField> createState() => _SetNumberFieldState();
@@ -1624,6 +1669,7 @@ class _SetNumberFieldState extends State<SetNumberField> {
     return TextField(
       controller: widget.controller,
       focusNode: _focus,
+      autofocus: widget.autofocus,
       textAlign: TextAlign.center,
       keyboardType: TextInputType.numberWithOptions(decimal: widget.decimal),
       inputFormatters: [FilteringTextInputFormatter.allow(RegExp(widget.decimal ? r'[0-9.,]' : r'[0-9]'))],
