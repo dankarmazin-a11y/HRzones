@@ -412,7 +412,8 @@ class RunSession extends ChangeNotifier {
     _treadmill = treadmill;
     _shoeId = shoeId;
     this.ghost = treadmill ? null : ghost;
-    _planId = plan?.id;
+    // A plan day's distance/time goal has no saved planned run (id '').
+    _planId = (plan?.id ?? '').isEmpty ? null : plan!.id;
     _planName = plan?.name;
     this.plan = plan == null ? null : PlanRunner(PlanSpec.fromJson(plan.specJson));
     _lastMoveAt = _startedAt;

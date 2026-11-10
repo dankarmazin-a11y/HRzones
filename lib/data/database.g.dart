@@ -7525,6 +7525,393 @@ class RunPlansCompanion extends UpdateCompanion<RunPlan> {
   }
 }
 
+class $TrainingPlansTable extends TrainingPlans with TableInfo<$TrainingPlansTable, TrainingPlan> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TrainingPlansTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    clientDefault: newId,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    clientDefault: DateTime.now,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _startDateMeta = const VerificationMeta('startDate');
+  @override
+  late final GeneratedColumn<DateTime> startDate = GeneratedColumn<DateTime>(
+    'start_date',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _weeksMeta = const VerificationMeta('weeks');
+  @override
+  late final GeneratedColumn<int> weeks = GeneratedColumn<int>(
+    'weeks',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _daysJsonMeta = const VerificationMeta('daysJson');
+  @override
+  late final GeneratedColumn<String> daysJson = GeneratedColumn<String>(
+    'days_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _activeMeta = const VerificationMeta('active');
+  @override
+  late final GeneratedColumn<bool> active = GeneratedColumn<bool>(
+    'active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('CHECK ("active" IN (0, 1))'),
+    defaultValue: const Constant(true),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, updatedAt, name, startDate, weeks, daysJson, active];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'training_plans';
+  @override
+  VerificationContext validateIntegrity(Insertable<TrainingPlan> instance, {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta, updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
+    if (data.containsKey('name')) {
+      context.handle(_nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('start_date')) {
+      context.handle(_startDateMeta, startDate.isAcceptableOrUnknown(data['start_date']!, _startDateMeta));
+    } else if (isInserting) {
+      context.missing(_startDateMeta);
+    }
+    if (data.containsKey('weeks')) {
+      context.handle(_weeksMeta, weeks.isAcceptableOrUnknown(data['weeks']!, _weeksMeta));
+    } else if (isInserting) {
+      context.missing(_weeksMeta);
+    }
+    if (data.containsKey('days_json')) {
+      context.handle(_daysJsonMeta, daysJson.isAcceptableOrUnknown(data['days_json']!, _daysJsonMeta));
+    }
+    if (data.containsKey('active')) {
+      context.handle(_activeMeta, active.isAcceptableOrUnknown(data['active']!, _activeMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  TrainingPlan map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TrainingPlan(
+      id: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      updatedAt: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+      name: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      startDate: attachedDatabase.typeMapping.read(DriftSqlType.dateTime, data['${effectivePrefix}start_date'])!,
+      weeks: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}weeks'])!,
+      daysJson: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}days_json'])!,
+      active: attachedDatabase.typeMapping.read(DriftSqlType.bool, data['${effectivePrefix}active'])!,
+    );
+  }
+
+  @override
+  $TrainingPlansTable createAlias(String alias) {
+    return $TrainingPlansTable(attachedDatabase, alias);
+  }
+}
+
+class TrainingPlan extends DataClass implements Insertable<TrainingPlan> {
+  final String id;
+  final DateTime updatedAt;
+  final String name;
+
+  /// Monday of week 1.
+  final DateTime startDate;
+  final int weeks;
+
+  /// The runs per day (`lib/run/training_plan.dart`, JSON).
+  final String daysJson;
+  final bool active;
+  const TrainingPlan({
+    required this.id,
+    required this.updatedAt,
+    required this.name,
+    required this.startDate,
+    required this.weeks,
+    required this.daysJson,
+    required this.active,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['name'] = Variable<String>(name);
+    map['start_date'] = Variable<DateTime>(startDate);
+    map['weeks'] = Variable<int>(weeks);
+    map['days_json'] = Variable<String>(daysJson);
+    map['active'] = Variable<bool>(active);
+    return map;
+  }
+
+  TrainingPlansCompanion toCompanion(bool nullToAbsent) {
+    return TrainingPlansCompanion(
+      id: Value(id),
+      updatedAt: Value(updatedAt),
+      name: Value(name),
+      startDate: Value(startDate),
+      weeks: Value(weeks),
+      daysJson: Value(daysJson),
+      active: Value(active),
+    );
+  }
+
+  factory TrainingPlan.fromJson(Map<String, dynamic> json, {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TrainingPlan(
+      id: serializer.fromJson<String>(json['id']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      name: serializer.fromJson<String>(json['name']),
+      startDate: serializer.fromJson<DateTime>(json['startDate']),
+      weeks: serializer.fromJson<int>(json['weeks']),
+      daysJson: serializer.fromJson<String>(json['daysJson']),
+      active: serializer.fromJson<bool>(json['active']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'name': serializer.toJson<String>(name),
+      'startDate': serializer.toJson<DateTime>(startDate),
+      'weeks': serializer.toJson<int>(weeks),
+      'daysJson': serializer.toJson<String>(daysJson),
+      'active': serializer.toJson<bool>(active),
+    };
+  }
+
+  TrainingPlan copyWith({
+    String? id,
+    DateTime? updatedAt,
+    String? name,
+    DateTime? startDate,
+    int? weeks,
+    String? daysJson,
+    bool? active,
+  }) => TrainingPlan(
+    id: id ?? this.id,
+    updatedAt: updatedAt ?? this.updatedAt,
+    name: name ?? this.name,
+    startDate: startDate ?? this.startDate,
+    weeks: weeks ?? this.weeks,
+    daysJson: daysJson ?? this.daysJson,
+    active: active ?? this.active,
+  );
+  TrainingPlan copyWithCompanion(TrainingPlansCompanion data) {
+    return TrainingPlan(
+      id: data.id.present ? data.id.value : this.id,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      name: data.name.present ? data.name.value : this.name,
+      startDate: data.startDate.present ? data.startDate.value : this.startDate,
+      weeks: data.weeks.present ? data.weeks.value : this.weeks,
+      daysJson: data.daysJson.present ? data.daysJson.value : this.daysJson,
+      active: data.active.present ? data.active.value : this.active,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TrainingPlan(')
+          ..write('id: $id, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('name: $name, ')
+          ..write('startDate: $startDate, ')
+          ..write('weeks: $weeks, ')
+          ..write('daysJson: $daysJson, ')
+          ..write('active: $active')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, updatedAt, name, startDate, weeks, daysJson, active);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TrainingPlan &&
+          other.id == this.id &&
+          other.updatedAt == this.updatedAt &&
+          other.name == this.name &&
+          other.startDate == this.startDate &&
+          other.weeks == this.weeks &&
+          other.daysJson == this.daysJson &&
+          other.active == this.active);
+}
+
+class TrainingPlansCompanion extends UpdateCompanion<TrainingPlan> {
+  final Value<String> id;
+  final Value<DateTime> updatedAt;
+  final Value<String> name;
+  final Value<DateTime> startDate;
+  final Value<int> weeks;
+  final Value<String> daysJson;
+  final Value<bool> active;
+  final Value<int> rowid;
+  const TrainingPlansCompanion({
+    this.id = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.name = const Value.absent(),
+    this.startDate = const Value.absent(),
+    this.weeks = const Value.absent(),
+    this.daysJson = const Value.absent(),
+    this.active = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  TrainingPlansCompanion.insert({
+    this.id = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    required String name,
+    required DateTime startDate,
+    required int weeks,
+    this.daysJson = const Value.absent(),
+    this.active = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : name = Value(name),
+       startDate = Value(startDate),
+       weeks = Value(weeks);
+  static Insertable<TrainingPlan> custom({
+    Expression<String>? id,
+    Expression<DateTime>? updatedAt,
+    Expression<String>? name,
+    Expression<DateTime>? startDate,
+    Expression<int>? weeks,
+    Expression<String>? daysJson,
+    Expression<bool>? active,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (name != null) 'name': name,
+      if (startDate != null) 'start_date': startDate,
+      if (weeks != null) 'weeks': weeks,
+      if (daysJson != null) 'days_json': daysJson,
+      if (active != null) 'active': active,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  TrainingPlansCompanion copyWith({
+    Value<String>? id,
+    Value<DateTime>? updatedAt,
+    Value<String>? name,
+    Value<DateTime>? startDate,
+    Value<int>? weeks,
+    Value<String>? daysJson,
+    Value<bool>? active,
+    Value<int>? rowid,
+  }) {
+    return TrainingPlansCompanion(
+      id: id ?? this.id,
+      updatedAt: updatedAt ?? this.updatedAt,
+      name: name ?? this.name,
+      startDate: startDate ?? this.startDate,
+      weeks: weeks ?? this.weeks,
+      daysJson: daysJson ?? this.daysJson,
+      active: active ?? this.active,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (startDate.present) {
+      map['start_date'] = Variable<DateTime>(startDate.value);
+    }
+    if (weeks.present) {
+      map['weeks'] = Variable<int>(weeks.value);
+    }
+    if (daysJson.present) {
+      map['days_json'] = Variable<String>(daysJson.value);
+    }
+    if (active.present) {
+      map['active'] = Variable<bool>(active.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TrainingPlansCompanion(')
+          ..write('id: $id, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('name: $name, ')
+          ..write('startDate: $startDate, ')
+          ..write('weeks: $weeks, ')
+          ..write('daysJson: $daysJson, ')
+          ..write('active: $active, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -7543,6 +7930,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $RunPointsTable runPoints = $RunPointsTable(this);
   late final $ShoesTable shoes = $ShoesTable(this);
   late final $RunPlansTable runPlans = $RunPlansTable(this);
+  late final $TrainingPlansTable trainingPlans = $TrainingPlansTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables => allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
@@ -7562,6 +7950,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     runPoints,
     shoes,
     runPlans,
+    trainingPlans,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -12229,6 +12618,196 @@ typedef $$RunPlansTableProcessedTableManager =
       RunPlan,
       PrefetchHooks Function()
     >;
+typedef $$TrainingPlansTableCreateCompanionBuilder = TrainingPlansCompanion Function({
+  Value<String> id,
+  Value<DateTime> updatedAt,
+  required String name,
+  required DateTime startDate,
+  required int weeks,
+  Value<String> daysJson,
+  Value<bool> active,
+  Value<int> rowid,
+});
+typedef $$TrainingPlansTableUpdateCompanionBuilder = TrainingPlansCompanion Function({
+  Value<String> id,
+  Value<DateTime> updatedAt,
+  Value<String> name,
+  Value<DateTime> startDate,
+  Value<int> weeks,
+  Value<String> daysJson,
+  Value<bool> active,
+  Value<int> rowid,
+});
+
+class $$TrainingPlansTableFilterComposer extends Composer<_$AppDatabase, $TrainingPlansTable> {
+  $$TrainingPlansTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get startDate =>
+      $composableBuilder(column: $table.startDate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get weeks => $composableBuilder(column: $table.weeks, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get daysJson =>
+      $composableBuilder(column: $table.daysJson, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get active =>
+      $composableBuilder(column: $table.active, builder: (column) => ColumnFilters(column));
+}
+
+class $$TrainingPlansTableOrderingComposer extends Composer<_$AppDatabase, $TrainingPlansTable> {
+  $$TrainingPlansTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get startDate =>
+      $composableBuilder(column: $table.startDate, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get weeks =>
+      $composableBuilder(column: $table.weeks, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get daysJson =>
+      $composableBuilder(column: $table.daysJson, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get active =>
+      $composableBuilder(column: $table.active, builder: (column) => ColumnOrderings(column));
+}
+
+class $$TrainingPlansTableAnnotationComposer extends Composer<_$AppDatabase, $TrainingPlansTable> {
+  $$TrainingPlansTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id => $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt => $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get name => $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get startDate => $composableBuilder(column: $table.startDate, builder: (column) => column);
+
+  GeneratedColumn<int> get weeks => $composableBuilder(column: $table.weeks, builder: (column) => column);
+
+  GeneratedColumn<String> get daysJson => $composableBuilder(column: $table.daysJson, builder: (column) => column);
+
+  GeneratedColumn<bool> get active => $composableBuilder(column: $table.active, builder: (column) => column);
+}
+
+class $$TrainingPlansTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $TrainingPlansTable,
+          TrainingPlan,
+          $$TrainingPlansTableFilterComposer,
+          $$TrainingPlansTableOrderingComposer,
+          $$TrainingPlansTableAnnotationComposer,
+          $$TrainingPlansTableCreateCompanionBuilder,
+          $$TrainingPlansTableUpdateCompanionBuilder,
+          (TrainingPlan, BaseReferences<_$AppDatabase, $TrainingPlansTable, TrainingPlan>),
+          TrainingPlan,
+          PrefetchHooks Function()
+        > {
+  $$TrainingPlansTableTableManager(_$AppDatabase db, $TrainingPlansTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () => $$TrainingPlansTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () => $$TrainingPlansTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () => $$TrainingPlansTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<DateTime> startDate = const Value.absent(),
+                Value<int> weeks = const Value.absent(),
+                Value<String> daysJson = const Value.absent(),
+                Value<bool> active = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TrainingPlansCompanion(
+                id: id,
+                updatedAt: updatedAt,
+                name: name,
+                startDate: startDate,
+                weeks: weeks,
+                daysJson: daysJson,
+                active: active,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                required String name,
+                required DateTime startDate,
+                required int weeks,
+                Value<String> daysJson = const Value.absent(),
+                Value<bool> active = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TrainingPlansCompanion.insert(
+                id: id,
+                updatedAt: updatedAt,
+                name: name,
+                startDate: startDate,
+                weeks: weeks,
+                daysJson: daysJson,
+                active: active,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$TrainingPlansTable, TrainingPlan>(table),
+                  BaseReferences<_$AppDatabase, $TrainingPlansTable, TrainingPlan>(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$TrainingPlansTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $TrainingPlansTable,
+      TrainingPlan,
+      $$TrainingPlansTableFilterComposer,
+      $$TrainingPlansTableOrderingComposer,
+      $$TrainingPlansTableAnnotationComposer,
+      $$TrainingPlansTableCreateCompanionBuilder,
+      $$TrainingPlansTableUpdateCompanionBuilder,
+      (TrainingPlan, BaseReferences<_$AppDatabase, $TrainingPlansTable, TrainingPlan>),
+      TrainingPlan,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -12252,4 +12831,5 @@ class $AppDatabaseManager {
   $$RunPointsTableTableManager get runPoints => $$RunPointsTableTableManager(_db, _db.runPoints);
   $$ShoesTableTableManager get shoes => $$ShoesTableTableManager(_db, _db.shoes);
   $$RunPlansTableTableManager get runPlans => $$RunPlansTableTableManager(_db, _db.runPlans);
+  $$TrainingPlansTableTableManager get trainingPlans => $$TrainingPlansTableTableManager(_db, _db.trainingPlans);
 }

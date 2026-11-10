@@ -8,6 +8,7 @@ import '../../workout/stats.dart';
 import '../../workout/streak.dart';
 import '../backup_section.dart';
 import '../goals_section.dart';
+import '../run/weekly_plan.dart';
 import '../history/history_screen.dart';
 import '../streak_card.dart';
 import '../run/run_start.dart';
@@ -38,6 +39,7 @@ class HomeScreen extends StatelessWidget {
         children: [
           const BackupReminder(),
           const ClosestGoalCard(),
+          const TodayRunCard(),
           const StreakCard(),
           const SizedBox(height: 8),
           Text('Start', style: text.titleMedium),
