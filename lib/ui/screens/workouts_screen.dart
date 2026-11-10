@@ -229,6 +229,67 @@ Future<bool> _pickPlaceIfHybrid(BuildContext context, {TrainingPlace? known}) as
   return true;
 }
 
+/// Home › Strength: pick one of your templates or an empty workout (straight
+/// to an empty workout when there are no templates yet).
+Future<void> quickStartStrength(BuildContext context) async {
+  final templates = await Services.of(context).templates.watchAll().first;
+  if (!context.mounted) return;
+  if (templates.isEmpty) return startEmptyWorkout(context);
+  // Templates by folder (no folder first), names A–Z inside.
+  final byFolder = <String, List<TemplateWithSlots>>{};
+  for (final t in templates) {
+    byFolder.putIfAbsent(t.template.folder ?? '', () => []).add(t);
+  }
+  final folders = byFolder.keys.toList()..sort();
+  final picked = await showModalBottomSheet<Object>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (c) => SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(c).height * 0.75),
+        child: ListView(
+          key: const Key('quickStartSheet'),
+          shrinkWrap: true,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text('Start a workout', style: Theme.of(c).textTheme.titleLarge),
+            ),
+            ListTile(
+              key: const Key('quickEmpty'),
+              leading: const Icon(Icons.add_circle_outline),
+              title: const Text('Empty workout'),
+              subtitle: const Text('Add exercises as you go'),
+              onTap: () => Navigator.pop(c, 'empty'),
+            ),
+            for (final f in folders) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                child: Text(f.isEmpty ? 'My templates' : f, style: Theme.of(c).textTheme.labelLarge),
+              ),
+              for (final t
+                  in byFolder[f]!
+                    ..sort((a, b) => a.template.name.toLowerCase().compareTo(b.template.name.toLowerCase())))
+                ListTile(
+                  key: Key('quickTemplate_${t.template.id}'),
+                  leading: const Icon(Icons.fitness_center),
+                  title: Text(t.template.name),
+                  subtitle: Text('${t.slots.length} ${t.slots.length == 1 ? 'exercise' : 'exercises'}'),
+                  trailing: const Icon(Icons.play_arrow),
+                  onTap: () => Navigator.pop(c, t),
+                ),
+            ],
+          ],
+        ),
+      ),
+    ),
+  );
+  if (!context.mounted || picked == null) return;
+  if (picked is TemplateWithSlots) return startTemplateWorkout(context, picked);
+  return startEmptyWorkout(context);
+}
+
 Future<void> startEmptyWorkout(BuildContext context) async {
   if (!await _confirmReplace(context) || !context.mounted) return;
   await Services.of(context).askNotificationsOnce();

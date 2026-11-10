@@ -180,6 +180,21 @@ void main() {
     expect(e.sets[0].weightKg, 20);
     expect(e.sets[1].weightKg, 20, reason: 'the right side gets the same weight');
 
+    expect(find.byKey(const Key('rightRow_0')), findsOneWidget, reason: 'the right side, collapsed under the left');
+    // Tap the right side's weight to give it its own number.
+    await tester.tap(find.byKey(const Key('rightFirst_0')));
+    await settle(tester);
+    await tester.enterText(find.byType(TextField).last, '17.5');
+    await tester.tap(find.text('OK'));
+    await settle(tester);
+    expect(e.sets[1].weightKg, 17.5);
+    expect(e.sets[0].weightKg, 20, reason: 'left unchanged');
+    // Typing on the left again doesn't overwrite the right side's own number.
+    await tester.enterText(find.byType(SetNumberField).first, '22');
+    await tester.pump();
+    expect(e.sets[0].weightKg, 22);
+    expect(e.sets[1].weightKg, 17.5);
+
     await tester.tap(find.byKey(const Key('tickL_0')));
     await settle(tester);
     expect(e.sets[0].done, isTrue);

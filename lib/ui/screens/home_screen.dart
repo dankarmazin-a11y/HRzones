@@ -47,7 +47,7 @@ class HomeScreen extends StatelessWidget {
                 key: const Key('startStrength'),
                 icon: Icons.fitness_center,
                 label: 'Strength',
-                onTap: () => startEmptyWorkout(context),
+                onTap: () => quickStartStrength(context),
               ),
               const SizedBox(width: 8),
               _StartTile(

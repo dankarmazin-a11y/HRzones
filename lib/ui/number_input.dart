@@ -49,7 +49,9 @@ Future<num?> promptNumber(
       },
     ),
   );
-  controller.dispose();
+  // Not disposed here: the dialog's text field still uses it while the
+  // dialog animates closed ("used after being disposed" error). It holds no
+  // listeners, so it is simply collected.
   return result;
 }
 
