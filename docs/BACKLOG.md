@@ -28,7 +28,7 @@ then work through this list. Run ONE iOS build at a time (no parallel macOS runs
 ## B. Strength workout improvements
 5. ✅ **Home › Strength (quick workout) offers templates**: a sheet with "Empty workout" plus
    the templates (folders), like the Strength tab.
-6. **Tick sets from the lock screen**: a ✓ button on the lock-screen card / Dynamic Island
+6. ✅ **Tick sets from the lock screen**: a ✓ button on the lock-screen card / Dynamic Island
    for the current set (interactive Live Activity, App Intents, iOS 17+). Also "Skip rest".
 7. ✅ **One-sided sets (on top of PR #37):** the left side is the full row; the right side is
    a collapsed line under it that copies the left values. Tap its weight/reps to give the

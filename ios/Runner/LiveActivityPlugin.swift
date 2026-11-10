@@ -8,9 +8,23 @@ import UIKit
 /// channel "hrzones/live". Does nothing before iOS 16.2 or when the user
 /// turned Live Activities off for the app.
 final class LiveActivityPlugin: NSObject, FlutterPlugin {
+  private var channel: FlutterMethodChannel?
+
   static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(name: "hrzones/live", binaryMessenger: registrar.messenger())
-    registrar.addMethodCallDelegate(LiveActivityPlugin(), channel: channel)
+    let instance = LiveActivityPlugin()
+    instance.channel = channel
+    registrar.addMethodCallDelegate(instance, channel: channel)
+    // A button on the lock-screen card was tapped → tell the Dart side.
+    NotificationCenter.default.addObserver(
+      instance, selector: #selector(onCardAction(_:)), name: liveActionNotification, object: nil)
+  }
+
+  @objc private func onCardAction(_ note: Notification) {
+    guard let action = note.userInfo?["action"] as? String else { return }
+    DispatchQueue.main.async { [weak self] in
+      self?.channel?.invokeMethod("action", arguments: action)
+    }
   }
 
   /// Why the last card didn't show (for Settings › Lock screen).
@@ -91,7 +105,8 @@ final class LiveActivityPlugin: NSObject, FlutterPlugin {
       paused: m["paused"] as? Bool ?? false,
       metrics: (m["metrics"] as? [[String: Any]])?.map {
         WorkoutMetric(label: $0["label"] as? String ?? "", value: $0["value"] as? String ?? "")
-      })
+      },
+      actions: m["actions"] as? [String])
   }
 }
 

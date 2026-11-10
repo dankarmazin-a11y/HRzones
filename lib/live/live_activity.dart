@@ -15,7 +15,11 @@ class LiveCard {
     this.countdownLabel,
     this.paused = false,
     this.metrics = const [],
+    this.actions = const [],
   });
+
+  /// Buttons on the card (iOS 17+): "completeSet", "startSet", "skipRest".
+  final List<String> actions;
 
   /// Big numbers under the title: (label, value), e.g. ("Pace", "5:12").
   final List<(String, String)> metrics;
@@ -46,6 +50,7 @@ class LiveCard {
     'countdownEnd': countdownEnd?.millisecondsSinceEpoch,
     'countdownLabel': countdownLabel,
     'paused': paused,
+    'actions': actions,
     'metrics': [
       for (final (label, value) in metrics) {'label': label, 'value': value},
     ],
@@ -63,7 +68,8 @@ class LiveCard {
       other.countdownEnd?.millisecondsSinceEpoch == countdownEnd?.millisecondsSinceEpoch &&
       other.countdownLabel == countdownLabel &&
       other.paused == paused &&
-      listEquals(other.metrics, metrics);
+      listEquals(other.metrics, metrics) &&
+      listEquals(other.actions, actions);
 
   @override
   int get hashCode => Object.hash(title, detail, heartRate, clockStart, countdownEnd, countdownLabel, paused);
@@ -86,6 +92,9 @@ abstract class LiveActivity {
 
   static LiveActivity create() =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS ? NativeLiveActivity() : NoLiveActivity();
+
+  /// A button on the card was tapped (set by AppServices).
+  void Function(String action)? onAction;
 
   String? _kind;
   LiveCard? _last;
@@ -129,6 +138,12 @@ abstract class LiveActivity {
 }
 
 class NativeLiveActivity extends LiveActivity {
+  NativeLiveActivity() {
+    _channel.setMethodCallHandler((call) async {
+      if (call.method == 'action' && call.arguments is String) onAction?.call(call.arguments as String);
+    });
+  }
+
   static const _channel = MethodChannel('hrzones/live');
 
   @override

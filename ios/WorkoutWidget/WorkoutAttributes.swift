@@ -27,6 +27,8 @@ struct WorkoutAttributes: ActivityAttributes {
     var paused: Bool
     /// Big numbers under the title: pace, avg pace, heart rate / sets done.
     var metrics: [WorkoutMetric]?
+    /// Buttons to show (iOS 17+): "completeSet", "startSet", "skipRest".
+    var actions: [String]?
   }
 
   /// "run" or "strength".

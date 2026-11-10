@@ -7,6 +7,7 @@ import 'package:hrzones/hr/hr_monitor.dart';
 import 'package:hrzones/live/live_activity.dart';
 import 'package:hrzones/run/run_plan.dart';
 import 'package:hrzones/run/run_session.dart';
+import 'package:hrzones/workout/workout_session.dart';
 
 import 'run_test.dart' show FakeLocation, north, t0;
 import 'test_helpers.dart';
@@ -88,6 +89,29 @@ void main() {
       await beeper.preview(SoundEvent.zoneHigh, c);
     }
     expect(beeper.calls, ['sound marimbax3', 'sound gongx3', 'sound fanfarex3']);
+  });
+
+  test('lock-screen buttons: tick the set, then skip the rest', () async {
+    final s = await testServices();
+    final live = s.live as NoLiveActivity;
+    await s.session.startEmpty();
+    await s.session.addExercises([(await s.exercises.byId('Barbell_Bench_Press'))!]);
+    final e = s.session.active!.exercises.single;
+    while (e.sets.length < 2) {
+      s.session.addSet(e);
+    }
+    expect(s.session.liveCard.actions, ['completeSet']);
+
+    live.onAction!('completeSet'); // as if tapped on the lock screen
+    expect(e.sets.first.done, isTrue);
+    expect(s.session.timer?.kind, TimerKind.rest);
+    expect(stateOf(live.calls.last)['actions'], ['skipRest']);
+
+    live.onAction!('skipRest');
+    expect(s.session.timer, isNull);
+    expect(s.session.liveCard.actions, ['completeSet'], reason: 'next set');
+    await s.session.discard();
+    await s.close();
   });
 
   group('run card', () {

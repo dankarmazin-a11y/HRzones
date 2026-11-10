@@ -144,8 +144,51 @@ private struct LockScreenView: View {
       } else if let hr = state.heartRate {
         Label("\(hr)", systemImage: "heart.fill").font(.title3.bold()).foregroundStyle(.red)
       }
+      if let actions = state.actions, !actions.isEmpty {
+        CardButtons(actions: actions)
+      }
     }
     .padding(.horizontal, 18)
     .padding(.vertical, 14)
+  }
+}
+
+/// ✓ Set / ▶ Start / Skip rest on the card (iOS 17+: buttons in a Live
+/// Activity run an App Intent inside the app).
+private struct CardButtons: View {
+  let actions: [String]
+
+  var body: some View {
+    if #available(iOS 17.0, *) {
+      HStack(spacing: 10) {
+        ForEach(actions, id: \.self) { a in
+          Button(intent: WorkoutCardIntent(action: a)) {
+            Label(title(a), systemImage: symbol(a))
+              .font(.headline)
+              .frame(maxWidth: .infinity)
+          }
+          .buttonStyle(.borderedProminent)
+          .tint(a == "skipRest" ? .gray : .green)
+        }
+      }
+    }
+  }
+
+  private func title(_ a: String) -> String {
+    switch a {
+    case "completeSet": return "Set done"
+    case "startSet": return "Start"
+    case "skipRest": return "Skip rest"
+    default: return a
+    }
+  }
+
+  private func symbol(_ a: String) -> String {
+    switch a {
+    case "completeSet": return "checkmark"
+    case "startSet": return "play.fill"
+    case "skipRest": return "forward.end.fill"
+    default: return "circle"
+    }
   }
 }
