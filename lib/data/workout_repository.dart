@@ -187,6 +187,18 @@ class WorkoutRepository {
     return [for (final r in await q.get()) SetStat.fromRow(r.readTable(db.workoutSets))];
   }
 
+  /// Completed sets of finished workouts started from [from] on (stats).
+  Future<List<SetStat>> setsSince(DateTime from) async {
+    final q =
+        db.select(db.workoutSets).join([innerJoin(db.workouts, db.workouts.id.equalsExp(db.workoutSets.workoutId))])
+          ..where(
+            db.workouts.endedAt.isNotNull() &
+                db.workoutSets.completedAt.isNotNull() &
+                db.workouts.startedAt.isBiggerOrEqualValue(from),
+          );
+    return [for (final r in await q.get()) SetStat.fromRow(r.readTable(db.workoutSets))];
+  }
+
   Stream<List<WorkoutListItem>>? _finishedShared;
   List<WorkoutListItem>? _lastFinished;
 

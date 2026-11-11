@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../images/cached_image.dart';
 import '../../data/database.dart';
 import '../../data/exercise_repository.dart';
 
@@ -27,7 +28,7 @@ class ExerciseAvatar extends StatelessWidget {
     return CircleAvatar(
       radius: radius,
       foregroundImage: loadImages && path != null
-          ? ResizeImage(NetworkImage('$exerciseImageBase$path'), width: (radius * 2 * dpr).round())
+          ? ResizeImage(cachedNetworkImage('$exerciseImageBase$path'), width: (radius * 2 * dpr).round())
           : null,
       onForegroundImageError: loadImages && path != null ? (_, _) {} : null,
       child: fallback,

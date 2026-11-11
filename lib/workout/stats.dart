@@ -5,7 +5,14 @@ double estimated1RM(double weightKg, int reps) => reps <= 1 ? weightKg : weightK
 
 /// A completed set reduced to what stats need.
 class SetStat {
-  const SetStat({required this.exerciseId, required this.type, this.weightKg, this.reps, this.durationS});
+  const SetStat({
+    required this.exerciseId,
+    required this.type,
+    this.weightKg,
+    this.reps,
+    this.durationS,
+    this.right = false,
+  });
 
   factory SetStat.fromRow(WorkoutSet s) => SetStat(
     exerciseId: s.subExerciseId ?? s.exerciseId,
@@ -13,7 +20,11 @@ class SetStat {
     weightKg: s.weightKg,
     reps: s.reps,
     durationS: s.durationS,
+    right: s.side == Side.right,
   );
+
+  /// The right side of a one-sided set (the pair counts as one set).
+  final bool right;
 
   final String exerciseId;
   final SetType type;

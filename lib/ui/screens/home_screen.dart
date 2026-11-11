@@ -10,6 +10,7 @@ import '../backup_section.dart';
 import '../goals_section.dart';
 import '../run/weekly_plan.dart';
 import '../history/history_screen.dart';
+import '../stats/stats_screen.dart';
 import '../streak_card.dart';
 import '../run/run_start.dart';
 import '../../data/database.dart';
@@ -149,8 +150,17 @@ class _ThisWeek extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('This week', style: text.titleMedium),
-              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(child: Text('This week', style: text.titleMedium)),
+                  TextButton.icon(
+                    key: const Key('openStats'),
+                    icon: const Icon(Icons.insights, size: 18),
+                    label: const Text('Stats'),
+                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const StatsScreen())),
+                  ),
+                ],
+              ),
               Card(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16),
