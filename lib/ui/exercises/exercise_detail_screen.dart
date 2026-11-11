@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../images/cached_image.dart';
+
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 
 import '../../app_services.dart';
@@ -76,8 +79,8 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
           if (e.imagePath != null)
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                '$exerciseImageBase${e.imagePath}',
+              child: Image(
+                image: cachedNetworkImage('$exerciseImageBase${e.imagePath}'),
                 height: 220,
                 fit: BoxFit.cover,
                 errorBuilder: (_, _, _) => const SizedBox.shrink(),

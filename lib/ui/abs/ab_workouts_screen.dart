@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import '../images/cached_image.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../app_services.dart';
@@ -210,8 +212,8 @@ class _FollowAlongScreenState extends State<FollowAlongScreen> {
     final path = moveImage(e, second: runner.remaining.isOdd);
     final child = path == null || !ExerciseAvatar.loadImages
         ? const Icon(Icons.self_improvement, size: 96, color: Colors.white54)
-        : Image.network(
-            '$exerciseImageBase$path',
+        : Image(
+            image: cachedNetworkImage('$exerciseImageBase$path'),
             fit: BoxFit.contain,
             gaplessPlayback: true,
             errorBuilder: (_, _, _) => const Icon(Icons.fitness_center, size: 96, color: Colors.white54),

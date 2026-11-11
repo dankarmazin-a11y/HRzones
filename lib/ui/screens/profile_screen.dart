@@ -5,6 +5,7 @@ import '../goals_section.dart';
 import '../measurements_section.dart';
 import '../backup_section.dart';
 import '../export_action.dart';
+import '../stats/stats_screen.dart';
 import '../streak_card.dart';
 import 'settings_screen.dart';
 
@@ -43,6 +44,14 @@ class ProfileScreen extends StatelessWidget {
           const MeasurementsSection(),
           const Divider(height: 32),
           Text('Your data', style: text.titleMedium),
+          ListTile(
+            key: const Key('profileStats'),
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.insights),
+            title: const Text('Stats'),
+            subtitle: const Text('Totals, training time per week, muscles worked'),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const StatsScreen())),
+          ),
           ListTile(
             key: const Key('export'),
             contentPadding: EdgeInsets.zero,
