@@ -96,6 +96,8 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('Strength').last);
     await settle(tester);
+    await tester.ensureVisible(find.byKey(const Key('starterPrograms'), skipOffstage: false));
+    await settle(tester);
     await tester.tap(find.byKey(const Key('starterPrograms')));
     await settle(tester);
     expect(find.text('Upper / Lower'), findsOneWidget); // default level: intermediate

@@ -14,6 +14,7 @@ import 'ui/run/running_run_bar.dart';
 import 'ui/start_menu.dart';
 import 'ui/workout/forgotten_workout.dart';
 import 'ui/workout/running_workout_bar.dart';
+import 'ui/theme/emblems.dart';
 
 class HrZonesApp extends StatelessWidget {
   const HrZonesApp({super.key, required this.services});
@@ -149,8 +150,8 @@ class _HomeShellState extends State<HomeShell> {
                       ),
                       NavigationDestination(icon: SizedBox(width: 24, height: 24), label: '', enabled: false),
                       NavigationDestination(
-                        icon: Icon(Icons.directions_run_outlined),
-                        selectedIcon: Icon(Icons.directions_run),
+                        icon: EmblemIcon(EmblemKind.run),
+                        selectedIcon: EmblemIcon(EmblemKind.run, bold: true),
                         label: 'Run',
                       ),
                       NavigationDestination(

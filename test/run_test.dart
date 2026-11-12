@@ -252,8 +252,8 @@ void main() {
 
     await tester.tap(find.text('Run').last);
     await settle(tester);
-    await tester.scrollUntilVisible(find.textContaining('Your runs will show up here'), 200, scrollable: runTabList());
-    expect(find.textContaining('Your runs will show up here'), findsOneWidget);
+    await tester.scrollUntilVisible(find.byKey(const Key('runGuide')), 200, scrollable: runTabList());
+    expect(find.byKey(const Key('runGuide')), findsOneWidget);
     await tester.scrollUntilVisible(find.byKey(const Key('startRun')), -200, scrollable: runTabList());
     await settle(tester);
     await tester.tap(find.byKey(const Key('startRun')));

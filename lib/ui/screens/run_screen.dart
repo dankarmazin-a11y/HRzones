@@ -15,6 +15,8 @@ import '../run/shoes.dart';
 import '../run/run_start.dart';
 import '../run/run_summary_screen.dart';
 import 'zones_screen.dart';
+import '../theme/emblems.dart';
+import '../guide/get_started.dart';
 
 /// Run tab: start a run, the run in progress, past runs.
 class RunScreen extends StatelessWidget {
@@ -66,7 +68,7 @@ class RunScreen extends StatelessWidget {
             children: [
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.monitor_heart_outlined),
+                leading: const Emblem(EmblemKind.heart),
                 title: const Text('Heart-rate zones'),
                 subtitle: const Text('Pick a zone at the start to get beeps when you leave it'),
                 trailing: const Icon(Icons.chevron_right),
@@ -86,7 +88,7 @@ class RunScreen extends StatelessWidget {
                 Card(
                   child: ListTile(
                     key: const Key('runProgress'),
-                    leading: const Icon(Icons.show_chart),
+                    leading: const Emblem(EmblemKind.route),
                     title: const Text('Progress'),
                     subtitle: const Text('Km per week, pace and fitness charts'),
                     trailing: const Icon(Icons.chevron_right),
@@ -98,15 +100,7 @@ class RunScreen extends StatelessWidget {
                 Text('Your runs', style: text.titleMedium),
                 for (final r in runs) RunTile(run: r),
               ] else
-                Padding(
-                  padding: const EdgeInsets.only(top: 24),
-                  child: Text(
-                    'Your runs will show up here.\n'
-                    'Start a run, lock the phone and go – it keeps recording with the screen off and music playing.',
-                    textAlign: TextAlign.center,
-                    style: text.bodyMedium,
-                  ),
-                ),
+                const RunGetStarted(),
             ],
           );
         },
@@ -165,9 +159,9 @@ class RunTile extends StatelessWidget {
     final pace = paceSecPerKm(run.distanceM, run.durationS.toDouble());
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: CircleAvatar(child: Icon(run.kind == RunKind.treadmill ? Icons.home_outlined : Icons.directions_run)),
+      leading: Emblem(run.kind == RunKind.treadmill ? EmblemKind.stopwatch : EmblemKind.run),
       title: Text('${formatKm(run.distanceM)} km'),
-      subtitle: Text(
+      subtitle: HeartText(
         '${runTitle(run)}${run.kind == RunKind.treadmill ? ' · treadmill' : ''}\n'
         '${formatDuration(Duration(seconds: run.durationS))} · ${formatPace(pace)} /km'
         '${run.effort == null ? '' : ' · effort ${run.effort}/10'}'

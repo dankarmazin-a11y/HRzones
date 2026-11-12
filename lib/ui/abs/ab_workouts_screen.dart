@@ -12,6 +12,7 @@ import '../../workout/interval_runner.dart';
 import '../../workout/stats.dart';
 import '../exercises/exercise_avatar.dart';
 import '../timer_style.dart';
+import '../theme/emblems.dart';
 
 /// Ready-made ab workouts to follow along (Tools › Ab workouts).
 class AbWorkoutsScreen extends StatelessWidget {
@@ -35,7 +36,7 @@ class AbWorkoutsScreen extends StatelessWidget {
             Card(
               child: ListTile(
                 key: Key('ab_${w.id}'),
-                leading: CircleAvatar(child: Text('${w.minutes}')),
+                leading: const Emblem(EmblemKind.abs),
                 title: Text(w.name, style: const TextStyle(fontWeight: FontWeight.w700)),
                 subtitle: Text('${w.minutes} min · ${w.level}\n${w.description}'),
                 isThreeLine: true,

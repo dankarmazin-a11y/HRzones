@@ -12,6 +12,7 @@ import '../programs/starter_programs_screen.dart';
 import '../workout/workout_editor.dart';
 import '../workout/active_workout_screen.dart';
 import '../run/run_start.dart';
+import '../guide/get_started.dart';
 
 class WorkoutsScreen extends StatelessWidget {
   const WorkoutsScreen({super.key});
@@ -26,6 +27,7 @@ class WorkoutsScreen extends StatelessWidget {
         scrollCacheExtent: const ScrollCacheExtent.pixels(4000),
         padding: const EdgeInsets.all(16),
         children: [
+          const StrengthGetStarted(),
           FilledButton.icon(
             icon: const Icon(Icons.add),
             label: const Text('Start empty workout'),

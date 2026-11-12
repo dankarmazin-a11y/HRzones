@@ -14,6 +14,7 @@ import '../run/shoes.dart';
 import '../stats/stats_screen.dart';
 import '../streak_card.dart';
 import '../theme/app_theme.dart';
+import '../theme/emblems.dart';
 import 'settings_screen.dart';
 import 'tools_screen.dart';
 
@@ -63,7 +64,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ListTile(
           key: const Key('profileStats'),
           contentPadding: EdgeInsets.zero,
-          leading: const Emblem(Icons.insights),
+          leading: const Emblem.icon(Icons.insights),
           title: const Text('Stats'),
           subtitle: const Text('Totals, training time per week, muscles worked'),
           onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const StatsScreen())),
@@ -71,7 +72,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ListTile(
           key: const Key('export'),
           contentPadding: EdgeInsets.zero,
-          leading: const Emblem(Icons.table_view_outlined),
+          leading: const Emblem.icon(Icons.table_view_outlined),
           title: const Text('Export to spreadsheet'),
           subtitle: const Text('All workouts, sets and measurements as an Excel file (.xlsx)'),
           onTap: () => exportAndShare(context),
