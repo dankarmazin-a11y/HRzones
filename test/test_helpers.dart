@@ -1,5 +1,8 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:hrzones/app_services.dart';
@@ -82,3 +85,26 @@ Future<AppServices> testServices({SilentBeeper? beeper, SimulatedHrSource? sourc
   db: memoryDb(),
   hr: HrMonitor(beeper: beeper ?? SilentBeeper(), source: source),
 );
+
+Future<void> _pumpABit(WidgetTester tester) async {
+  for (var i = 0; i < 5; i++) {
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+    await tester.pump(const Duration(milliseconds: 300));
+  }
+}
+
+/// Opens Tools: Home tab › Tools "All ›".
+Future<void> openTools(WidgetTester tester) async {
+  await tester.tap(find.text('Home').last);
+  await _pumpABit(tester);
+  await tester.tap(find.byKey(const Key('openTools')));
+  await _pumpABit(tester);
+}
+
+/// Taps the big Start button, then a tile in the Start menu
+/// (`startStrength`, `startRunHome`, `startEmpty`, `startTimer`).
+Future<void> tapStartTile(WidgetTester tester, String tile) async {
+  await tester.tap(find.byKey(const Key('startButton')));
+  await _pumpABit(tester);
+  await tester.tap(find.byKey(Key(tile)));
+}

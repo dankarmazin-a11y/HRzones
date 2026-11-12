@@ -252,8 +252,8 @@ void main() {
 
     await tester.tap(find.text('Run').last);
     await settle(tester);
-    await tester.scrollUntilVisible(find.textContaining('Your runs will show up here'), 200, scrollable: runTabList());
-    expect(find.textContaining('Your runs will show up here'), findsOneWidget);
+    await tester.scrollUntilVisible(find.byKey(const Key('runGuide')), 200, scrollable: runTabList());
+    expect(find.byKey(const Key('runGuide')), findsOneWidget);
     await tester.scrollUntilVisible(find.byKey(const Key('startRun')), -200, scrollable: runTabList());
     await settle(tester);
     await tester.tap(find.byKey(const Key('startRun')));
@@ -296,7 +296,7 @@ void main() {
     s.run.location = FakeLocation();
     await tester.pumpWidget(HrZonesApp(services: s));
     await settle(tester);
-    await tester.tap(find.byKey(const Key('startRunHome')));
+    await tapStartTile(tester, 'startRunHome');
     await settle(tester);
     await tester.tap(find.byKey(const Key('goRun')));
     await countdown(tester);
@@ -304,7 +304,9 @@ void main() {
     await settle(tester);
     expect(find.byKey(const Key('runningRunBar')), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('startStrength')));
+    await tester.tap(find.text('Strength').last);
+    await settle(tester);
+    await tester.tap(find.text('Start empty workout'));
     await settle(tester);
     expect(find.text('Run in progress'), findsOneWidget);
     await tester.tap(find.text('OK'));
@@ -323,7 +325,7 @@ void main() {
     await tester.pumpWidget(HrZonesApp(services: s));
     await settle(tester);
 
-    await tester.tap(find.byKey(const Key('startRunHome')));
+    await tapStartTile(tester, 'startRunHome');
     await settle(tester);
     expect(find.text('Ready to run'), findsOneWidget);
     expect(find.byKey(const Key('runZoneNew')), findsOneWidget);
@@ -340,7 +342,7 @@ void main() {
     expect(s.hr.running, isFalse);
 
     // Next time the same zone is already picked.
-    await tester.tap(find.byKey(const Key('startRunHome')));
+    await tapStartTile(tester, 'startRunHome');
     await settle(tester);
     expect(tester.widget<ChoiceChip>(find.byKey(Key('runZone_$presetId'))).selected, isTrue);
     await tester.tap(find.byKey(const Key('runZoneNone')));
@@ -364,7 +366,7 @@ void main() {
     expect(bar().selectedIndex, 1);
     await tester.fling(find.byKey(const Key('tabPages')), const Offset(-400, 0), 1000);
     await settle(tester);
-    expect(bar().selectedIndex, 2);
+    expect(bar().selectedIndex, 3); // Run (slot 2 is the Start button's gap)
     await tester.fling(find.byKey(const Key('tabPages')), const Offset(400, 0), 1000);
     await settle(tester);
     expect(bar().selectedIndex, 1);
@@ -383,7 +385,7 @@ void main() {
     await tester.pumpWidget(HrZonesApp(services: s));
     await settle(tester);
 
-    await tester.tap(find.byKey(const Key('startRunHome')));
+    await tapStartTile(tester, 'startRunHome');
     await settle(tester);
     await tester.tap(find.byKey(const Key('goRun')));
     await tester.pump();
@@ -399,7 +401,7 @@ void main() {
     final ticks = beeper.calls.where((c) => c.startsWith('beep 880x1')).length;
     expect(ticks, 2);
 
-    await tester.tap(find.byKey(const Key('startRunHome')));
+    await tapStartTile(tester, 'startRunHome');
     await settle(tester);
     await tester.tap(find.byKey(const Key('goRun')));
     for (var i = 0; i < 5; i++) {
@@ -423,7 +425,7 @@ void main() {
     s.run.location = gps;
     await tester.pumpWidget(HrZonesApp(services: s));
     await settle(tester);
-    await tester.tap(find.byKey(const Key('startRunHome')));
+    await tapStartTile(tester, 'startRunHome');
     await settle(tester);
     await tester.tap(find.byKey(const Key('goRun')));
     await countdown(tester);
@@ -579,7 +581,7 @@ void main() {
     s.run.location = FakeLocation();
     await tester.pumpWidget(HrZonesApp(services: s));
     await settle(tester);
-    await tester.tap(find.byKey(const Key('startRunHome')));
+    await tapStartTile(tester, 'startRunHome');
     await settle(tester);
     await tester.tap(find.byKey(const Key('runVoiceSwitch')));
     await settle(tester);
@@ -629,7 +631,7 @@ void main() {
     ))!;
     await tester.pumpWidget(HrZonesApp(services: s));
     await settle(tester);
-    await tester.tap(find.byKey(const Key('startRunHome')));
+    await tapStartTile(tester, 'startRunHome');
     await settle(tester);
     await tester.tap(find.byKey(Key('runZone_$presetId')));
     await tester.tap(find.byKey(const Key('goRun')));
@@ -728,7 +730,7 @@ void main() {
     await tester.runAsync(() => s.setWeeklyTarget(1));
     await tester.pumpWidget(HrZonesApp(services: s));
     await settle(tester);
-    await tester.tap(find.byKey(const Key('startRunHome')));
+    await tapStartTile(tester, 'startRunHome');
     await settle(tester);
     await tester.tap(find.byKey(const Key('goRun')));
     await countdown(tester);
@@ -753,7 +755,7 @@ void main() {
     await tester.tap(find.text('Home').last);
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
     await settle(tester);
-    expect(find.text('1-week streak'), findsOneWidget);
+    expect(find.textContaining('1-week streak'), findsOneWidget);
     expect(find.text('km run'), findsOneWidget);
     final homeTile = find.descendant(of: find.byType(HomeScreen), matching: find.byType(RunTile));
     await tester.scrollUntilVisible(

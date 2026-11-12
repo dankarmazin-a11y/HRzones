@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 
 import '../../app_services.dart';
@@ -11,6 +12,7 @@ import '../../workout/stats.dart';
 import '../../workout/training_stats.dart';
 import '../body_map.dart';
 import '../exercises/exercise_detail_screen.dart';
+import '../theme/app_theme.dart';
 
 /// The periods the stats can show.
 enum StatsPeriod {
@@ -172,51 +174,90 @@ class _TotalsCard extends StatelessWidget {
   }
 }
 
-/// Minutes per week for the last 12 weeks: strength and running stacked.
+/// Hours per week for the last 12 weeks: strength and running side by side
+/// (soft style – docs/DESIGN.md), hours axis, week labels, this week's total.
 class _WeeksCard extends StatelessWidget {
   const _WeeksCard({required this.weeks});
 
   final List<WeekSummary> weeks;
 
+  static String hours(int minutes) => '${minutes ~/ 60}:${(minutes % 60).toString().padLeft(2, '0')}';
+
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final t = AppTheme.of(context);
     final text = Theme.of(context).textTheme;
-    final strengthColor = scheme.primary, runColor = Colors.orange;
-    final maxMin = weeks.fold(0, (m, w) => w.minutes > m ? w.minutes : m);
-    final avg = weeks.take(weeks.length - 1).fold(0, (s, w) => s + w.minutes) / (weeks.length - 1);
+    final strengthColor = t.second, runColor = t.bright;
+    double h(int minutes) => minutes / 60;
+    final maxH = weeks.fold(0.0, (m, w) {
+      final v = h(
+        w.strengthMinutes > w.minutes - w.strengthMinutes ? w.strengthMinutes : w.minutes - w.strengthMinutes,
+      );
+      return v > m ? v : m;
+    });
+    final step = maxH <= 2 ? 0.5 : (maxH <= 6 ? 1.0 : (maxH <= 12 ? 2.0 : 5.0));
+    final top = maxH <= 0 ? 2.0 : ((maxH / step).ceil() * step).toDouble();
+    final avg = weeks.length < 2
+        ? 0
+        : weeks.take(weeks.length - 1).fold(0, (s, w) => s + w.minutes) / (weeks.length - 1);
+    final thisWeek = weeks.isEmpty ? null : weeks.last;
     Widget legend(Color c, String label) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
           width: 10,
           height: 10,
-          decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(2)),
+          decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(3)),
         ),
-        const SizedBox(width: 4),
-        Text(label, style: text.labelSmall),
+        const SizedBox(width: 5),
+        Text(label, style: text.labelMedium),
       ],
     );
+    final axis = TextStyle(fontSize: 10, color: t.muted);
     return _Card(
       key: const Key('statsWeeks'),
       title: 'Training time per week',
-      subtitle: 'Last 12 weeks · average ${avg.round()} min a week',
+      subtitle: 'Last 12 weeks · average ${hours(avg.round())} h a week',
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (thisWeek != null)
+            Text.rich(
+              key: const Key('statsThisWeek'),
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: hours(thisWeek.minutes),
+                    style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+                  ),
+                  TextSpan(
+                    text: '  h this week',
+                    style: text.labelMedium?.copyWith(color: t.muted),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 10),
           SizedBox(
-            height: 170,
+            height: 180,
             child: BarChart(
               BarChartData(
-                maxY: maxMin <= 0 ? 60 : (maxMin * 1.15).ceilToDouble(),
-                gridData: const FlGridData(show: false),
+                maxY: top,
+                alignment: BarChartAlignment.spaceAround,
+                gridData: FlGridData(
+                  drawVerticalLine: false,
+                  horizontalInterval: step,
+                  getDrawingHorizontalLine: (_) => FlLine(color: t.track, strokeWidth: 1),
+                ),
                 borderData: FlBorderData(show: false),
                 barTouchData: BarTouchData(
                   touchTooltipData: BarTouchTooltipData(
+                    getTooltipColor: (_) => t.ink,
                     getTooltipItem: (g, _, rod, _) {
                       final w = weeks[g.x];
                       return BarTooltipItem(
-                        '${w.minutes} min\n${w.strength} strength · ${w.runs} runs',
-                        const TextStyle(fontSize: 12),
+                        '${hours(w.minutes)} h\n${w.strength} strength · ${w.runs} runs',
+                        const TextStyle(fontSize: 12, color: Colors.white),
                       );
                     },
                   ),
@@ -227,10 +268,10 @@ class _WeeksCard extends StatelessWidget {
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 32,
-                      getTitlesWidget: (v, m) => v == m.max
-                          ? const SizedBox.shrink()
-                          : Text(v.round().toString(), style: const TextStyle(fontSize: 10)),
+                      reservedSize: 30,
+                      interval: step,
+                      getTitlesWidget: (v, m) =>
+                          Text(v == 0 ? '0' : '${v == v.roundToDouble() ? v.round() : v} h', style: axis),
                     ),
                   ),
                   bottomTitles: AxisTitles(
@@ -239,9 +280,13 @@ class _WeeksCard extends StatelessWidget {
                       reservedSize: 20,
                       getTitlesWidget: (v, m) {
                         final i = v.toInt();
-                        if (i % 2 == 1 || i >= weeks.length) return const SizedBox.shrink();
+                        if (i >= weeks.length) return const SizedBox.shrink();
+                        if (i == weeks.length - 1) {
+                          return Text('Now', style: axis.copyWith(fontWeight: FontWeight.w700));
+                        }
+                        if ((weeks.length - 1 - i) % 3 != 0) return const SizedBox.shrink();
                         final d = weeks[i].start;
-                        return Text('${d.day}/${d.month}', style: const TextStyle(fontSize: 10));
+                        return Text('${d.day}/${d.month}', style: axis);
                       },
                     ),
                   ),
@@ -250,16 +295,19 @@ class _WeeksCard extends StatelessWidget {
                   for (final (i, w) in weeks.indexed)
                     BarChartGroupData(
                       x: i,
+                      barsSpace: 2,
                       barRods: [
                         BarChartRodData(
-                          toY: w.minutes.toDouble(),
-                          width: 14,
-                          borderRadius: BorderRadius.circular(3),
-                          color: Colors.transparent,
-                          rodStackItems: [
-                            BarChartRodStackItem(0, w.strengthMinutes.toDouble(), strengthColor),
-                            BarChartRodStackItem(w.strengthMinutes.toDouble(), w.minutes.toDouble(), runColor),
-                          ],
+                          toY: h(w.strengthMinutes),
+                          width: 7,
+                          color: strengthColor,
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(3)),
+                        ),
+                        BarChartRodData(
+                          toY: h(w.minutes - w.strengthMinutes),
+                          width: 7,
+                          color: runColor,
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(3)),
                         ),
                       ],
                     ),
@@ -267,10 +315,10 @@ class _WeeksCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: [legend(strengthColor, 'Strength'), const SizedBox(width: 16), legend(runColor, 'Running')],
+            children: [legend(strengthColor, 'Strength'), const SizedBox(width: 18), legend(runColor, 'Running')],
           ),
         ],
       ),

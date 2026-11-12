@@ -199,6 +199,36 @@ class WorkoutRepository {
     return [for (final r in await q.get()) SetStat.fromRow(r.readTable(db.workoutSets))];
   }
 
+  /// Your best estimated one-rep max per exercise (working sets with weight
+  /// and reps), heaviest first – for Profile › Records.
+  Future<List<LiftRecord>> bestLifts({int limit = 6}) async {
+    final q =
+        db.select(db.workoutSets).join([innerJoin(db.workouts, db.workouts.id.equalsExp(db.workoutSets.workoutId))])
+          ..where(
+            db.workouts.endedAt.isNotNull() &
+                db.workoutSets.completedAt.isNotNull() &
+                db.workoutSets.weightKg.isBiggerThanValue(0) &
+                db.workoutSets.reps.isBiggerThanValue(0),
+          );
+    final best = <String, LiftRecord>{};
+    for (final r in await q.get()) {
+      final set = r.readTable(db.workoutSets);
+      if (set.setType == SetType.warmup) continue;
+      final id = set.subExerciseId ?? set.exerciseId;
+      final e1rm = estimated1RM(set.weightKg!, set.reps!);
+      if ((best[id]?.estimated1Rm ?? 0) >= e1rm) continue;
+      best[id] = LiftRecord(
+        exerciseId: id,
+        estimated1Rm: e1rm,
+        weightKg: set.weightKg!,
+        reps: set.reps!,
+        date: r.readTable(db.workouts).startedAt,
+      );
+    }
+    final list = best.values.toList()..sort((a, b) => b.estimated1Rm.compareTo(a.estimated1Rm));
+    return list.take(limit).toList();
+  }
+
   Stream<List<WorkoutListItem>>? _finishedShared;
   List<WorkoutListItem>? _lastFinished;
 
@@ -294,4 +324,21 @@ class WorkoutRepository {
   }
 
   Future<void> delete(String id) => (db.delete(db.workouts)..where((w) => w.id.equals(id))).go();
+}
+
+/// Best set of one exercise (see [WorkoutRepository.bestLifts]).
+class LiftRecord {
+  const LiftRecord({
+    required this.exerciseId,
+    required this.estimated1Rm,
+    required this.weightKg,
+    required this.reps,
+    required this.date,
+  });
+
+  final String exerciseId;
+  final double estimated1Rm;
+  final double weightKg;
+  final int reps;
+  final DateTime date;
 }

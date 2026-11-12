@@ -6,6 +6,8 @@ import '../../app_services.dart';
 import '../../data/database.dart';
 import '../../run/geo.dart';
 import '../../workout/streak.dart';
+import '../theme/charts.dart';
+import '../theme/app_theme.dart';
 
 /// Running charts: km per week, pace over time and aerobic fitness (metres
 /// per heartbeat).
@@ -98,7 +100,6 @@ class _WeeklyKm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final thisWeek = weekStart(DateTime.now());
     final weeks = [for (var i = 11; i >= 0; i--) DateTime(thisWeek.year, thisWeek.month, thisWeek.day - 7 * i)];
     final km = {for (final w in weeks) w: 0.0};
@@ -110,11 +111,13 @@ class _WeeklyKm extends StatelessWidget {
     return BarChart(
       BarChartData(
         maxY: maxKm <= 0 ? 10 : (maxKm * 1.2).ceilToDouble(),
-        gridData: const FlGridData(show: false),
+        gridData: SoftChart.grid(context),
         borderData: FlBorderData(show: false),
         barTouchData: BarTouchData(
           touchTooltipData: BarTouchTooltipData(
-            getTooltipItem: (g, _, rod, _) => BarTooltipItem('${rod.toY.toStringAsFixed(1)} km', const TextStyle()),
+            getTooltipColor: (_) => AppTheme.of(context).ink,
+            getTooltipItem: (g, _, rod, _) =>
+                BarTooltipItem('${rod.toY.toStringAsFixed(1)} km', const TextStyle(color: Colors.white)),
           ),
         ),
         titlesData: FlTitlesData(
@@ -147,9 +150,11 @@ class _WeeklyKm extends StatelessWidget {
               barRods: [
                 BarChartRodData(
                   toY: double.parse(km[w]!.toStringAsFixed(1)),
-                  color: i == weeks.length - 1 ? scheme.primary : scheme.primary.withValues(alpha: 0.55),
-                  width: 14,
-                  borderRadius: BorderRadius.circular(3),
+                  color: i == weeks.length - 1
+                      ? AppTheme.of(context).bright
+                      : AppTheme.of(context).bright.withValues(alpha: 0.45),
+                  width: 12,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(3)),
                 ),
               ],
             ),
@@ -169,7 +174,6 @@ class _RunLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final list = [
       for (final r in runs.reversed)
         if (value(r) case final v?) (r, v),
@@ -185,15 +189,16 @@ class _RunLine extends StatelessWidget {
       LineChartData(
         minY: lo - pad,
         maxY: hi + pad,
-        gridData: const FlGridData(show: false),
+        gridData: SoftChart.grid(context),
         borderData: FlBorderData(show: false),
         lineTouchData: LineTouchData(
           touchTooltipData: LineTouchTooltipData(
+            getTooltipColor: (_) => AppTheme.of(context).ink,
             getTooltipItems: (spots) => [
               for (final s in spots)
                 LineTooltipItem(
                   '${label(s.y)}\n${last[s.x.toInt()].$1.startedAt.day}/${last[s.x.toInt()].$1.startedAt.month}',
-                  const TextStyle(),
+                  const TextStyle(color: Colors.white),
                 ),
             ],
           ),
@@ -206,19 +211,13 @@ class _RunLine extends StatelessWidget {
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 40,
-              getTitlesWidget: (v, m) => v == m.min || v == m.max
-                  ? const SizedBox.shrink()
-                  : Text(label(v), style: const TextStyle(fontSize: 10)),
+              getTitlesWidget: (v, m) =>
+                  v == m.min || v == m.max ? const SizedBox.shrink() : Text(label(v), style: SoftChart.axis(context)),
             ),
           ),
         ),
         lineBarsData: [
-          LineChartBarData(
-            spots: [for (final (i, x) in last.indexed) FlSpot(i.toDouble(), x.$2)],
-            color: scheme.primary,
-            barWidth: 2.5,
-            dotData: const FlDotData(show: true),
-          ),
+          SoftChart.line(context, [for (final (i, x) in last.indexed) FlSpot(i.toDouble(), x.$2)], area: false),
         ],
       ),
     );

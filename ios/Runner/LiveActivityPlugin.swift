@@ -107,7 +107,8 @@ final class LiveActivityPlugin: NSObject, FlutterPlugin {
       metrics: (m["metrics"] as? [[String: Any]])?.map {
         WorkoutMetric(label: $0["label"] as? String ?? "", value: $0["value"] as? String ?? "")
       },
-      actions: m["actions"] as? [String])
+      actions: m["actions"] as? [String],
+      accent: m["accent"] as? String)
   }
 }
 

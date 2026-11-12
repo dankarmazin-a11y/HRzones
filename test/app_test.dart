@@ -24,19 +24,13 @@ Future<void> tearDownApp(WidgetTester tester, AppServices s) async {
 }
 
 void main() {
-  testWidgets('shows 5 tabs and switches between them', (tester) async {
+  testWidgets('shows 4 tabs and the Start button, and switches between them', (tester) async {
     final s = (await tester.runAsync(testServices))!;
     await tester.pumpWidget(HrZonesApp(services: s));
     await settle(tester);
 
     expect(find.textContaining('streak'), findsOneWidget);
-    for (final (tab, title) in [
-      ('Strength', 'Strength'),
-      ('Run', 'Run'),
-      ('Tools', 'Tools'),
-      ('Profile', 'Profile'),
-      ('Home', 'Good'),
-    ]) {
+    for (final (tab, title) in [('Strength', 'Strength'), ('Run', 'Run'), ('Profile', 'Profile'), ('Home', 'Good')]) {
       await tester.tap(find.text(tab).last);
       await settle(tester);
       expect(find.descendant(of: find.byType(AppBar), matching: find.textContaining(title)), findsWidgets);
@@ -49,7 +43,7 @@ void main() {
     await tester.pumpWidget(HrZonesApp(services: s));
     await settle(tester);
 
-    await tester.tap(find.byKey(const Key('startStrength')));
+    await tapStartTile(tester, 'startStrength');
     await settle(tester);
     expect(find.text('Finish'), findsOneWidget);
 
@@ -175,6 +169,8 @@ void main() {
     // When the last timer ends: ✓, then it closes by itself.
     s.session.startCountdown(2);
     await tester.pump();
+    await tester.tap(find.byKey(const Key('timerBar'))); // opens big
+    await settle(tester);
     await tester.tap(find.byTooltip('Full screen'));
     await settle(tester);
     expect(find.byKey(const Key('closeFullScreen')), findsOneWidget);
@@ -202,7 +198,7 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 50));
     });
     await tester.pump();
-    await tester.tap(find.text('Tools').last);
+    await openTools(tester);
     await settle(tester);
     await tester.scrollUntilVisible(find.byKey(const Key('toolZones')), 200, scrollable: find.byType(Scrollable).first);
     await tester.tap(find.byKey(const Key('toolZones')));

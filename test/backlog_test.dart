@@ -74,7 +74,7 @@ void main() {
     final s = (await tester.runAsync(testServices))!;
     await tester.pumpWidget(HrZonesApp(services: s));
     await settle(tester);
-    await tester.tap(find.text('Tools').last);
+    await openTools(tester);
     await settle(tester);
     await tester.scrollUntilVisible(
       find.text('How the tools work'),
@@ -83,6 +83,8 @@ void main() {
     );
     expect(find.text('How the tools work'), findsOneWidget);
     expect(find.textContaining('3 high beeps', skipOffstage: false), findsWidgets); // open the first time
+    await tester.ensureVisible(find.text('How the tools work'));
+    await settle(tester);
     await tester.tap(find.text('How the tools work'));
     await settle(tester);
     expect(await tester.runAsync(() => s.db.getSetting('toolsGuideClosed')), '1');

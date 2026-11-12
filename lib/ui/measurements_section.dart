@@ -7,6 +7,7 @@ import '../data/body_repository.dart';
 import '../data/database.dart';
 import '../workout/stats.dart';
 import 'workout/workout_summary_screen.dart' show formatDate;
+import 'theme/charts.dart';
 
 /// The 5 most common measurements, shown as boxes (others: "More" / Log).
 const popularMeasurements = [
@@ -283,7 +284,6 @@ class _MeasurementHistoryScreenState extends State<MeasurementHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final k = widget.kind;
-    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(title: Text(k.label)),
       floatingActionButton: FloatingActionButton(
@@ -327,7 +327,7 @@ class _MeasurementHistoryScreenState extends State<MeasurementHistoryScreen> {
                   height: 200,
                   child: LineChart(
                     LineChartData(
-                      gridData: const FlGridData(drawVerticalLine: false),
+                      gridData: SoftChart.grid(context),
                       borderData: FlBorderData(show: false),
                       titlesData: const FlTitlesData(
                         topTitles: AxisTitles(),
@@ -336,14 +336,7 @@ class _MeasurementHistoryScreenState extends State<MeasurementHistoryScreen> {
                         leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 40)),
                       ),
                       lineBarsData: [
-                        LineChartBarData(
-                          spots: [for (final (i, m) in points.indexed) FlSpot(i.toDouble(), m.value)],
-                          isCurved: true,
-                          preventCurveOverShooting: true,
-                          color: scheme.primary,
-                          barWidth: 3,
-                          belowBarData: BarAreaData(show: true, color: scheme.primary.withValues(alpha: 0.15)),
-                        ),
+                        SoftChart.line(context, [for (final (i, m) in points.indexed) FlSpot(i.toDouble(), m.value)]),
                       ],
                     ),
                   ),

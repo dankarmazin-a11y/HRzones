@@ -7,6 +7,7 @@ import '../../workout/stats.dart';
 import '../../workout/workout_session.dart';
 import '../timer_style.dart';
 import '../number_input.dart';
+import '../theme/app_theme.dart';
 
 String _buttonLabel(TimerKind kind) => switch (kind) {
   TimerKind.rest => 'Skip',
@@ -15,7 +16,8 @@ String _buttonLabel(TimerKind kind) => switch (kind) {
 };
 
 /// Bottom bar of a workout showing the running timer.
-/// Tap: a stretch/hold opens full screen; other timers grow a little.
+/// A slim dark bar; tap it and it opens big (−15 s / +15 s / Skip).
+/// A stretch/hold opens the full-screen timer instead.
 class TimerBar extends StatefulWidget {
   const TimerBar({super.key, required this.session});
 
@@ -37,85 +39,157 @@ class _TimerBarState extends State<TimerBar> {
     final session = widget.session;
     final t = session.timer;
     if (t == null) return const SizedBox.shrink();
-    final scheme = Theme.of(context).colorScheme;
-    final text = Theme.of(context).textTheme;
+    final theme = AppTheme.of(context);
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final bg = dark ? Theme.of(context).colorScheme.surfaceContainerHigh : theme.ink;
     final countsDown = t.countsDown;
     final shown = countsDown ? t.remaining : t.elapsed;
     final isSet = t.kind == TimerKind.setTimer;
     final big = _expanded;
     final next = session.nextUpLabel;
-
-    Widget icon(double size) =>
-        Icon(isSet ? Icons.self_improvement : (countsDown ? Icons.timer_outlined : Icons.av_timer), size: size);
-    final info = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(t.label, overflow: TextOverflow.ellipsis, style: big ? text.titleMedium : text.labelMedium),
-        Text(
-          formatDuration(Duration(seconds: shown)),
-          style: (big ? text.displayMedium : text.titleLarge)?.copyWith(
-            fontWeight: FontWeight.bold,
-            fontFeatures: const [FontFeature.tabularFigures()],
+    final progress = countsDown && t.total > 0 ? shown / t.total : null;
+    const white = Colors.white;
+    final digits = TextStyle(
+      fontFamily: 'Inter',
+      color: white,
+      fontWeight: FontWeight.w900,
+      fontSize: big ? 76 : 17,
+      height: 1,
+      letterSpacing: big ? -3 : -0.3,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
+    final label = Text(
+      t.label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        fontFamily: 'Inter',
+        color: theme.bright,
+        fontWeight: FontWeight.w800,
+        fontSize: big ? 13 : 11.5,
+        letterSpacing: big ? 1.2 : 0,
+      ),
+    );
+    Widget bar(double h) => ClipRRect(
+      borderRadius: BorderRadius.circular(3),
+      child: LinearProgressIndicator(
+        value: progress ?? 1,
+        minHeight: h,
+        color: theme.bright,
+        backgroundColor: white.withValues(alpha: 0.18),
+      ),
+    );
+    Widget pill(String text, VoidCallback onTap, {bool main = false, Key? key}) => Material(
+      color: main ? theme.bright : white.withValues(alpha: 0.13),
+      borderRadius: BorderRadius.circular(9),
+      child: InkWell(
+        key: key,
+        borderRadius: BorderRadius.circular(9),
+        onTap: onTap,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: big ? 0 : 11, vertical: big ? 13 : 6),
+          child: Text(
+            text,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              color: main ? theme.onBright : white,
+              fontWeight: FontWeight.w800,
+              fontSize: big ? 14 : 12,
+            ),
           ),
         ),
-        if (next != null) Text('Next: $next', overflow: TextOverflow.ellipsis, style: text.bodySmall),
+      ),
+    );
+
+    final collapsed = Row(
+      children: [
+        Flexible(
+          flex: 0,
+          child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 110), child: label),
+        ),
+        const SizedBox(width: 8),
+        Text(formatDuration(Duration(seconds: shown)), style: digits),
+        const SizedBox(width: 12),
+        Expanded(child: bar(4)),
+        const SizedBox(width: 10),
+        pill(_buttonLabel(t.kind), session.stopTimer),
       ],
     );
-    final buttons = <Widget>[
-      if (countsDown) ...[
-        TextButton(onPressed: () => session.adjustTimer(-15), child: const Text('−15')),
-        TextButton(onPressed: () => session.adjustTimer(15), child: const Text('+15')),
-      ],
-      IconButton(
-        tooltip: 'Full screen',
-        icon: const Icon(Icons.fullscreen),
-        onPressed: () => openFullScreenTimer(context, session),
-      ),
-      FilledButton(onPressed: session.stopTimer, child: Text(_buttonLabel(t.kind))),
-    ];
-
-    return Material(
-      color: isSet
-          ? (Theme.of(context).brightness == Brightness.dark ? Colors.teal.shade800 : Colors.teal.shade100)
-          : scheme.primaryContainer,
-      child: SafeArea(
-        top: false,
-        child: InkWell(
-          key: const Key('timerBar'),
-          onTap: () => isSet ? openFullScreenTimer(context, session) : setState(() => _expanded = !_expanded),
-          child: AnimatedSize(
-            duration: const Duration(milliseconds: 150),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (countsDown)
-                  LinearProgressIndicator(value: t.total == 0 ? 0 : shown / t.total, minHeight: big ? 6 : 4),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: big ? 12 : 8),
-                  child: big
-                      ? Column(
-                          children: [
-                            Row(
-                              children: [
-                                icon(40),
-                                const SizedBox(width: 12),
-                                Expanded(child: info),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Row(mainAxisAlignment: MainAxisAlignment.end, children: buttons),
-                          ],
-                        )
-                      : Row(
-                          children: [
-                            icon(24),
-                            const SizedBox(width: 8),
-                            Expanded(child: info),
-                            ...buttons,
-                          ],
-                        ),
+    final expanded = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            const Spacer(),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(color: white.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2)),
+            ),
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: IconButton(
+                  tooltip: 'Full screen',
+                  color: white,
+                  icon: const Icon(Icons.fullscreen),
+                  onPressed: () => openFullScreenTimer(context, session),
                 ),
-              ],
+              ),
+            ),
+          ],
+        ),
+        label,
+        const SizedBox(height: 6),
+        Text(formatDuration(Duration(seconds: shown)), style: digits),
+        if (next != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Next: $next',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontFamily: 'Inter', color: white.withValues(alpha: 0.7), fontSize: 13),
+          ),
+        ],
+        const SizedBox(height: 14),
+        bar(6),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            if (countsDown) ...[
+              Expanded(child: pill('−15 s', () => session.adjustTimer(-15))),
+              const SizedBox(width: 8),
+              Expanded(child: pill('+15 s', () => session.adjustTimer(15))),
+              const SizedBox(width: 8),
+            ],
+            Expanded(child: pill(_buttonLabel(t.kind), session.stopTimer, main: true)),
+          ],
+        ),
+      ],
+    );
+
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
+        child: Material(
+          color: bg,
+          elevation: 8,
+          shadowColor: Colors.black54,
+          borderRadius: BorderRadius.circular(big ? 16 : 10),
+          child: InkWell(
+            key: const Key('timerBar'),
+            borderRadius: BorderRadius.circular(big ? 16 : 10),
+            onTap: () => isSet ? openFullScreenTimer(context, session) : setState(() => _expanded = !_expanded),
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOut,
+              child: Padding(
+                padding: big ? const EdgeInsets.fromLTRB(16, 0, 16, 16) : const EdgeInsets.fromLTRB(14, 8, 8, 8),
+                child: big ? expanded : collapsed,
+              ),
             ),
           ),
         ),

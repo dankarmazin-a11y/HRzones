@@ -71,7 +71,7 @@ void main() {
     final s = (await tester.runAsync(testServices))!;
     await tester.pumpWidget(HrZonesApp(services: s));
     await settle(tester);
-    await tester.tap(find.text('Tools').last);
+    await openTools(tester);
     await settle(tester);
     await tester.scrollUntilVisible(find.byKey(const Key('toolZones')), 200, scrollable: find.byType(Scrollable).first);
     await tester.tap(find.byKey(const Key('toolZones')));
@@ -95,6 +95,8 @@ void main() {
     await tester.pumpWidget(HrZonesApp(services: s));
     await settle(tester);
     await tester.tap(find.text('Strength').last);
+    await settle(tester);
+    await tester.ensureVisible(find.byKey(const Key('starterPrograms'), skipOffstage: false));
     await settle(tester);
     await tester.tap(find.byKey(const Key('starterPrograms')));
     await settle(tester);

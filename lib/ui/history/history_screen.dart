@@ -9,6 +9,7 @@ import '../../workout/stats.dart';
 import '../../workout/workout_session.dart';
 import '../workout/workout_editor.dart';
 import '../workout/workout_summary_screen.dart';
+import '../theme/emblems.dart';
 
 enum _Show { all, strength, run }
 
@@ -39,13 +40,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   ListTile(
-                    leading: const Icon(Icons.fitness_center),
+                    leading: const Emblem(EmblemKind.dumbbell),
                     title: const Text('Strength workout'),
                     onTap: () => Navigator.pop(c, 'strength'),
                   ),
                   ListTile(
                     key: const Key('logPastRun'),
-                    leading: const Icon(Icons.directions_run),
+                    leading: const Emblem(EmblemKind.run),
                     title: const Text('Run'),
                     onTap: () => Navigator.pop(c, 'run'),
                   ),
@@ -127,8 +128,9 @@ class WorkoutTile extends StatelessWidget {
     final duration = w.endedAt == null ? Duration.zero : w.endedAt!.difference(w.startedAt);
     return Card(
       child: ListTile(
+        leading: const Emblem(EmblemKind.dumbbell),
         title: Text(w.name),
-        subtitle: Text(
+        subtitle: HeartText(
           '${formatDate(w.startedAt)}\n'
           '${formatDuration(duration)} · ${item.setCount} sets · ${formatKg(item.volume)} kg'
           '${w.avgHr != null ? ' · ♥ ${w.avgHr}' : ''}\n'

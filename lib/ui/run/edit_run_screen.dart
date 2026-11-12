@@ -6,6 +6,7 @@ import '../../run/geo.dart';
 import '../workout/workout_summary_screen.dart' show formatDate;
 import '../number_input.dart';
 import 'run_summary_screen.dart';
+import '../theme/app_theme.dart';
 
 /// Log a run by hand ([run] null: treadmill, or the phone stayed at home)
 /// or edit a finished run: start, time, distance, kind, average heart rate.
@@ -191,7 +192,7 @@ class _EditRunScreenState extends State<EditRunScreen> {
           ],
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.favorite_outline),
+            leading: const Icon(Icons.favorite_outline, color: AppColors.heart),
             title: const Text('Average heart rate'),
             trailing: EditableNumber(
               key: const Key('editAvgHr'),

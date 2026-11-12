@@ -55,3 +55,6 @@ Profile. Settings is a gear button at the top right of Profile.
 - **Setup:** chat style (app bubbles, answer chips).
 - **App icon:** heart pulse for now (name and icon will change later).
 - **Later:** realistic body figures / muscle map need real artwork (buy or commission) – keep photos until then.
+
+## Build status
+Every rule above is in the app as of 2026-11-12 (steps 1–6, see CLAUDE.md › Phase 3 – UI & looks). Still open: realistic body figures (needs artwork), app name, and whether the app icon follows the theme.

@@ -9,12 +9,12 @@ import 'hr/hr_monitor.dart';
 import 'ui/screens/home_screen.dart';
 import 'ui/screens/profile_screen.dart';
 import 'ui/screens/run_screen.dart';
-import 'ui/screens/tools_screen.dart';
 import 'ui/screens/workouts_screen.dart';
 import 'ui/run/running_run_bar.dart';
-import 'ui/tools_icon.dart';
+import 'ui/start_menu.dart';
 import 'ui/workout/forgotten_workout.dart';
 import 'ui/workout/running_workout_bar.dart';
+import 'ui/theme/emblems.dart';
 
 class HrZonesApp extends StatelessWidget {
   const HrZonesApp({super.key, required this.services});
@@ -57,7 +57,10 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   AppTab _tab = AppTab.home;
 
-  static const _screens = [HomeScreen(), WorkoutsScreen(), RunScreen(), ToolsScreen(), ProfileScreen()];
+  static const _screens = [HomeScreen(), WorkoutsScreen(), RunScreen(), ProfileScreen()];
+
+  /// Tab → NavigationBar slot (slot 2 is the gap under the Start button).
+  static int _slot(AppTab t) => t.index < 2 ? t.index : t.index + 1;
 
   /// One scroll position per tab. Without this, on iPhone every tab's list
   /// attached to the same (route-wide) controller and the tabs' scroll
@@ -124,27 +127,41 @@ class _HomeShellState extends State<HomeShell> {
             children: [
               const RunningWorkoutBar(),
               const RunningRunBar(),
-              NavigationBar(
-                selectedIndex: _tab.index,
-                onDestinationSelected: (i) => _select(AppTab.values[i]),
-                destinations: const [
-                  NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
-                  NavigationDestination(
-                    icon: Icon(Icons.fitness_center_outlined),
-                    selectedIcon: Icon(Icons.fitness_center),
-                    label: 'Strength',
+              Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.topCenter,
+                children: [
+                  NavigationBar(
+                    selectedIndex: _slot(_tab),
+                    onDestinationSelected: (i) {
+                      if (i == 2) return; // the Start button's gap
+                      _select(AppTab.values[i < 2 ? i : i - 1]);
+                    },
+                    destinations: const [
+                      NavigationDestination(
+                        icon: Icon(Icons.home_outlined),
+                        selectedIcon: Icon(Icons.home),
+                        label: 'Home',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.fitness_center_outlined),
+                        selectedIcon: Icon(Icons.fitness_center),
+                        label: 'Strength',
+                      ),
+                      NavigationDestination(icon: SizedBox(width: 24, height: 24), label: '', enabled: false),
+                      NavigationDestination(
+                        icon: EmblemIcon(EmblemKind.run),
+                        selectedIcon: EmblemIcon(EmblemKind.run, bold: true),
+                        label: 'Run',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.person_outline),
+                        selectedIcon: Icon(Icons.person),
+                        label: 'Profile',
+                      ),
+                    ],
                   ),
-                  NavigationDestination(
-                    icon: Icon(Icons.directions_run_outlined),
-                    selectedIcon: Icon(Icons.directions_run),
-                    label: 'Run',
-                  ),
-                  NavigationDestination(icon: ToolsIcon(), selectedIcon: ToolsIcon(selected: true), label: 'Tools'),
-                  NavigationDestination(
-                    icon: Icon(Icons.person_outline),
-                    selectedIcon: Icon(Icons.person),
-                    label: 'Profile',
-                  ),
+                  const Positioned(top: -StartButton.size / 2, child: StartButton()),
                 ],
               ),
             ],

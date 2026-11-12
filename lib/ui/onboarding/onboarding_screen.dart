@@ -5,10 +5,13 @@ import '../../hr/zones.dart';
 import '../../workout/training_level.dart';
 import '../../workout/training_place.dart';
 import '../number_input.dart';
+import '../theme/app_theme.dart';
+import '../theme/emblems.dart';
 
-/// First launch: a short walk-through that sets the app up – what you train,
-/// your level, where you train, age (heart-rate zones), workouts per week and
-/// body weight / a goal. Every answer is saved right away; "Skip" keeps the
+/// First launch: a short chat (docs/DESIGN.md "Setup: chat style") – what you
+/// train, your level, where you train, age (heart-rate zones), workouts per
+/// week and body weight / a goal. The coach asks on the left, your answers
+/// appear on the right; every answer is saved right away; "Skip" keeps the
 /// defaults. Settings › "Run the setup again" shows it again.
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -18,19 +21,19 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 enum _Focus {
-  strength('Strength', 'Lifting, machines, bodyweight', Icons.fitness_center),
-  running('Running', 'Outdoor and treadmill runs', Icons.directions_run),
-  both('Both – hybrid', 'Strength and running', Icons.sync_alt);
+  strength('Strength'),
+  running('Running'),
+  both('Both – hybrid');
 
-  const _Focus(this.label, this.description, this.icon);
+  const _Focus(this.label);
   final String label;
-  final String description;
-  final IconData icon;
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  final _pages = PageController();
-  int _page = 0;
+  final _scroll = ScrollController();
+
+  /// The question being asked (0 = welcome … 7 = all set).
+  int _step = 0;
   _Focus? _focus;
   late TrainingLevel _level;
   late TrainingPlace _place;
@@ -39,8 +42,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   double? _weight;
   double? _goalWeight;
   bool _loaded = false;
-
-  static const _steps = 8;
 
   @override
   void didChangeDependencies() {
@@ -56,13 +57,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   void dispose() {
-    _pages.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
-  void _go(int page) {
+  void _next() {
     FocusScope.of(context).unfocus();
-    _pages.animateToPage(page, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+    setState(() => _step++);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scroll.hasClients) {
+        _scroll.animateTo(
+          _scroll.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   Future<void> _finish() async {
@@ -74,118 +84,81 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     await s.finishOnboarding();
   }
 
+  String _kg(double v) => '${v.toStringAsFixed(v == v.roundToDouble() ? 0 : 1)} kg';
+
+  /// The coach's message for each step.
+  String _question(int step) {
+    final zones = HrZones.fromAge(_age);
+    return switch (step) {
+      0 =>
+        'Hi! I\'m your HR Zones coach. I log your strength workouts, track your runs, and beep when your heart '
+            'rate leaves your zone – even with the screen locked and music playing.\n\nA few quick questions?',
+      1 => 'What do you train?',
+      2 => 'What\'s your training level? It decides which exercises and options you see.',
+      3 => 'Where do you train? The exercise list shows what you can do there.',
+      4 => 'How old are you? I use it for your heart-rate zones.',
+      5 =>
+        'Max heart rate about ${zones.maxHr} bpm – your easy zone 2 is ${zones.zones[1].minBpm}–'
+            '${zones.zones[1].maxBpm} bpm.\n\nHow many workouts a week? Runs count too.',
+      6 => 'Your body weight? Optional – for run calories and progress. Add a goal weight to see it on Home.',
+      _ => 'You\'re all set',
+    };
+  }
+
+  /// Your answer bubble for a finished step (null = no bubble).
+  String? _answer(int step) => switch (step) {
+    0 => 'Let\'s go',
+    1 => _focus?.label ?? 'Skip',
+    2 => _level.label,
+    3 => _place.label,
+    4 => '$_age',
+    5 => '$_weekly× a week',
+    6 =>
+      _weight == null
+          ? 'Skip for now'
+          : '${_kg(_weight!)}${_goalWeight == null || _goalWeight == _weight ? '' : ' → goal ${_kg(_goalWeight!)}'}',
+    _ => null,
+  };
+
   @override
   Widget build(BuildContext context) {
-    final s = Services.of(context);
-    final scheme = Theme.of(context).colorScheme;
-    final last = _page == _steps - 1;
+    final t = AppTheme.of(context);
+    final text = Theme.of(context).textTheme;
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
-            // Progress dots + Skip
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
+              padding: const EdgeInsets.fromLTRB(16, 8, 8, 4),
               child: Row(
                 children: [
-                  for (var i = 0; i < _steps; i++)
-                    Container(
-                      width: i == _page ? 20 : 8,
-                      height: 8,
-                      margin: const EdgeInsets.only(right: 4),
-                      decoration: BoxDecoration(
-                        color: i <= _page ? scheme.primary : scheme.outlineVariant,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
+                  const Emblem(EmblemKind.heart, size: 36),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('HR Zones', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                        Text('Setup · ${_step.clamp(0, 7)} of 7', style: text.labelSmall?.copyWith(color: t.muted)),
+                      ],
                     ),
-                  const Spacer(),
-                  if (!last)
+                  ),
+                  if (_step < 7)
                     TextButton(key: const Key('skipOnboarding'), onPressed: _finish, child: const Text('Skip')),
                 ],
               ),
             ),
             Expanded(
-              child: PageView(
-                controller: _pages,
-                physics: const NeverScrollableScrollPhysics(),
-                onPageChanged: (p) => setState(() => _page = p),
+              child: ListView(
+                controller: _scroll,
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                 children: [
-                  _welcome(context),
-                  _choice<_Focus>(
-                    title: 'What do you train?',
-                    subtitle: 'You can do both any time – this just sets your start.',
-                    values: _Focus.values,
-                    selected: _focus,
-                    label: (f) => f.label,
-                    description: (f) => f.description,
-                    icon: (f) => f.icon,
-                    onSelect: (f) {
-                      setState(() => _focus = f);
-                      s.setFocus(f.name);
-                    },
-                  ),
-                  _choice<TrainingLevel>(
-                    title: 'Your training level',
-                    subtitle: 'Decides which exercises and options you see. Change it any time in Settings.',
-                    values: TrainingLevel.values,
-                    selected: _level,
-                    label: (l) => l.label,
-                    description: (l) => l.description,
-                    icon: (l) => switch (l) {
-                      TrainingLevel.beginner => Icons.looks_one_outlined,
-                      TrainingLevel.intermediate => Icons.looks_two_outlined,
-                      TrainingLevel.advanced => Icons.looks_3_outlined,
-                    },
-                    onSelect: (l) {
-                      setState(() => _level = l);
-                      s.setLevel(l);
-                    },
-                  ),
-                  _choice<TrainingPlace>(
-                    title: 'Where do you train?',
-                    subtitle: 'The exercise list shows what you can do there.',
-                    values: TrainingPlace.values,
-                    selected: _place,
-                    label: (p) => p.label,
-                    description: (p) => switch (p) {
-                      TrainingPlace.gym => 'All equipment',
-                      TrainingPlace.home => 'Dumbbells, kettlebells, bands, bodyweight',
-                      TrainingPlace.outdoors => 'Bodyweight and bands',
-                      TrainingPlace.hybrid => 'Different places – the app asks at each workout',
-                    },
-                    icon: (p) => p.icon,
-                    onSelect: (p) {
-                      setState(() => _place = p);
-                      s.setPlace(p);
-                    },
-                  ),
-                  _ageStep(context),
-                  _weeklyStep(context),
-                  _weightStep(context),
-                  _doneStep(context),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: Row(
-                children: [
-                  if (_page > 0)
-                    TextButton.icon(
-                      icon: const Icon(Icons.arrow_back),
-                      label: const Text('Back'),
-                      onPressed: () => _go(_page - 1),
-                    ),
-                  const Spacer(),
-                  FilledButton(
-                    key: const Key('onboardingNext'),
-                    style: FilledButton.styleFrom(minimumSize: const Size(160, 52)),
-                    onPressed: last ? _finish : () => _go(_page + 1),
-                    child: Text(
-                      _page == 0 ? 'Let\'s go' : (last ? 'Start training' : 'Next'),
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                    ),
-                  ),
+                  for (var i = 0; i <= _step; i++) ...[
+                    i == 7 ? _doneBubble(context) : _CoachBubble(_question(i)),
+                    if (i < _step && _answer(i) != null) _YouBubble(_answer(i)!),
+                  ],
+                  const SizedBox(height: 8),
+                  _input(context),
                 ],
               ),
             ),
@@ -195,234 +168,254 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _section(BuildContext context, {required String title, String? subtitle, required List<Widget> children}) {
-    final text = Theme.of(context).textTheme;
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-      children: [
-        Text(title, style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
-        if (subtitle != null) ...[const SizedBox(height: 8), Text(subtitle, style: text.bodyLarge)],
-        const SizedBox(height: 20),
-        ...children,
-      ],
-    );
-  }
-
-  Widget _welcome(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return _section(
-      context,
-      title: 'Welcome to HR Zones',
-      subtitle:
-          'Log your strength workouts, track your runs, and hear a beep when your heart rate leaves your zone – '
-          'even with the screen locked and music playing.\n\nA few quick questions to set things up for you.',
-      children: [
-        const SizedBox(height: 24),
-        Center(child: Icon(Icons.monitor_heart, size: 120, color: scheme.primary)),
-      ],
-    );
-  }
-
-  Widget _choice<T>({
-    required String title,
-    required String subtitle,
-    required List<T> values,
-    required T? selected,
-    required String Function(T) label,
-    required String Function(T) description,
-    required IconData Function(T) icon,
-    required ValueChanged<T> onSelect,
-  }) {
-    final scheme = Theme.of(context).colorScheme;
-    return _section(
-      context,
-      title: title,
-      subtitle: subtitle,
-      children: [
-        for (final v in values)
-          Card(
-            color: v == selected ? scheme.primaryContainer : null,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(
-                color: v == selected ? scheme.primary : scheme.outlineVariant,
-                width: v == selected ? 2 : 1,
-              ),
+  /// What you can answer with at the current step.
+  Widget _input(BuildContext context) {
+    final s = Services.of(context);
+    return switch (_step) {
+      0 => _NextButton(label: 'Let\'s go', onTap: _next),
+      1 => _chips<_Focus>(_Focus.values, _focus, (f) => f.label, (f) {
+        setState(() => _focus = f);
+        s.setFocus(f.name);
+        _next();
+      }),
+      2 => _chips<TrainingLevel>(TrainingLevel.values, null, (l) => l.label, (l) {
+        setState(() => _level = l);
+        s.setLevel(l);
+        _next();
+      }),
+      3 => _chips<TrainingPlace>(TrainingPlace.values, null, (p) => p.label, (p) {
+        setState(() => _place = p);
+        s.setPlace(p);
+        _next();
+      }),
+      4 => _ageInput(context),
+      5 => Wrap(
+        alignment: WrapAlignment.end,
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (var n = 1; n <= 7; n++)
+            ChoiceChip(
+              key: Key('weekly_$n'),
+              label: Text('$n', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+              selected: false,
+              onSelected: (_) {
+                setState(() => _weekly = n);
+                s.setWeeklyTarget(n);
+                _next();
+              },
             ),
-            child: ListTile(
-              key: Key('choice_$v'),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              leading: Icon(icon(v), size: 32),
-              title: Text(label(v), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17)),
-              subtitle: Text(description(v)),
-              trailing: v == selected ? Icon(Icons.check_circle, color: scheme.primary) : null,
-              onTap: () => onSelect(v),
-            ),
-          ),
-      ],
-    );
+        ],
+      ),
+      6 => _weightInput(context),
+      _ => _NextButton(label: 'Start training', onTap: _finish),
+    };
   }
 
-  Widget _stepper({
-    required String value,
-    required VoidCallback onMinus,
-    required VoidCallback onPlus,
-    VoidCallback? onTap,
-    Key? key,
-  }) {
-    final text = Theme.of(context).textTheme;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        IconButton.filledTonal(iconSize: 32, icon: const Icon(Icons.remove), onPressed: onMinus),
-        const SizedBox(width: 16),
-        InkWell(
-          key: key,
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Text(value, style: text.displayMedium?.copyWith(fontWeight: FontWeight.w800)),
-          ),
+  Widget _chips<T>(List<T> values, T? selected, String Function(T) label, ValueChanged<T> onSelect) => Wrap(
+    alignment: WrapAlignment.end,
+    spacing: 8,
+    runSpacing: 8,
+    children: [
+      for (final v in values)
+        ActionChip(
+          key: Key('choice_$v'),
+          label: Text(label(v), style: const TextStyle(fontWeight: FontWeight.w700)),
+          onPressed: () => onSelect(v),
         ),
-        const SizedBox(width: 16),
-        IconButton.filledTonal(iconSize: 32, icon: const Icon(Icons.add), onPressed: onPlus),
-      ],
-    );
-  }
+    ],
+  );
 
-  Widget _ageStep(BuildContext context) {
+  Widget _ageInput(BuildContext context) {
     final s = Services.of(context);
     final text = Theme.of(context).textTheme;
-    final zones = HrZones.fromAge(_age);
     void set(int a) {
       final v = a.clamp(10, 99);
       setState(() => _age = v);
       s.hr.setAge(v);
     }
 
-    final z2 = zones.zones[1];
-    return _section(
-      context,
-      title: 'Your age',
-      subtitle: 'Used for your heart-rate zones (max heart rate ≈ 220 − age). You can fine-tune zones later.',
+    final zones = HrZones.fromAge(_age);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        _stepper(
-          key: const Key('ageValue'),
-          value: '$_age',
-          onMinus: () => set(_age - 1),
-          onPlus: () => set(_age + 1),
-          onTap: () async {
-            final v = await promptNumber(context, title: 'Your age', initial: _age, min: 10, max: 99);
-            if (v != null) set(v.round());
-          },
-        ),
-        const SizedBox(height: 16),
-        Center(child: Text('Max heart rate about ${zones.maxHr} bpm', style: text.titleMedium)),
-        Center(child: Text('Easy zone 2: ${z2.minBpm}–${z2.maxBpm} bpm', style: text.bodyMedium)),
-      ],
-    );
-  }
-
-  Widget _weeklyStep(BuildContext context) {
-    final s = Services.of(context);
-    return _section(
-      context,
-      title: 'Workouts per week',
-      subtitle: 'Your weekly target for the streak on Home. Runs count too.',
-      children: [
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 10,
-          runSpacing: 10,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            for (var n = 1; n <= 7; n++)
-              ChoiceChip(
-                key: Key('weekly_$n'),
-                label: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                  child: Text('$n', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
-                ),
-                selected: _weekly == n,
-                onSelected: (_) {
-                  setState(() => _weekly = n);
-                  s.setWeeklyTarget(n);
-                },
+            IconButton.filledTonal(icon: const Icon(Icons.remove), onPressed: () => set(_age - 1)),
+            InkWell(
+              key: const Key('ageValue'),
+              borderRadius: BorderRadius.circular(9),
+              onTap: () async {
+                final v = await promptNumber(context, title: 'Your age', initial: _age, min: 10, max: 99);
+                if (v != null) set(v.round());
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                child: Text('$_age', style: text.displaySmall?.copyWith(fontWeight: FontWeight.w900)),
               ),
+            ),
+            IconButton.filledTonal(icon: const Icon(Icons.add), onPressed: () => set(_age + 1)),
           ],
         ),
+        Text('Max heart rate about ${zones.maxHr}', style: text.labelMedium),
+        const SizedBox(height: 8),
+        _NextButton(label: 'That\'s me', onTap: _next),
       ],
     );
   }
 
-  Widget _weightStep(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    String kg(double? v) => v == null ? 'Tap to enter' : '${v.toStringAsFixed(v == v.roundToDouble() ? 0 : 1)} kg';
-    return _section(
-      context,
-      title: 'Body weight (optional)',
-      subtitle: 'For calories on runs and your progress. Add a goal weight to see it at the top of Home.',
+  Widget _weightInput(BuildContext context) {
+    Future<double?> ask(String title, double? initial) async {
+      final v = await promptNumber(context, title: title, initial: initial, min: 30, max: 300, decimal: true);
+      return v?.toDouble();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        ListTile(
-          key: const Key('enterWeight'),
-          leading: const Icon(Icons.monitor_weight_outlined),
-          title: const Text('Your weight now'),
-          trailing: Text(kg(_weight), style: text.titleMedium),
-          onTap: () async {
-            final v = await promptNumber(
-              context,
-              title: 'Weight (kg)',
-              initial: _weight,
-              min: 30,
-              max: 300,
-              decimal: true,
-            );
-            if (v != null) setState(() => _weight = v.toDouble());
-          },
+        Wrap(
+          alignment: WrapAlignment.end,
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            ActionChip(
+              key: const Key('enterWeight'),
+              avatar: const Icon(Icons.monitor_weight_outlined, size: 18),
+              label: Text(_weight == null ? 'My weight' : _kg(_weight!)),
+              onPressed: () async {
+                final v = await ask('Weight (kg)', _weight);
+                if (v != null) setState(() => _weight = v);
+              },
+            ),
+            ActionChip(
+              key: const Key('enterGoalWeight'),
+              avatar: const Icon(Icons.flag_outlined, size: 18),
+              label: Text(_goalWeight == null ? 'Goal weight' : 'Goal ${_kg(_goalWeight!)}'),
+              onPressed: _weight == null
+                  ? null
+                  : () async {
+                      final v = await ask('Goal weight (kg)', _goalWeight ?? _weight);
+                      if (v != null) setState(() => _goalWeight = v);
+                    },
+            ),
+          ],
         ),
-        ListTile(
-          key: const Key('enterGoalWeight'),
-          enabled: _weight != null,
-          leading: const Icon(Icons.flag_outlined),
-          title: const Text('Goal weight'),
-          trailing: Text(_goalWeight == null ? 'Optional' : kg(_goalWeight), style: text.titleMedium),
-          onTap: () async {
-            final v = await promptNumber(
-              context,
-              title: 'Goal weight (kg)',
-              initial: _goalWeight ?? _weight,
-              min: 30,
-              max: 300,
-              decimal: true,
-            );
-            if (v != null) setState(() => _goalWeight = v.toDouble());
-          },
-        ),
+        const SizedBox(height: 8),
+        _NextButton(label: _weight == null ? 'Skip for now' : 'Next', onTap: _next),
       ],
     );
   }
 
-  Widget _doneStep(BuildContext context) {
+  Widget _doneBubble(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final tips = [
-      if (_focus != _Focus.running)
-        ('Strength', 'Pick a ready-made program in the Strength tab, or start an empty workout.'),
-      if (_focus != _Focus.strength) ('Running', 'Tap Run to go, or plan your weeks with "Weekly running plan".'),
-      ('Heart-rate zones', 'Tools › Heart-rate zones: make a zone and get beeps when you leave it.'),
-      ('Abs', 'Tools › Ab workouts: 5–20 minute follow-along workouts.'),
+      if (_focus != _Focus.running) 'Strength tab: pick a ready-made program or start an empty workout.',
+      if (_focus != _Focus.strength) 'Run tab: tap Run to go, or plan your weeks.',
+      'Tools › Heart-rate zones: get beeps when you leave your zone.',
+      'Tools › Ab workouts: 5–20 minute follow-along workouts.',
     ];
-    return _section(
-      context,
-      title: 'You\'re all set',
-      subtitle: '${_level.label} · ${_place.label} · $_weekly× a week · age $_age',
-      children: [
-        for (final (title, body) in tips)
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.check_circle_outline),
-            title: Text(title, style: text.titleSmall),
-            subtitle: Text(body),
-          ),
-      ],
+    return _CoachBubble.rich(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('You\'re all set', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+          Text('${_level.label} · ${_place.label} · $_weekly× a week · age $_age', style: text.bodySmall),
+          const SizedBox(height: 8),
+          for (final tip in tips)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text('•  $tip', style: text.bodyMedium),
+            ),
+        ],
+      ),
     );
   }
+}
+
+/// The coach's bubble on the left.
+class _CoachBubble extends StatelessWidget {
+  const _CoachBubble(String this.message) : child = null;
+  const _CoachBubble.rich(Widget this.child) : message = null;
+
+  final String? message;
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTheme.of(context);
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.8),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+          decoration: BoxDecoration(
+            color: t.card,
+            boxShadow: t.cardShadow,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(4),
+              topRight: Radius.circular(14),
+              bottomLeft: Radius.circular(14),
+              bottomRight: Radius.circular(14),
+            ),
+          ),
+          child: child ?? Text(message!, style: Theme.of(context).textTheme.bodyLarge),
+        ),
+      ),
+    );
+  }
+}
+
+/// Your answer on the right, in the dark ink colour.
+class _YouBubble extends StatelessWidget {
+  const _YouBubble(this.message);
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTheme.of(context);
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final bg = dark ? t.bright : t.ink;
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(14),
+            topRight: Radius.circular(4),
+            bottomLeft: Radius.circular(14),
+            bottomRight: Radius.circular(14),
+          ),
+        ),
+        child: Text(
+          message,
+          style: TextStyle(color: onColor(bg), fontWeight: FontWeight.w700),
+        ),
+      ),
+    );
+  }
+}
+
+class _NextButton extends StatelessWidget {
+  const _NextButton({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Align(
+    alignment: Alignment.centerRight,
+    child: FilledButton(
+      key: const Key('onboardingNext'),
+      style: FilledButton.styleFrom(minimumSize: const Size(150, 48)),
+      onPressed: onTap,
+      child: Text(label, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+    ),
+  );
 }

@@ -20,12 +20,12 @@ void main() {
     await tester.pumpWidget(HrZonesApp(services: s));
     await settle(tester);
 
-    await tester.tap(find.byKey(const Key('startStrength')));
+    await tapStartTile(tester, 'startStrength');
     await settle(tester);
     expect(find.byKey(const Key('quickStartSheet')), findsOneWidget);
     expect(find.text('Split'), findsOneWidget, reason: 'folder heading');
     expect(find.text('1 exercise'), findsOneWidget);
-    await tester.tap(find.text('Back bicep'));
+    await tester.tap(find.descendant(of: find.byKey(const Key('quickStartSheet')), matching: find.text('Back bicep')));
     await settle(tester);
     expect(s.session.active?.name, 'Back bicep');
     expect(s.session.active!.exercises.single.sets, hasLength(3));

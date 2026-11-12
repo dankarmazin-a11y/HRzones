@@ -8,6 +8,7 @@ import '../../workout/stats.dart';
 import '../../workout/workout_session.dart';
 import 'active_workout_screen.dart';
 import 'workout_editor.dart';
+import '../theme/emblems.dart';
 
 String formatDate(DateTime d) {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -144,7 +145,7 @@ class WorkoutSummaryScreen extends StatelessWidget {
                     Text(e.exercise.name, style: text.titleSmall),
                     const SizedBox(height: 4),
                     for (final (i, set) in e.sets.indexed)
-                      Text(
+                      HeartText(
                         '${i + 1}. ${set.subExercise != null ? '${set.subExercise!.name}: ' : ''}'
                         '${_setText(e.exercise.trackingType, set.type, set.weightKg, set.reps, set.durationS, set.distanceM)}'
                         '${set.rpe != null ? ' @ RPE ${formatKg(set.rpe)}' : ''}'

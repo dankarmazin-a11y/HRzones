@@ -9,7 +9,7 @@ struct WorkoutLiveActivity: Widget {
   var body: some WidgetConfiguration {
     ActivityConfiguration(for: WorkoutAttributes.self) { context in
       LockScreenView(attributes: context.attributes, state: context.state)
-        .activityBackgroundTint(Color.black.opacity(0.85))
+        .activityBackgroundTint(Color.black.opacity(0.38))  // glass: the system blurs the wallpaper behind
         .activitySystemActionForegroundColor(.white)
     } dynamicIsland: { context in
       DynamicIsland {
@@ -31,34 +31,48 @@ struct WorkoutLiveActivity: Widget {
                 ForEach(metrics, id: \.label) { m in
                   VStack(alignment: .leading, spacing: 0) {
                     Text(m.value).font(.headline.monospacedDigit())
-                      .foregroundStyle(m.label == "Heart rate" ? .red : .primary)
+                      .foregroundStyle(m.label == "Heart rate" ? heartRed : .primary)
                     Text(m.label).font(.caption2).foregroundStyle(.secondary)
                   }
                   .frame(maxWidth: .infinity, alignment: .leading)
                 }
               }
             } else if let hr = context.state.heartRate {
-              Label("\(hr)", systemImage: "heart.fill").font(.caption.bold()).foregroundStyle(.red)
+              Label("\(hr)", systemImage: "heart.fill").font(.caption.bold()).foregroundStyle(heartRed)
             }
             if let end = context.state.countdownEnd, end > Date() {
-              TimerBar(label: context.state.countdownLabel, start: context.state.countdownStart, end: end)
+              TimerBar(
+                label: context.state.countdownLabel, start: context.state.countdownStart, end: end,
+                color: accent(context.state))
             }
           }
         }
       } compactLeading: {
-        Image(systemName: icon(context.attributes)).foregroundStyle(.green)
+        Image(systemName: icon(context.attributes)).foregroundStyle(accent(context.state))
       } compactTrailing: {
         if let end = context.state.countdownEnd, end > Date() {
           Text(timerInterval: Date()...end, countsDown: true)
-            .monospacedDigit().frame(maxWidth: 48).foregroundStyle(.cyan)
+            .monospacedDigit().frame(maxWidth: 48).foregroundStyle(accent(context.state))
         } else {
           Clock(state: context.state).monospacedDigit().frame(maxWidth: 52)
         }
       } minimal: {
-        Image(systemName: icon(context.attributes)).foregroundStyle(.green)
+        Image(systemName: icon(context.attributes)).foregroundStyle(accent(context.state))
       }
     }
   }
+}
+
+/// Every heart-rate heart in the app is this red (docs/DESIGN.md).
+private let heartRed = Color(red: 1.0, green: 0.231, blue: 0.290)
+
+/// The app theme's bright colour (Orange by default).
+private func accent(_ s: WorkoutAttributes.ContentState) -> Color {
+  guard let hex = s.accent, hex.count == 6, let v = UInt32(hex, radix: 16) else {
+    return Color(red: 1.0, green: 0.478, blue: 0.176)
+  }
+  return Color(
+    red: Double((v >> 16) & 0xFF) / 255, green: Double((v >> 8) & 0xFF) / 255, blue: Double(v & 0xFF) / 255)
 }
 
 private func icon(_ a: WorkoutAttributes) -> String {
@@ -88,6 +102,7 @@ private struct TimerBar: View {
   let label: String?
   let start: Date?
   let end: Date
+  let color: Color
 
   var body: some View {
     let from = min(start ?? Date(), end.addingTimeInterval(-1))
@@ -106,9 +121,9 @@ private struct TimerBar: View {
         EmptyView()
       }
       .progressViewStyle(.linear)
-      .tint(.cyan)
+      .tint(color)
     }
-    .foregroundStyle(.cyan)
+    .foregroundStyle(color)
   }
 }
 
@@ -123,7 +138,7 @@ private struct Metrics: View {
         VStack(alignment: .leading, spacing: 0) {
           HStack(spacing: 3) {
             if m.label == "Heart rate" {
-              Image(systemName: "heart.fill").font(.headline).foregroundStyle(.red)
+              Image(systemName: "heart.fill").font(.headline).foregroundStyle(heartRed)
             }
             Text(m.value)
               .font(.system(size: size, weight: .bold, design: .rounded).monospacedDigit())
@@ -148,7 +163,7 @@ private struct LockScreenView: View {
       HStack(spacing: 8) {
         Image(systemName: icon(attributes))
           .font(.headline)
-          .foregroundStyle(state.paused ? .orange : .green)
+          .foregroundStyle(state.paused ? .white.opacity(0.6) : accent(state))
         Text(state.paused ? "\(attributes.name) · paused" : attributes.name)
           .font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.75)).lineLimit(1)
         Spacer(minLength: 8)
@@ -167,7 +182,7 @@ private struct LockScreenView: View {
         }
       }
       if let end = state.countdownEnd, end > Date() {
-        TimerBar(label: state.countdownLabel, start: state.countdownStart, end: end)
+        TimerBar(label: state.countdownLabel, start: state.countdownStart, end: end, color: accent(state))
       }
       // Numbers on the left half, the button on the right half
       HStack(alignment: .center, spacing: 12) {
@@ -175,11 +190,11 @@ private struct LockScreenView: View {
           Metrics(metrics: metrics, size: actions.isEmpty ? 26 : 22)
             .frame(maxWidth: .infinity, alignment: .leading)
         } else if let hr = state.heartRate {
-          Label("\(hr)", systemImage: "heart.fill").font(.title3.bold()).foregroundStyle(.red)
+          Label("\(hr)", systemImage: "heart.fill").font(.title3.bold()).foregroundStyle(heartRed)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         if !actions.isEmpty {
-          CardButtons(actions: actions).frame(maxWidth: .infinity)
+          CardButtons(actions: actions, color: accent(state)).frame(maxWidth: .infinity)
         }
       }
     }
@@ -192,6 +207,7 @@ private struct LockScreenView: View {
 /// Activity run an App Intent inside the app).
 private struct CardButtons: View {
   let actions: [String]
+  let color: Color
 
   var body: some View {
     if #available(iOS 17.0, *) {
@@ -203,7 +219,7 @@ private struct CardButtons: View {
               .frame(maxWidth: .infinity)
           }
           .buttonStyle(.borderedProminent)
-          .tint(a == "skipRest" ? .gray : .green)
+          .tint(a == "skipRest" ? .gray : color)
         }
       }
     }

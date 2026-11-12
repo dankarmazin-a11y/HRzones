@@ -7,6 +7,7 @@ import '../../run/run_plan.dart';
 import '../../workout/stats.dart';
 import '../number_input.dart';
 import 'run_start.dart';
+import '../theme/emblems.dart';
 
 /// Run tab: your planned runs; ▶ starts one, tap to edit.
 class RunPlansSection extends StatelessWidget {
@@ -43,9 +44,7 @@ class RunPlansSection extends StatelessWidget {
                   ListTile(
                     key: Key('plan_${p.id}'),
                     contentPadding: EdgeInsets.zero,
-                    leading: Icon(
-                      PlanSpec.fromJson(p.specJson).isIntervals ? Icons.timer_outlined : Icons.flag_outlined,
-                    ),
+                    leading: Emblem(PlanSpec.fromJson(p.specJson).isIntervals ? EmblemKind.interval : EmblemKind.flag),
                     title: Text(p.name),
                     subtitle: Text(PlanSpec.fromJson(p.specJson).description),
                     onTap: () =>

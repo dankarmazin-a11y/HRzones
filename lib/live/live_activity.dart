@@ -101,6 +101,12 @@ abstract class LiveActivity {
   /// A button on the card was tapped (set by AppServices).
   void Function(String action)? onAction;
 
+  /// The theme's bright colour as "RRGGBB" for the card's icon, bar and
+  /// buttons (set by AppServices from the palette).
+  String? accent;
+
+  Map<String, Object?> _state(LiveCard card) => {...card.toMap(), 'accent': accent};
+
   String? _kind;
   LiveCard? _last;
   DateTime? _sentAt;
@@ -113,7 +119,7 @@ abstract class LiveActivity {
     _kind = kind;
     _last = card;
     _sentAt = _now();
-    await send('start', {'kind': kind, 'name': name, 'state': card.toMap()});
+    await send('start', {'kind': kind, 'name': name, 'state': _state(card)});
   }
 
   /// [now]: send right away (pause, resume, a new set…).
@@ -123,7 +129,7 @@ abstract class LiveActivity {
     if (!now && _sentAt != null && t.difference(_sentAt!) < minGap) return;
     _last = card;
     _sentAt = t;
-    await send('update', {'state': card.toMap()});
+    await send('update', {'state': _state(card)});
   }
 
   /// Takes the card away. [kind]: only if the card belongs to that kind.

@@ -5,6 +5,7 @@ import '../../app_services.dart';
 import '../../data/database.dart';
 import '../../data/workout_repository.dart';
 import '../../workout/stats.dart';
+import '../theme/charts.dart';
 
 /// Records, a progress chart and the history of one exercise.
 class ExerciseProgressSection extends StatelessWidget {
@@ -101,7 +102,6 @@ class _ProgressChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     final ys = points.map((p) => p.$2);
     final minY = ys.reduce((a, b) => a < b ? a : b);
     final maxY = ys.reduce((a, b) => a > b ? a : b);
@@ -110,12 +110,20 @@ class _ProgressChart extends StatelessWidget {
       LineChartData(
         minY: (minY - pad).floorToDouble().clamp(0, double.infinity),
         maxY: (maxY + pad).ceilToDouble(),
-        gridData: const FlGridData(drawVerticalLine: false),
+        gridData: SoftChart.grid(context),
         borderData: FlBorderData(show: false),
         titlesData: FlTitlesData(
           topTitles: const AxisTitles(),
           rightTitles: const AxisTitles(),
-          leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 40)),
+          leftTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 40,
+              getTitlesWidget: (v, m) => v == m.min || v == m.max
+                  ? const SizedBox.shrink()
+                  : Text(m.formattedValue, style: SoftChart.axis(context)),
+            ),
+          ),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
@@ -126,22 +134,16 @@ class _ProgressChart extends StatelessWidget {
                 final d = points[i].$1;
                 return SideTitleWidget(
                   meta: meta,
-                  child: Text('${d.day}/${d.month}', style: const TextStyle(fontSize: 10)),
+                  child: Text('${d.day}/${d.month}', style: SoftChart.axis(context)),
                 );
               },
             ),
           ),
         ),
         lineBarsData: [
-          LineChartBarData(
-            spots: [for (final (i, p) in points.indexed) FlSpot(i.toDouble(), double.parse(p.$2.toStringAsFixed(1)))],
-            isCurved: true,
-            preventCurveOverShooting: true,
-            color: scheme.primary,
-            barWidth: 3,
-            dotData: const FlDotData(show: true),
-            belowBarData: BarAreaData(show: true, color: scheme.primary.withValues(alpha: 0.15)),
-          ),
+          SoftChart.line(context, [
+            for (final (i, p) in points.indexed) FlSpot(i.toDouble(), double.parse(p.$2.toStringAsFixed(1))),
+          ]),
         ],
       ),
     );

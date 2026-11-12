@@ -4,6 +4,7 @@ import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import '../../app_services.dart';
 import '../../data/shoe_repository.dart';
 import '../number_input.dart';
+import '../theme/emblems.dart';
 
 String _km(double km) => km.toStringAsFixed(km >= 100 ? 0 : 1);
 
@@ -286,7 +287,7 @@ class RunShoeRow extends StatelessWidget {
         return ListTile(
           key: const Key('runShoe'),
           contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.directions_walk),
+          leading: const Emblem(EmblemKind.shoe),
           title: Text(shoe == null ? 'Which shoes?' : shoe.shoe.name),
           subtitle: shoe == null
               ? null

@@ -8,6 +8,8 @@ import '../../app_services.dart';
 import '../../data/exercise_repository.dart';
 import '../plate_calculator.dart';
 import '../timers/timers_screen.dart';
+import '../theme/app_theme.dart';
+import '../theme/emblems.dart';
 import 'zones_screen.dart';
 
 /// One box per tool. New tools (plate calculator, pace calculator…) get a
@@ -29,8 +31,7 @@ class ToolsScreen extends StatelessWidget {
             valueListenable: Services.of(context).zonesEnabled,
             builder: (context, on, _) => _ToolBox(
               key: const Key('toolZones'),
-              icon: Icons.monitor_heart_outlined,
-              color: Colors.red,
+              emblem: EmblemKind.heart,
               title: 'Heart-rate zones',
               subtitle: on ? 'Program your zone presets, alerts, beeps and your strap' : 'Off – tap to turn them on',
               onTap: () => open(const ZonesScreen()),
@@ -39,8 +40,7 @@ class ToolsScreen extends StatelessWidget {
           const SizedBox(height: 12),
           _ToolBox(
             key: const Key('toolTimers'),
-            icon: Icons.timer_outlined,
-            color: Colors.indigo,
+            emblem: EmblemKind.stopwatch,
             title: 'Timers',
             subtitle: 'Intervals (Tabata, EMOM…), your own timers and quick countdowns',
             onTap: () => open(const TimersScreen()),
@@ -48,8 +48,7 @@ class ToolsScreen extends StatelessWidget {
           const SizedBox(height: 12),
           _ToolBox(
             key: const Key('toolAbs'),
-            icon: Icons.self_improvement,
-            color: Colors.deepOrange,
+            emblem: EmblemKind.abs,
             title: 'Ab workouts',
             subtitle: 'Ready-made 5–20 min ab workouts to follow along: picture, timer and "next up"',
             onTap: () => open(const AbWorkoutsScreen()),
@@ -57,8 +56,7 @@ class ToolsScreen extends StatelessWidget {
           const SizedBox(height: 12),
           _ToolBox(
             key: const Key('toolPlates'),
-            icon: Icons.fitness_center,
-            color: Colors.teal,
+            emblem: EmblemKind.plates,
             title: 'Plate calculator',
             subtitle: 'Which plates to load for any weight – with your bar and the plates in your gym',
             onTap: () => open(const PlateCalculatorScreen()),
@@ -72,17 +70,9 @@ class ToolsScreen extends StatelessWidget {
 }
 
 class _ToolBox extends StatelessWidget {
-  const _ToolBox({
-    super.key,
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
+  const _ToolBox({super.key, required this.emblem, required this.title, required this.subtitle, required this.onTap});
 
-  final IconData icon;
-  final Color color;
+  final EmblemKind emblem;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
@@ -98,11 +88,7 @@ class _ToolBox extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 28,
-                backgroundColor: color.withValues(alpha: 0.15),
-                child: Icon(icon, color: color, size: 30),
-              ),
+              Emblem(emblem, size: 56),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
@@ -208,6 +194,118 @@ class _ToolsGuideState extends State<ToolsGuide> {
           ]),
         ],
       ),
+    );
+  }
+}
+
+/// One tool: what Home's row and Profile's list show.
+class ToolInfo {
+  const ToolInfo(this.id, this.emblem, this.title, this.subtitle, this.screen);
+
+  final String id;
+  final EmblemKind emblem;
+  final String title;
+  final String subtitle;
+  final Widget Function() screen;
+
+  static final all = [
+    ToolInfo('zones', EmblemKind.heart, 'Zones', 'Presets, strap, alerts', () => const ZonesScreen()),
+    ToolInfo('timers', EmblemKind.stopwatch, 'Timers', 'Tabata, EMOM, your own', () => const TimersScreen()),
+    ToolInfo('abs', EmblemKind.abs, 'Abs', 'Follow along, 5–20 min', () => const AbWorkoutsScreen()),
+    ToolInfo('plates', EmblemKind.plates, 'Plates', 'Which plates to load', () => const PlateCalculatorScreen()),
+  ];
+
+  void open(BuildContext context) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen()));
+}
+
+/// Home: a row of tool boxes with "All ›" (opens [ToolsScreen]).
+class ToolsRow extends StatelessWidget {
+  const ToolsRow({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppTheme.of(context);
+    final text = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(child: Text('Tools', style: text.titleMedium)),
+            TextButton(
+              key: const Key('openTools'),
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ToolsScreen())),
+              child: const Text('All ›'),
+            ),
+          ],
+        ),
+        Row(
+          children: [
+            for (final (i, tool) in ToolInfo.all.indexed) ...[
+              if (i > 0) const SizedBox(width: 8),
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: t.card,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: t.cardShadow,
+                  ),
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: InkWell(
+                      key: Key('homeTool_${tool.id}'),
+                      borderRadius: BorderRadius.circular(10),
+                      onTap: () => tool.open(context),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Column(
+                          children: [
+                            Emblem(tool.emblem),
+                            const SizedBox(height: 6),
+                            Text(tool.title, style: text.labelLarge?.copyWith(fontSize: 12.5)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Profile: the tools as a list.
+class ToolsList extends StatelessWidget {
+  const ToolsList({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Tools', style: text.titleMedium),
+        const SizedBox(height: 4),
+        for (final tool in ToolInfo.all)
+          Card(
+            child: ListTile(
+              key: Key('profileTool_${tool.id}'),
+              leading: Emblem(tool.emblem),
+              title: Text(
+                tool.id == 'zones'
+                    ? 'Heart-rate zones'
+                    : (tool.id == 'abs' ? 'Ab workouts' : (tool.id == 'plates' ? 'Plate calculator' : tool.title)),
+              ),
+              subtitle: Text(tool.subtitle),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => tool.open(context),
+            ),
+          ),
+      ],
     );
   }
 }

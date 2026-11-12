@@ -210,9 +210,24 @@ class _HeartRate extends StatelessWidget {
             const Text('bpm', style: TextStyle(color: Colors.white70, fontSize: 16)),
           ],
         ),
-        Text(
-          'Target ${hr.range}${hr.zone == null ? '' : ' · zone ${hr.zone!.number}'}',
-          style: const TextStyle(color: Colors.white70, fontSize: 14),
+        const SizedBox(height: 4),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (hr.zone != null) ...[
+              Container(
+                key: const Key('runZone'),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                decoration: BoxDecoration(color: zoneColor(hr.zone!.number), borderRadius: BorderRadius.circular(7)),
+                child: Text(
+                  'Zone ${hr.zone!.number}',
+                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
+            Text('Target ${hr.range}', style: const TextStyle(color: Colors.white70, fontSize: 14)),
+          ],
         ),
       ],
     );
@@ -349,6 +364,7 @@ class _Controls extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const big = Size(96, 96);
+    final t = AppTheme.of(context);
     Widget round({
       required Key key,
       required IconData icon,
@@ -365,7 +381,7 @@ class _Controls extends StatelessWidget {
             style: FilledButton.styleFrom(
               shape: const CircleBorder(),
               backgroundColor: color,
-              foregroundColor: Colors.black,
+              foregroundColor: onColor(color),
               padding: EdgeInsets.zero,
             ),
             onPressed: onTap,
@@ -386,14 +402,14 @@ class _Controls extends StatelessWidget {
                   key: const Key('finishRun'),
                   icon: Icons.stop,
                   label: 'Finish',
-                  color: const Color(0xFFFF8A80),
+                  color: Colors.white,
                   onTap: () => _finish(context),
                 ),
                 round(
                   key: const Key('resumeRun'),
                   icon: Icons.play_arrow,
                   label: 'Resume',
-                  color: TimerStyle.workAccent,
+                  color: t.bright,
                   onTap: () {
                     runVibration();
                     run.resume();
@@ -406,7 +422,7 @@ class _Controls extends StatelessWidget {
                 key: const Key('pauseRun'),
                 icon: Icons.pause,
                 label: 'Pause',
-                color: TimerStyle.readyAccent,
+                color: t.bright,
                 onTap: () {
                   runVibration();
                   run.pause();

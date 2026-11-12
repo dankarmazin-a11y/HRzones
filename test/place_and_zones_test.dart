@@ -85,7 +85,7 @@ void main() {
     await tester.pumpWidget(HrZonesApp(services: s));
     await settle(tester);
 
-    await tester.tap(find.text('Tools').last);
+    await openTools(tester);
     await settle(tester);
     await tester.scrollUntilVisible(find.byKey(const Key('toolZones')), 200, scrollable: find.byType(Scrollable).first);
     await tester.tap(find.byKey(const Key('toolZones')));
@@ -98,10 +98,12 @@ void main() {
     await tester.pageBack();
     await settle(tester);
     expect(find.text('Off – tap to turn them on'), findsOneWidget);
+    await tester.pageBack(); // Tools › Home
+    await settle(tester);
 
     await tester.tap(find.text('Home').last);
     await settle(tester);
-    await tester.tap(find.byKey(const Key('startStrength')));
+    await tapStartTile(tester, 'startStrength');
     await settle(tester);
     expect(find.text('Where are you training today?'), findsOneWidget);
     await tester.tap(find.byKey(const Key('place-outdoors')));

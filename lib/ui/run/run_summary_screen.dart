@@ -289,7 +289,11 @@ class _RouteCardState extends State<_RouteCard> {
               key: const Key('routeMode'),
               segments: const [
                 ButtonSegment(value: false, label: Text('Route'), icon: Icon(Icons.route)),
-                ButtonSegment(value: true, label: Text('Heart-rate zones'), icon: Icon(Icons.favorite_outline)),
+                ButtonSegment(
+                  value: true,
+                  label: Text('Heart-rate zones'),
+                  icon: Icon(Icons.favorite_outline, color: AppColors.heart),
+                ),
               ],
               selected: {_byZone},
               onSelectionChanged: (v) => setState(() => _byZone = v.first),
