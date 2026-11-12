@@ -25,7 +25,7 @@ void main() {
     expect(find.byKey(const Key('quickStartSheet')), findsOneWidget);
     expect(find.text('Split'), findsOneWidget, reason: 'folder heading');
     expect(find.text('1 exercise'), findsOneWidget);
-    await tester.tap(find.text('Back bicep'));
+    await tester.tap(find.descendant(of: find.byKey(const Key('quickStartSheet')), matching: find.text('Back bicep')));
     await settle(tester);
     expect(s.session.active?.name, 'Back bicep');
     expect(s.session.active!.exercises.single.sets, hasLength(3));

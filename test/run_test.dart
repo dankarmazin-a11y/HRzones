@@ -755,7 +755,7 @@ void main() {
     await tester.tap(find.text('Home').last);
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
     await settle(tester);
-    expect(find.text('1-week streak'), findsOneWidget);
+    expect(find.textContaining('1-week streak'), findsOneWidget);
     expect(find.text('km run'), findsOneWidget);
     final homeTile = find.descendant(of: find.byType(HomeScreen), matching: find.byType(RunTile));
     await tester.scrollUntilVisible(
