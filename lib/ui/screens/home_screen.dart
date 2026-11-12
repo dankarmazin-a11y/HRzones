@@ -12,13 +12,12 @@ import '../run/weekly_plan.dart';
 import '../history/history_screen.dart';
 import '../stats/stats_screen.dart';
 import '../streak_card.dart';
-import '../run/run_start.dart';
 import '../../data/database.dart';
 import '../../run/geo.dart';
 import 'run_screen.dart';
-import 'workouts_screen.dart';
+import 'tools_screen.dart';
 
-/// Dashboard: streak, quick start (strength / run / zones), goals, this week.
+/// Dashboard: streak, tools, goals, this week. Starting is the Start button.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -30,7 +29,6 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final shell = AppShell.of(context);
-    final text = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(title: Text(_greeting())),
       body: ListView(
@@ -43,64 +41,13 @@ class HomeScreen extends StatelessWidget {
           const TodayRunCard(),
           const StreakCard(),
           const SizedBox(height: 8),
-          Text('Start', style: text.titleMedium),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              _StartTile(
-                key: const Key('startStrength'),
-                icon: Icons.fitness_center,
-                label: 'Strength',
-                onTap: () => quickStartStrength(context),
-              ),
-              const SizedBox(width: 8),
-              _StartTile(
-                key: const Key('startRunHome'),
-                icon: Icons.directions_run,
-                label: 'Run',
-                onTap: () => startRun(context),
-              ),
-            ],
-          ),
+          const ToolsRow(),
           const SizedBox(height: 16),
           GoalsSection(limit: 3, onSeeAll: () => shell.goTo(AppTab.profile)),
           const SizedBox(height: 16),
           const _ThisWeek(),
         ],
-      ),
-    );
-  }
-}
-
-class _StartTile extends StatelessWidget {
-  const _StartTile({super.key, required this.icon, required this.label, required this.onTap});
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Expanded(
-      child: Material(
-        color: scheme.primaryContainer,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          child: SizedBox(
-            height: 110,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, size: 32),
-                const SizedBox(height: 6),
-                Text(label, style: Theme.of(context).textTheme.titleSmall),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }

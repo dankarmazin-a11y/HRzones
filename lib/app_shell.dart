@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
-enum AppTab { home, strength, run, tools, profile }
+/// The four tab screens. The Start button sits between Strength and Run.
+enum AppTab { home, strength, run, profile }
 
 /// Lets screens switch tabs (e.g. Home → Zones).
 class AppShell extends InheritedWidget {

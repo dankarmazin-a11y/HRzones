@@ -7,7 +7,9 @@ import '../backup_section.dart';
 import '../export_action.dart';
 import '../stats/stats_screen.dart';
 import '../streak_card.dart';
+import '../theme/app_theme.dart';
 import 'settings_screen.dart';
+import 'tools_screen.dart';
 
 /// You: streak, goals, body measurements and your data. Settings: ⚙ top right.
 /// Set by CI (`--dart-define=APP_BUILD=<commit> <date>`) so you can see which
@@ -24,11 +26,18 @@ class ProfileScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Profile'),
         actions: [
-          IconButton(
-            key: const Key('openSettings'),
-            tooltip: 'Settings',
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsScreen())),
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: IconButton.filledTonal(
+              key: const Key('openSettings'),
+              tooltip: 'Settings',
+              style: IconButton.styleFrom(
+                backgroundColor: AppTheme.of(context).card,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              icon: const Icon(Icons.settings_outlined),
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsScreen())),
+            ),
           ),
         ],
       ),
@@ -42,6 +51,8 @@ class ProfileScreen extends StatelessWidget {
           const GoalsSection(),
           const SizedBox(height: 16),
           const MeasurementsSection(),
+          const SizedBox(height: 16),
+          const ToolsList(),
           const Divider(height: 32),
           Text('Your data', style: text.titleMedium),
           ListTile(

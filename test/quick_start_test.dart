@@ -20,7 +20,7 @@ void main() {
     await tester.pumpWidget(HrZonesApp(services: s));
     await settle(tester);
 
-    await tester.tap(find.byKey(const Key('startStrength')));
+    await tapStartTile(tester, 'startStrength');
     await settle(tester);
     expect(find.byKey(const Key('quickStartSheet')), findsOneWidget);
     expect(find.text('Split'), findsOneWidget, reason: 'folder heading');
