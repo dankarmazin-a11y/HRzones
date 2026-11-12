@@ -12,13 +12,13 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('Profile').last);
     await settle(tester);
-    expect(find.textContaining('streak'), findsWidgets);
+    expect(find.text('All time'), findsOneWidget);
 
     // Scroll Profile to the bottom.
-    await tester.drag(find.byType(ListView).last, const Offset(0, -3000));
+    await tester.drag(find.byKey(const Key('allTime')), const Offset(0, -3000));
     await settle(tester);
     expect(find.text('Export to spreadsheet'), findsOneWidget);
-    expect(find.textContaining('week streak'), findsNothing);
+    expect(find.text('All time'), findsNothing);
 
     // Home is not scrolled by that.
     await tester.tap(find.text('Home').last);
@@ -31,7 +31,7 @@ void main() {
     expect(find.text('Export to spreadsheet'), findsOneWidget);
     await tester.tap(find.text('Profile').last);
     await settle(tester);
-    expect(find.textContaining('week streak'), findsOneWidget);
+    expect(find.text('All time'), findsOneWidget);
     await tearDownApp(tester, s);
   });
 }

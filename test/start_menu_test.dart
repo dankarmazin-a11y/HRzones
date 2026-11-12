@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hrzones/app.dart';
+import 'package:hrzones/ui/screens/profile_screen.dart';
 
 import 'app_test.dart' show settle, tearDownApp;
 import 'test_helpers.dart';
@@ -52,7 +53,7 @@ void main() {
     await tester.scrollUntilVisible(
       find.byKey(const Key('profileTool_plates')),
       200,
-      scrollable: find.byType(Scrollable).last,
+      scrollable: find.descendant(of: find.byType(ProfileScreen), matching: find.byType(Scrollable)).first,
     );
     expect(find.byKey(const Key('profileTool_zones')), findsOneWidget);
     expect(find.byKey(const Key('openSettings')), findsOneWidget);
