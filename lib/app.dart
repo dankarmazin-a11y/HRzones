@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'ui/onboarding/onboarding_screen.dart';
+import 'ui/theme/app_theme.dart';
 
 import 'app_services.dart';
 import 'app_shell.dart';
@@ -22,22 +23,18 @@ class HrZonesApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    ThemeData theme(Brightness b) => ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFE53935), brightness: b),
-      useMaterial3: true,
-    );
     return Services(
       services: services,
       child: HrScope(
         monitor: services.hr,
-        child: ValueListenableBuilder<ThemeMode>(
-          valueListenable: services.themeMode,
-          builder: (context, mode, _) => MaterialApp(
+        child: ListenableBuilder(
+          listenable: Listenable.merge([services.themeMode, services.palette]),
+          builder: (context, _) => MaterialApp(
             title: 'HR Zones',
             debugShowCheckedModeBanner: false,
-            theme: theme(Brightness.light),
-            darkTheme: theme(Brightness.dark),
-            themeMode: mode,
+            theme: buildAppTheme(services.palette.value, Brightness.light),
+            darkTheme: buildAppTheme(services.palette.value, Brightness.dark),
+            themeMode: services.themeMode.value,
             // First launch: the setup walk-through, then the app.
             home: ValueListenableBuilder<bool>(
               valueListenable: services.needsOnboarding,

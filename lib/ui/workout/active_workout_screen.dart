@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/services.dart';
 
+import '../theme/app_theme.dart';
 import '../../app_services.dart';
 import '../../data/database.dart';
 import '../../hr/hr_monitor.dart';
@@ -572,7 +573,7 @@ class _HrChip extends StatelessWidget {
     final m = HrScope.of(context);
     final color = zoneColor(m.zone?.number);
     return ActionChip(
-      avatar: Icon(Icons.favorite, color: m.running ? color : null, size: 18),
+      avatar: Icon(Icons.favorite, color: m.running ? AppColors.heart : color.withValues(alpha: 0.6), size: 18),
       label: Text(m.running ? (m.bpm?.toString() ?? '--') : 'HR'),
       onPressed: m.running ? m.stop : m.start,
     );

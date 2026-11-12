@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'ui/theme/app_theme.dart';
+
 import 'app.dart';
 import 'app_services.dart';
 
@@ -62,7 +64,7 @@ class _StartupAppState extends State<StartupApp> {
     if (s != null) return HrZonesApp(services: s);
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFE53935)), useMaterial3: true),
+      theme: buildAppTheme(AppPalette.fallback, Brightness.light),
       home: Scaffold(
         body: SafeArea(
           child: Center(
@@ -71,7 +73,7 @@ class _StartupAppState extends State<StartupApp> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.monitor_heart_outlined, size: 56, color: Color(0xFFE53935)),
+                  const Icon(Icons.monitor_heart_outlined, size: 56, color: AppColors.heart),
                   const SizedBox(height: 16),
                   Text('HR Zones', style: Theme.of(context).textTheme.headlineSmall),
                   const SizedBox(height: 24),

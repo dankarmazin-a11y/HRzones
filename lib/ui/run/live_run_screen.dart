@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../theme/app_theme.dart';
 import '../../app_services.dart';
 import '../../hr/hr_monitor.dart';
 import '../../run/geo.dart';
@@ -193,13 +194,12 @@ class _HeartRate extends StatelessWidget {
     final hr = HrScope.of(context);
     if (!hr.running) return const SizedBox.shrink();
     final bpm = hr.bpm;
-    final color = zoneColor(hr.zone?.number);
     return Column(
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.favorite, color: color, size: 32),
+            const Icon(Icons.favorite, color: AppColors.heart, size: 32),
             const SizedBox(width: 8),
             Text(
               bpm == null ? '––' : '$bpm',
