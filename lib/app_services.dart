@@ -58,6 +58,10 @@ class AppServices {
     session.live = live;
     run.live = live;
     live.onAction = session.handleCardAction;
+    void accent() =>
+        live.accent = (palette.value.bright.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase();
+    accent();
+    palette.addListener(accent);
   }
 
   /// The workout card on the lock screen / Dynamic Island (strength or run).

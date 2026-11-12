@@ -31,6 +31,8 @@ struct WorkoutAttributes: ActivityAttributes {
     var metrics: [WorkoutMetric]?
     /// Buttons to show (iOS 17+): "completeSet", "startSet", "skipRest".
     var actions: [String]?
+    /// The app theme's bright colour, "RRGGBB" (icon, timer bar, buttons).
+    var accent: String?
   }
 
   /// "run" or "strength".

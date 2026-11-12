@@ -18,7 +18,7 @@ void main() {
     await tester.pumpWidget(HrZonesApp(services: s));
     await settle(tester);
     expect(find.byType(OnboardingScreen), findsOneWidget);
-    expect(find.text('Welcome to HR Zones'), findsOneWidget);
+    expect(find.textContaining('HR Zones coach'), findsOneWidget);
 
     Future<void> next() async {
       await tester.tap(find.byKey(const Key('onboardingNext')));
@@ -31,12 +31,10 @@ void main() {
     }
 
     await next();
+    // Tapping an answer chip answers and moves on, like a chat.
     await choose('choice__Focus.both');
-    await next();
     await choose('choice_TrainingLevel.beginner');
-    await next();
     await choose('choice_TrainingPlace.home');
-    await next();
     // Age: type 35.
     await choose('ageValue');
     await tester.enterText(find.byType(TextField).last, '35');
@@ -45,7 +43,7 @@ void main() {
     expect(find.textContaining('Max heart rate about 185'), findsOneWidget);
     await next();
     await choose('weekly_4');
-    await next();
+    expect(find.text('4× a week'), findsOneWidget, reason: 'your answer bubble');
     await choose('enterWeight');
     await tester.enterText(find.byType(TextField).last, '82');
     await tester.tap(find.text('OK'));
