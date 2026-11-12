@@ -49,6 +49,9 @@ void main() {
       200,
       scrollable: find.descendant(of: find.byType(RunScreen), matching: find.byType(Scrollable)).first,
     );
+    // Bring it fully above the pinned Run button.
+    await tester.ensureVisible(find.byKey(const Key('shoesCard')));
+    await settle(tester);
     await tester.tap(find.byKey(const Key('shoesCard')));
     await settle(tester);
     await tester.tap(find.byKey(const Key('addShoe')));

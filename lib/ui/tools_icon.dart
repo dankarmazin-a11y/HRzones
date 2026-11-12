@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'theme/app_theme.dart';
+
 /// Tools tab icon: a stopwatch with a small heart overlapping its lower
 /// right corner. The heart has a thin ring in the background colour so the
 /// two shapes stay apart.
@@ -35,7 +37,7 @@ class ToolsIcon extends StatelessWidget {
               alignment: Alignment.center,
               children: [
                 Icon(Icons.favorite, size: heart + size * 0.2, color: ring),
-                Icon(Icons.favorite, size: heart, color: selected ? Colors.red.shade600 : color),
+                Icon(Icons.favorite, size: heart, color: selected ? AppColors.heart : color),
               ],
             ),
           ),

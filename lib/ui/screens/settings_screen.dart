@@ -9,8 +9,9 @@ import '../../beep/sounds.dart';
 import '../../workout/training_level.dart';
 import '../../workout/training_place.dart';
 import '../number_input.dart';
+import '../theme/app_theme.dart';
 
-/// Settings (⚙ on Profile): training, rest timer alerts, sounds, theme.
+/// Settings (⚙ on Profile): theme, training, rest timer alerts, sounds.
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
@@ -26,6 +27,9 @@ class SettingsScreen extends StatelessWidget {
         scrollCacheExtent: const ScrollCacheExtent.pixels(4000),
         padding: const EdgeInsets.all(16),
         children: [
+          Text('Look', style: text.titleMedium),
+          const ThemeRow(),
+          const Divider(height: 32),
           Text('Training', style: text.titleMedium),
           ListenableBuilder(
             listenable: session,
@@ -81,28 +85,6 @@ class SettingsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text('${place.description} Changes the exercise list and the starter programs.', style: text.bodySmall),
-              ],
-            ),
-          ),
-          ValueListenableBuilder<ThemeMode>(
-            valueListenable: s.themeMode,
-            builder: (context, mode, _) => Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 16),
-                const Text('Theme'),
-                const SizedBox(height: 6),
-                SegmentedButton<ThemeMode>(
-                  key: const Key('themePicker'),
-                  showSelectedIcon: false,
-                  segments: const [
-                    ButtonSegment(value: ThemeMode.light, label: Text('Light'), icon: Icon(Icons.light_mode)),
-                    ButtonSegment(value: ThemeMode.dark, label: Text('Dark'), icon: Icon(Icons.dark_mode)),
-                    ButtonSegment(value: ThemeMode.system, label: Text('Auto')),
-                  ],
-                  selected: {mode},
-                  onSelectionChanged: (v) => s.setThemeMode(v.first),
-                ),
               ],
             ),
           ),
@@ -463,3 +445,127 @@ class _LockScreenCardCheckState extends State<LockScreenCardCheck> {
     );
   }
 }
+
+/// Settings › Theme: one row (palette + light/dark); tapping opens [showThemeSheet].
+class ThemeRow extends StatelessWidget {
+  const ThemeRow({super.key});
+
+  static String modeLabel(ThemeMode m) => switch (m) {
+    ThemeMode.system => 'follows the phone',
+    ThemeMode.light => 'light',
+    ThemeMode.dark => 'dark',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Services.of(context);
+    return ListenableBuilder(
+      listenable: Listenable.merge([s.palette, s.themeMode]),
+      builder: (context, _) => ListTile(
+        key: const Key('themeRow'),
+        contentPadding: EdgeInsets.zero,
+        leading: const Icon(Icons.palette_outlined),
+        title: const Text('Theme'),
+        subtitle: Text('${s.palette.value.label} · ${modeLabel(s.themeMode.value)}'),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [PaletteSwatch(s.palette.value), const Icon(Icons.chevron_right)],
+        ),
+        onTap: () => showThemeSheet(context),
+      ),
+    );
+  }
+}
+
+/// Three small colour blocks for a palette.
+class PaletteSwatch extends StatelessWidget {
+  const PaletteSwatch(this.palette, {super.key, this.height = 16, this.width = 30});
+
+  final AppPalette palette;
+  final double height;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+    borderRadius: BorderRadius.circular(5),
+    child: SizedBox(
+      width: width,
+      height: height,
+      child: Row(
+        children: [
+          for (final c in [palette.ink, palette.bright, palette.second]) Expanded(child: ColoredBox(color: c)),
+        ],
+      ),
+    ),
+  );
+}
+
+/// The theme menu: Mint / Orange / Pink and Phone / Light / Dark.
+Future<void> showThemeSheet(BuildContext context) => showModalBottomSheet<void>(
+  context: context,
+  isScrollControlled: true,
+  builder: (context) {
+    final s = Services.of(context);
+    final text = Theme.of(context).textTheme;
+    final t = AppTheme.of(context);
+    return ListenableBuilder(
+      listenable: Listenable.merge([s.palette, s.themeMode]),
+      builder: (context, _) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Theme', style: text.titleLarge),
+              const SizedBox(height: 12),
+              for (final p in AppPalette.values) ...[
+                Material(
+                  color: t.field,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(9),
+                    side: p == s.palette.value ? BorderSide(color: t.ink, width: 2) : BorderSide.none,
+                  ),
+                  child: InkWell(
+                    key: Key('palette_${p.name}'),
+                    borderRadius: BorderRadius.circular(9),
+                    onTap: () => s.setPalette(p),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          PaletteSwatch(p, width: 36, height: 18),
+                          const SizedBox(width: 12),
+                          Expanded(child: Text(p.label, style: text.titleSmall)),
+                          if (p == s.palette.value) Icon(Icons.check, color: t.ink),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+              const SizedBox(height: 4),
+              SizedBox(
+                width: double.infinity,
+                child: SegmentedButton<ThemeMode>(
+                  key: const Key('themePicker'),
+                  showSelectedIcon: false,
+                  segments: const [
+                    ButtonSegment(value: ThemeMode.system, label: Text('Phone')),
+                    ButtonSegment(value: ThemeMode.light, label: Text('Light')),
+                    ButtonSegment(value: ThemeMode.dark, label: Text('Dark')),
+                  ],
+                  selected: {s.themeMode.value},
+                  onSelectionChanged: (v) => s.setThemeMode(v.first),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text('Phone = follows the iPhone: light in the day, dark at night.', style: text.bodySmall),
+            ],
+          ),
+        ),
+      ),
+    );
+  },
+);

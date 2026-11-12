@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../theme/app_theme.dart';
 import '../../app_services.dart';
 import '../../data/database.dart';
 import '../../run/geo.dart';
@@ -132,7 +133,7 @@ class _ShareRunScreenState extends State<ShareRunScreen> {
                           Expanded(
                             child: Text(runTitle(r), style: const TextStyle(color: Colors.white70, fontSize: 13)),
                           ),
-                          const Icon(Icons.favorite, color: Color(0xFFE53935), size: 16),
+                          const Icon(Icons.favorite, color: AppColors.heart, size: 16),
                           const SizedBox(width: 4),
                           const Text(
                             'HR Zones',

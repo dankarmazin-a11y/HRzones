@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import 'ui/theme/app_theme.dart';
+
 import 'beep/sounds.dart';
 import 'data/body_repository.dart';
 import 'data/database.dart';
@@ -112,8 +114,16 @@ class AppServices {
   final HrPresetRepository presets;
   final IntervalPresetRepository intervals;
 
-  /// Light / dark / system (setting `theme`, default light).
-  final themeMode = ValueNotifier<ThemeMode>(ThemeMode.light);
+  /// Light / dark / follow the phone (setting `theme`, default: follow the phone).
+  final themeMode = ValueNotifier<ThemeMode>(ThemeMode.system);
+
+  /// Colour theme Mint / Orange / Pink (setting `palette`, default Orange).
+  final palette = ValueNotifier<AppPalette>(AppPalette.fallback);
+
+  Future<void> setPalette(AppPalette p) async {
+    palette.value = p;
+    await db.setSetting('palette', p.name);
+  }
 
   /// Training level (setting `level`, default intermediate).
   final level = ValueNotifier<TrainingLevel>(TrainingLevel.intermediate);
@@ -294,7 +304,8 @@ class AppServices {
     Future<int?> getInt(String k) async => int.tryParse(await db.getSetting(k) ?? '');
     weeklyTarget.value = await getInt('weeklyTarget') ?? 3;
     final theme = await db.getSetting('theme');
-    themeMode.value = ThemeMode.values.where((m) => m.name == theme).firstOrNull ?? ThemeMode.light;
+    themeMode.value = ThemeMode.values.where((m) => m.name == theme).firstOrNull ?? ThemeMode.system;
+    palette.value = AppPalette.byName(await db.getSetting('palette'));
     final placeName = await db.getSetting('place');
     place.value = TrainingPlace.values.where((p) => p.name == placeName).firstOrNull ?? TrainingPlace.gym;
     zonesEnabled.value = await db.getSetting('zones') != '0';

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
 import '../../app_services.dart';
 import '../../data/database.dart';
 import '../../run/geo.dart';
@@ -539,7 +540,7 @@ class _SplitsSectionState extends State<_SplitsSection> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                            if (x.avgHr != null) Icon(Icons.favorite, size: 13, color: Colors.red.shade400),
+                            if (x.avgHr != null) const Icon(Icons.favorite, size: 13, color: AppColors.heart),
                             const SizedBox(width: 3),
                             Flexible(
                               child: FittedBox(

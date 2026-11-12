@@ -205,49 +205,51 @@ class _ShoeDialogState extends State<_ShoeDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(widget.existing == null ? 'Add shoes' : 'Edit shoes'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextField(
-            key: const Key('shoeName'),
-            controller: _name,
-            autofocus: widget.existing == null,
-            textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(labelText: 'Name', hintText: 'e.g. Nike Pegasus 41'),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              const Expanded(child: Text('Km already on them')),
-              EditableNumber(
-                key: const Key('shoeStartKm'),
-                value: _start,
-                title: 'Km already on them',
-                decimal: true,
-                max: 5000,
-                suffix: 'km',
-                display: '${_km(_start)} km',
-                onChanged: (v) => setState(() => _start = v.toDouble()),
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              const Expanded(child: Text('Replace at')),
-              EditableNumber(
-                key: const Key('shoeLimitKm'),
-                value: _limit,
-                title: 'Replace at (km)',
-                min: 50,
-                max: 5000,
-                suffix: 'km',
-                display: '${_km(_limit)} km',
-                onChanged: (v) => setState(() => _limit = v.toDouble()),
-              ),
-            ],
-          ),
-        ],
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              key: const Key('shoeName'),
+              controller: _name,
+              autofocus: widget.existing == null,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(labelText: 'Name', hintText: 'e.g. Nike Pegasus 41'),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Expanded(child: Text('Km already on them')),
+                EditableNumber(
+                  key: const Key('shoeStartKm'),
+                  value: _start,
+                  title: 'Km already on them',
+                  decimal: true,
+                  max: 5000,
+                  suffix: 'km',
+                  display: '${_km(_start)} km',
+                  onChanged: (v) => setState(() => _start = v.toDouble()),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                const Expanded(child: Text('Replace at')),
+                EditableNumber(
+                  key: const Key('shoeLimitKm'),
+                  value: _limit,
+                  title: 'Replace at (km)',
+                  min: 50,
+                  max: 5000,
+                  suffix: 'km',
+                  display: '${_km(_limit)} km',
+                  onChanged: (v) => setState(() => _limit = v.toDouble()),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),

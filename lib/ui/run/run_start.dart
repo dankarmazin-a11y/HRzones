@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../theme/app_theme.dart';
 import '../../app_services.dart';
 import '../../data/database.dart';
 import '../../data/exercise_repository.dart';
@@ -12,7 +13,6 @@ import '../../run/location_source.dart';
 import '../../beep/sounds.dart';
 import '../hr_presets.dart';
 import '../timer_style.dart';
-import '../zone_colors.dart';
 import '../screens/settings_screen.dart';
 import '../screens/workouts_screen.dart';
 import 'live_run_screen.dart';
@@ -339,7 +339,7 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
         ? 'Heart rate from ${(hr.source as BleHrSource).deviceName}'
         : 'Heart rate: simulated – connect a strap in Tools › Heart-rate zones';
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
         child: ValueListenableBuilder<bool>(
           valueListenable: s.zonesEnabled,
@@ -405,7 +405,7 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
                     for (final p in _presets)
                       ChoiceChip(
                         key: Key('runZone_${p.id}'),
-                        avatar: Icon(Icons.favorite, size: 16, color: zoneColor(2)),
+                        avatar: const Icon(Icons.favorite, size: 16, color: AppColors.heart),
                         label: Text('${p.name} · ${p.minBpm}–${p.maxBpm}'),
                         selected: _selected == p.id,
                         onSelected: (_) => setState(() => _selected = p.id),
