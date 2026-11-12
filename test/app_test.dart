@@ -169,6 +169,8 @@ void main() {
     // When the last timer ends: ✓, then it closes by itself.
     s.session.startCountdown(2);
     await tester.pump();
+    await tester.tap(find.byKey(const Key('timerBar'))); // opens big
+    await settle(tester);
     await tester.tap(find.byTooltip('Full screen'));
     await settle(tester);
     expect(find.byKey(const Key('closeFullScreen')), findsOneWidget);
