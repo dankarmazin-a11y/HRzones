@@ -4,6 +4,7 @@ import '../../app_services.dart';
 import '../../run/geo.dart';
 import '../../workout/stats.dart';
 import 'run_start.dart';
+import '../../units/units.dart';
 
 /// Shown above the tabs while a run is being recorded. Tap to go back to it.
 class RunningRunBar extends StatelessWidget {
@@ -36,7 +37,7 @@ class RunningRunBar extends StatelessWidget {
                       builder: (context, _, _) => Text(
                         [
                           run.paused ? 'Run paused' : 'Run',
-                          '${formatKm(run.distanceM)} km',
+                          '${formatKm(run.distanceM)} ${Units.d}',
                           formatDuration(run.moving),
                         ].join(' · '),
                         style: text.titleSmall,

@@ -7,6 +7,7 @@ import '../../workout/training_place.dart';
 import '../number_input.dart';
 import '../theme/app_theme.dart';
 import '../theme/emblems.dart';
+import '../../units/units.dart';
 
 /// First launch: a short chat (docs/DESIGN.md "Setup: chat style") – what you
 /// train, your level, where you train, age (heart-rate zones), workouts per
@@ -39,6 +40,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   late TrainingPlace _place;
   late int _age;
   late int _weekly;
+  // Typed in the chosen weight unit (kg or lb); stored in kg.
   double? _weight;
   double? _goalWeight;
   bool _loaded = false;
@@ -77,14 +79,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> _finish() async {
     final s = Services.of(context);
-    if (_weight != null) await s.body.add('weight', _weight!);
+    if (_weight != null) await s.body.add('weight', Units.fromW(_weight!));
     if (_goalWeight != null && _weight != null && _goalWeight != _weight) {
-      await s.goals.addMeasurement('weight', _goalWeight!);
+      await s.goals.addMeasurement('weight', Units.fromW(_goalWeight!));
     }
     await s.finishOnboarding();
   }
 
-  String _kg(double v) => '${v.toStringAsFixed(v == v.roundToDouble() ? 0 : 1)} kg';
+  String _kg(double v) => '${v.toStringAsFixed(v == v.roundToDouble() ? 0 : 1)} ${Units.w}';
 
   /// The coach's message for each step.
   String _question(int step) {
@@ -267,7 +269,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Widget _weightInput(BuildContext context) {
     Future<double?> ask(String title, double? initial) async {
-      final v = await promptNumber(context, title: title, initial: initial, min: 30, max: 300, decimal: true);
+      final v = await promptNumber(
+        context,
+        title: title,
+        initial: initial,
+        min: Units.lb ? 66 : 30,
+        max: Units.lb ? 660 : 300,
+        decimal: true,
+      );
       return v?.toDouble();
     }
 
@@ -284,7 +293,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               avatar: const Icon(Icons.monitor_weight_outlined, size: 18),
               label: Text(_weight == null ? 'My weight' : _kg(_weight!)),
               onPressed: () async {
-                final v = await ask('Weight (kg)', _weight);
+                final v = await ask('Weight (${Units.w})', _weight);
                 if (v != null) setState(() => _weight = v);
               },
             ),
@@ -295,7 +304,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               onPressed: _weight == null
                   ? null
                   : () async {
-                      final v = await ask('Goal weight (kg)', _goalWeight ?? _weight);
+                      final v = await ask('Goal weight (${Units.w})', _goalWeight ?? _weight);
                       if (v != null) setState(() => _goalWeight = v);
                     },
             ),

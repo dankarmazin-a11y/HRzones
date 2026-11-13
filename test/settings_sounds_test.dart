@@ -77,8 +77,9 @@ void main() {
     await settle(tester);
     await tester.tap(find.byKey(const Key('openSettings')));
     await settle(tester);
-    expect(find.byKey(const Key('levelPicker')), findsOneWidget);
-    expect(find.byKey(const Key('placePicker')), findsOneWidget);
+    expect(find.byKey(const Key('unitsWeight')), findsOneWidget, reason: 'Settings › Units');
+    expect(find.byKey(const Key('levelPicker'), skipOffstage: false), findsOneWidget);
+    expect(find.byKey(const Key('placePicker'), skipOffstage: false), findsOneWidget);
     await tester.scrollUntilVisible(
       find.byKey(const Key('sound-intervalDone')),
       300,

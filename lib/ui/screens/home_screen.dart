@@ -17,6 +17,7 @@ import '../theme/app_theme.dart';
 import 'run_screen.dart';
 import 'tools_screen.dart';
 import 'workouts_screen.dart';
+import '../../units/units.dart';
 
 /// Dashboard: this week, your next workout, tools, goals, last workout.
 /// Starting anything else is the Start button.
@@ -139,7 +140,10 @@ class WeekHeroCard extends StatelessWidget {
                     Row(
                       children: [
                         number('${w.count}', 'workouts', first: true),
-                        number((w.metres / 1000).toStringAsFixed(w.metres >= 10000 ? 0 : 1), 'km run'),
+                        number(
+                          Units.toD(w.metres).toStringAsFixed(Units.toD(w.metres) >= 10 ? 0 : 1),
+                          '${Units.d} run',
+                        ),
                         number('$h:${m.toString().padLeft(2, '0')}', 'hours'),
                       ],
                     ),

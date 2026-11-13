@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 
+import '../units/units.dart';
+
 /// One GPS fix.
 class GeoFix {
   const GeoFix({required this.time, required this.lat, required this.lon, this.accuracy, this.altitude, this.speed});
@@ -89,12 +91,14 @@ class DistanceTracker {
 /// Pace in seconds per km for [metres] in [seconds] (null if too little).
 double? paceSecPerKm(double metres, double seconds) => metres < 1 || seconds <= 0 ? null : seconds / metres * 1000;
 
-/// "5:42" (min:sec per km), "–:––" when unknown.
+/// "5:42" (min:sec per km, or per mile with miles chosen), "–:––" when unknown.
+/// The unit label is `Units.pace`.
 String formatPace(double? secPerKm) {
-  if (secPerKm == null || !secPerKm.isFinite || secPerKm > 60 * 60) return '–:––';
-  final s = secPerKm.round();
+  final v = Units.paceOut(secPerKm);
+  if (v == null || !v.isFinite || v > 60 * 60) return '–:––';
+  final s = v.round();
   return '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
 }
 
-/// "5.24" km with two decimals.
-String formatKm(double metres) => (metres / 1000).toStringAsFixed(2);
+/// "5.24" with two decimals, in km or miles (label: `Units.d`).
+String formatKm(double metres) => Units.toD(metres).toStringAsFixed(2);

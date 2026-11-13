@@ -19,6 +19,7 @@ import 'location_source.dart';
 import 'motion_source.dart';
 import 'run_plan.dart';
 import 'run_voice.dart';
+import '../units/units.dart';
 
 /// GPS signal as shown on the run screen.
 enum GpsStatus {
@@ -213,7 +214,7 @@ class RunSession extends ChangeNotifier {
       ('Heart rate', bpm == null ? '–' : '$bpm'),
     ];
     return LiveCard(
-      title: _treadmill ? 'Treadmill run' : '${formatKm(distanceM)} km',
+      title: _treadmill ? 'Treadmill run' : '${formatKm(distanceM)} ${Units.d}',
       detail: paused ? 'Paused' : detail,
       heartRate: hr.running ? hr.bpm : null,
       clockStart: clockStart,

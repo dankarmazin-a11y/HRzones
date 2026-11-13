@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app_services.dart';
 import '../../hr/zones.dart';
 import '../../run/geo.dart';
+import '../../units/units.dart';
 
 /// "Pace alert" row: off, or the target pace range. Tap to change.
 class PaceAlertRow extends StatefulWidget {
@@ -25,7 +26,7 @@ class _PaceAlertRowState extends State<PaceAlertRow> {
       subtitle: Text(
         range == null
             ? 'Off – tap to beep when you run faster or slower than a target pace'
-            : '${formatPace(range.min.toDouble())}–${formatPace(range.max.toDouble())} /km',
+            : '${formatPace(range.min.toDouble())}–${formatPace(range.max.toDouble())} ${Units.pace}',
       ),
       trailing: range == null
           ? const Icon(Icons.chevron_right)
@@ -48,9 +49,12 @@ class _PaceAlertRowState extends State<PaceAlertRow> {
   }
 }
 
-/// Asks for a pace range: fastest and slowest pace per km (± 5 s, or type).
+/// Asks for a pace range: fastest and slowest pace per km or mile (± 5 s, or
+/// type). Stored in seconds per km either way.
 Future<HrRange?> pickPaceRange(BuildContext context, HrRange? current) async {
   var fast = current?.min ?? 330, slow = current?.max ?? 360;
+  // ± 5 s of the shown pace (per km or per mile).
+  int step(int v, int by) => Units.paceIn(Units.paceOut(v.toDouble())! + by).round();
   return showDialog<HrRange>(
     context: context,
     builder: (c) => StatefulBuilder(
@@ -58,7 +62,7 @@ Future<HrRange?> pickPaceRange(BuildContext context, HrRange? current) async {
         Widget row(String label, int value, ValueChanged<int> set, Key key) => Row(
           children: [
             Expanded(child: Text(label)),
-            IconButton(onPressed: () => set(value - 5), icon: const Icon(Icons.remove)),
+            IconButton(onPressed: () => set(step(value, -5)), icon: const Icon(Icons.remove)),
             TextButton(
               key: key,
               onPressed: () async {
@@ -67,11 +71,11 @@ Future<HrRange?> pickPaceRange(BuildContext context, HrRange? current) async {
               },
               child: Text(formatPace(value.toDouble()), style: Theme.of(c).textTheme.titleLarge),
             ),
-            IconButton(onPressed: () => set(value + 5), icon: const Icon(Icons.add)),
+            IconButton(onPressed: () => set(step(value, 5)), icon: const Icon(Icons.add)),
           ],
         );
         return AlertDialog(
-          title: const Text('Target pace (per km)'),
+          title: Text('Target pace (per ${Units.mi ? 'mile' : 'km'})'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -98,16 +102,20 @@ Future<HrRange?> pickPaceRange(BuildContext context, HrRange? current) async {
   );
 }
 
-/// Type a pace as m:ss (or just minutes). Returns seconds per km.
+/// Type a pace as m:ss (or just minutes), per km or per mile. Returns
+/// seconds per km.
 Future<int?> promptPace(BuildContext context, String title, int current) async {
   final v = await showDialog<String>(
     context: context,
-    builder: (_) => _PaceInputDialog(title: '$title (m:ss per km)', initial: formatPace(current.toDouble())),
+    builder: (_) => _PaceInputDialog(
+      title: '$title (m:ss per ${Units.mi ? 'mile' : 'km'})',
+      initial: formatPace(current.toDouble()),
+    ),
   );
   if (v == null) return null;
   final m = RegExp(r'^\s*(\d{1,2})(?:[:.,](\d{1,2}))?\s*$').firstMatch(v);
   if (m == null) return null;
-  return int.parse(m[1]!) * 60 + int.parse(m[2] ?? '0');
+  return Units.paceIn((int.parse(m[1]!) * 60 + int.parse(m[2] ?? '0')).toDouble()).round();
 }
 
 /// Owns its text controller, so it lives until the dialog's closing

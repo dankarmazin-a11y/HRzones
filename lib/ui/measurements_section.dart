@@ -103,7 +103,9 @@ class MeasurementsSection extends StatelessWidget {
               for (final k in measurementKinds)
                 ListTile(
                   title: Text(k.label),
-                  trailing: Text(grouped[k.key] == null ? '—' : '${formatKg(grouped[k.key]!.first.value)} ${k.unit}'),
+                  trailing: Text(
+                    grouped[k.key] == null ? '—' : '${_shown(k, grouped[k.key]!.first.value)} ${k.shownUnit}',
+                  ),
                   onTap: () {
                     Navigator.pop(c);
                     Navigator.of(context).push(MaterialPageRoute(builder: (_) => MeasurementHistoryScreen(kind: k)));
@@ -135,11 +137,11 @@ class _MeasureBox extends StatelessWidget {
     final badColor = dark ? Colors.orangeAccent : Colors.deepOrange.shade700;
     return _Box(
       label: label,
-      value: latest == null ? '—' : '${formatKg(latest.value)}${kind.unit == '%' ? '%' : ''}',
-      unit: kind.unit == '%' ? null : kind.unit,
+      value: latest == null ? '—' : '${_shown(kind, latest.value)}${kind.unit == '%' ? '%' : ''}',
+      unit: kind.unit == '%' ? null : kind.shownUnit,
       sub: diff == null || diff == 0
           ? (latest == null ? 'tap to add' : 'no change')
-          : '${diff > 0 ? '▲' : '▼'} ${formatKg(diff.abs())}',
+          : '${diff > 0 ? '▲' : '▼'} ${_shown(kind, diff.abs())}',
       subColor: good == null ? null : (good ? goodColor : badColor),
       onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => MeasurementHistoryScreen(kind: kind))),
     );
@@ -232,8 +234,8 @@ Future<void> logMeasurements(BuildContext context) async {
                           inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
                           decoration: InputDecoration(
                             labelText: k.label,
-                            suffixText: k.unit,
-                            hintText: latest[k.key] == null ? null : 'last: ${formatKg(latest[k.key])}',
+                            suffixText: k.shownUnit,
+                            hintText: latest[k.key] == null ? null : 'last: ${_shown(k, latest[k.key]!)}',
                             isDense: true,
                             border: const OutlineInputBorder(),
                           ),
@@ -252,7 +254,8 @@ Future<void> logMeasurements(BuildContext context) async {
     final now = DateTime.now();
     for (final MapEntry(:key, :value) in controllers.entries) {
       final v = double.tryParse(value.text.replaceAll(',', '.'));
-      if (v != null) await body.add(key, v, date: now);
+      // Typed in lb / inches when chosen; stored in kg / cm.
+      if (v != null) await body.add(key, kindOf(key).fromShown(v), date: now);
     }
   }
   for (final c in controllers.values) {
@@ -297,7 +300,7 @@ class _MeasurementHistoryScreenState extends State<MeasurementHistoryScreen> {
                 controller: c,
                 autofocus: true,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(suffixText: k.unit),
+                decoration: InputDecoration(suffixText: k.shownUnit),
               ),
               actions: [
                 TextButton(
@@ -308,7 +311,7 @@ class _MeasurementHistoryScreenState extends State<MeasurementHistoryScreen> {
             ),
           );
           if (v != null && context.mounted) {
-            await Services.of(context).body.add(k.key, v);
+            await Services.of(context).body.add(k.key, k.fromShown(v));
             _reload();
           }
         },
@@ -336,7 +339,9 @@ class _MeasurementHistoryScreenState extends State<MeasurementHistoryScreen> {
                         leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 40)),
                       ),
                       lineBarsData: [
-                        SoftChart.line(context, [for (final (i, m) in points.indexed) FlSpot(i.toDouble(), m.value)]),
+                        SoftChart.line(context, [
+                          for (final (i, m) in points.indexed) FlSpot(i.toDouble(), k.toShown(m.value)),
+                        ]),
                       ],
                     ),
                   ),
@@ -355,7 +360,10 @@ class _MeasurementHistoryScreenState extends State<MeasurementHistoryScreen> {
                     await Services.of(context).body.delete(m.id);
                     _reload();
                   },
-                  child: ListTile(title: Text('${formatKg(m.value)} ${k.unit}'), subtitle: Text(formatDate(m.date))),
+                  child: ListTile(
+                    title: Text('${_shown(k, m.value)} ${k.shownUnit}'),
+                    subtitle: Text(formatDate(m.date)),
+                  ),
                 ),
             ],
           );
@@ -364,3 +372,7 @@ class _MeasurementHistoryScreenState extends State<MeasurementHistoryScreen> {
     );
   }
 }
+
+/// A stored measurement in the chosen units, one decimal at most: "82.5",
+/// "181.9" (lb), "31.5" (in).
+String _shown(MeasurementKind k, double v) => formatKg(double.parse(k.toShown(v).toStringAsFixed(1)));

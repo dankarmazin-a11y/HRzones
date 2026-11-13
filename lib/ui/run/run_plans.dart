@@ -8,6 +8,7 @@ import '../../workout/stats.dart';
 import '../number_input.dart';
 import 'run_start.dart';
 import '../theme/emblems.dart';
+import '../../units/units.dart';
 
 /// Run tab: your planned runs; ▶ starts one, tap to edit.
 class RunPlansSection extends StatelessWidget {
@@ -413,7 +414,7 @@ class LapsCard extends StatelessWidget {
                         style: TextStyle(fontWeight: l.step.kind == StepKind.work ? FontWeight.w700 : null),
                       ),
                     ),
-                    SizedBox(width: 70, child: Text('${formatKm(l.distanceM)} km', textAlign: TextAlign.end)),
+                    SizedBox(width: 70, child: Text('${formatKm(l.distanceM)} ${Units.d}', textAlign: TextAlign.end)),
                     SizedBox(
                       width: 64,
                       child: Text(formatDuration(Duration(seconds: l.seconds.round())), textAlign: TextAlign.end),

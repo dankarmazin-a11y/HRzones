@@ -13,6 +13,7 @@ import '../../workout/training_stats.dart';
 import '../body_map.dart';
 import '../exercises/exercise_detail_screen.dart';
 import '../theme/app_theme.dart';
+import '../../units/units.dart';
 
 /// The periods the stats can show.
 enum StatsPeriod {
@@ -153,18 +154,14 @@ class _TotalsCard extends StatelessWidget {
             children: [
               tile('totalWorkouts', '${t.workouts}', 'workouts'),
               tile('totalTime', hours(t.minutes), 'training time'),
-              tile('totalKm', formatKm(t.metres), 'km run'),
+              tile('totalKm', formatKm(t.metres), '${Units.d} run'),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             children: [
               tile('totalSets', '${t.sets}', 'sets'),
-              tile(
-                'totalVolume',
-                t.volume >= 10000 ? '${(t.volume / 1000).toStringAsFixed(1)} t' : formatKg(t.volume),
-                t.volume >= 10000 ? 'lifted' : 'kg lifted',
-              ),
+              tile('totalVolume', formatBigWeight(t.volume), '${bigWeightUnit(t.volume)} lifted'.trim()),
               const Expanded(child: SizedBox()),
             ],
           ),

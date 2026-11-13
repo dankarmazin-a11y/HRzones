@@ -7,6 +7,7 @@ import 'run_repository.dart';
 import '../run/best_efforts.dart';
 import '../workout/streak.dart';
 import 'workout_repository.dart';
+import '../units/units.dart';
 
 /// A goal with its current value and progress (0–1).
 class GoalProgress {
@@ -16,13 +17,22 @@ class GoalProgress {
     required this.current,
     required this.progress,
     required this.unit,
+    this.toShown = _same,
+    this.fromShown = _same,
   });
 
   final Goal goal;
   final String title;
+
+  /// [current] and the goal's target are stored in kg / cm / km / minutes;
+  /// [toShown] turns them into the chosen units ([unit]), [fromShown] back.
   final double? current;
   final double progress;
   final String unit;
+  final double Function(double) toShown;
+  final double Function(double) fromShown;
+
+  static double _same(double v) => v;
 
   bool get achieved => progress >= 1;
 }
@@ -138,10 +148,12 @@ class GoalRepository {
         final current = await bestWeight(g.exerciseId ?? '');
         return GoalProgress(
           goal: g,
-          title: '${ex?.name ?? 'Exercise'} ${_n(g.target)} kg',
+          title: '${ex?.name ?? 'Exercise'} ${_n(Units.toW(g.target))} ${Units.w}',
           current: current,
           progress: progressBetween(g.startValue ?? 0, g.target, current ?? 0),
-          unit: 'kg',
+          unit: Units.w,
+          toShown: Units.toW,
+          fromShown: Units.fromW,
         );
       case GoalType.measurement:
         final kind = kindOf(g.measurementKind ?? '');
@@ -149,28 +161,34 @@ class GoalRepository {
         final start = g.startValue ?? current ?? g.target;
         return GoalProgress(
           goal: g,
-          title: '${kind.label} ${_n(g.target)} ${kind.unit}',
+          title: '${kind.label} ${_n(kind.toShown(g.target))} ${kind.shownUnit}',
           current: current,
           progress: current == null ? 0 : progressBetween(start, g.target, current),
-          unit: kind.unit,
+          unit: kind.shownUnit,
+          toShown: kind.toShown,
+          fromShown: kind.fromShown,
         );
       case GoalType.runKmPerWeek:
         final km = await kmThisWeek();
         return GoalProgress(
           goal: g,
-          title: 'Run ${_n(g.target)} km a week',
+          title: 'Run ${_n(_kmShown(g.target))} ${Units.d} a week',
           current: km,
           progress: g.target <= 0 ? 0 : (km / g.target).clamp(0.0, 1.0),
-          unit: 'km',
+          unit: Units.d,
+          toShown: _kmShown,
+          fromShown: _kmStored,
         );
       case GoalType.runDistance:
         final longest = ((await runs.records()).longest?.value ?? 0) / 1000;
         return GoalProgress(
           goal: g,
-          title: 'Run ${_n(g.target)} km in one go',
+          title: 'Run ${_n(_kmShown(g.target))} ${Units.d} in one go',
           current: longest,
           progress: progressBetween(g.startValue ?? 0, g.target, longest),
-          unit: 'km',
+          unit: Units.d,
+          toShown: _kmShown,
+          fromShown: _kmStored,
         );
       case GoalType.runTime:
         final d = (g.distanceM ?? 5000).round();
@@ -189,6 +207,10 @@ class GoalRepository {
         return GoalProgress(goal: g, title: '${_n(g.target)} workouts a week', current: null, progress: 0, unit: '');
     }
   }
+
+  /// Run goals are stored in km.
+  static double _kmShown(double km) => Units.toD(km * 1000);
+  static double _kmStored(double v) => Units.fromD(v) / 1000;
 
   static String _n(double v) => v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toStringAsFixed(1);
 }

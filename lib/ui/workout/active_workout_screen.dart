@@ -27,6 +27,7 @@ import 'calculators_sheet.dart';
 import 'reorder_sheet.dart';
 import 'timer_widgets.dart';
 import 'workout_summary_screen.dart';
+import '../../units/units.dart';
 
 const _supersetColors = [Colors.purple, Colors.teal, Colors.amber, Colors.pink];
 
@@ -915,13 +916,13 @@ class _HeaderRow extends StatelessWidget {
           SizedBox(width: _setW, child: cell('SET')),
           SizedBox(width: _prevW, child: cell('PREVIOUS')),
           if (tracking == TrackingType.duration) ...[
-            Expanded(child: cell('+KG')),
+            Expanded(child: cell('+${Units.w.toUpperCase()}')),
             Expanded(child: cell('SECONDS')),
           ] else if (tracking == TrackingType.distance) ...[
             Expanded(child: cell('METRES')),
             Expanded(child: cell('SECONDS')),
           ] else ...[
-            Expanded(child: cell(tracking == TrackingType.bodyweightReps ? '+KG' : 'KG')),
+            Expanded(child: cell('${tracking == TrackingType.bodyweightReps ? '+' : ''}${Units.w.toUpperCase()}')),
             Expanded(child: cell('REPS')),
           ],
           if (showRpe) SizedBox(width: _rpeW, child: cell('RPE')),
@@ -948,7 +949,7 @@ class _StretchHeaderRow extends StatelessWidget {
         children: [
           SizedBox(width: _setW, child: cell('#')),
           Expanded(child: Text('STRETCH', style: s)),
-          SizedBox(width: _kgW, child: cell('+KG')),
+          SizedBox(width: _kgW, child: cell('+${Units.w.toUpperCase()}')),
           SizedBox(width: _secW, child: cell('SEC')),
           const SizedBox(width: _doneW, child: Icon(Icons.play_arrow, size: 16)),
         ],
@@ -975,7 +976,7 @@ class SetRow extends StatefulWidget {
 }
 
 class _SetRowState extends State<SetRow> {
-  late final _weight = TextEditingController(text: formatKg(widget.set.weightKg));
+  late final _weight = TextEditingController(text: formatW(widget.set.weightKg));
   late final _reps = TextEditingController(text: widget.set.reps?.toString() ?? '');
   late final _secs = TextEditingController(text: widget.set.durationS?.toString() ?? '');
   late final _metres = TextEditingController(text: widget.set.distanceM == null ? '' : formatKg(widget.set.distanceM));
@@ -989,7 +990,7 @@ class _SetRowState extends State<SetRow> {
   @override
   void didUpdateWidget(SetRow old) {
     super.didUpdateWidget(old);
-    _sync(_weight, formatKg(widget.set.weightKg));
+    _sync(_weight, formatW(widget.set.weightKg));
     _sync(_reps, widget.set.reps?.toString() ?? '');
     _sync(_secs, widget.set.durationS?.toString() ?? '');
   }
@@ -1055,13 +1056,13 @@ class _SetRowState extends State<SetRow> {
     if (p == null) return '—';
     final w = p.weightKg;
     if (widget.entry.exercise.trackingType == TrackingType.duration) {
-      return (w == null || w == 0) ? '${p.durationS ?? 0} s' : '+${formatKg(w)} · ${p.durationS ?? 0}s';
+      return (w == null || w == 0) ? '${p.durationS ?? 0} s' : '+${formatW(w)} · ${p.durationS ?? 0}s';
     }
     if (widget.entry.exercise.trackingType == TrackingType.distance) {
       return '${formatKg(p.distanceM ?? 0)} m · ${formatDuration(Duration(seconds: p.durationS ?? 0))}';
     }
     final reps = p.reps ?? 0;
-    return (w == null || w == 0) ? '$reps reps' : '${formatKg(w)} × $reps';
+    return (w == null || w == 0) ? '$reps reps' : '${formatW(w)} × $reps';
   }
 
   void _fillFromPrevious(WorkoutSet? p) {
@@ -1075,7 +1076,7 @@ class _SetRowState extends State<SetRow> {
     }
     setState(() {
       _metres.text = widget.set.distanceM == null ? '' : formatKg(widget.set.distanceM);
-      _weight.text = formatKg(widget.set.weightKg);
+      _weight.text = formatW(widget.set.weightKg);
       _reps.text = widget.set.reps?.toString() ?? '';
       _secs.text = widget.set.durationS?.toString() ?? '';
     });
@@ -1143,8 +1144,10 @@ class _SetRowState extends State<SetRow> {
     num? first(LoggedSet x) => tracking == TrackingType.distance ? x.distanceM : x.weightKg;
     num? second(LoggedSet x) =>
         tracking == TrackingType.duration || tracking == TrackingType.distance ? x.durationS : x.reps;
-    String show(num? v) => v == null ? '–' : (v is double ? formatKg(v) : '$v');
-    String text(num? v) => v == null ? '' : (v is double ? formatKg(v) : '$v');
+    // Weights show in kg or lb; metres stay plain numbers.
+    String dbl(double v) => tracking == TrackingType.distance ? formatKg(v) : formatW(v);
+    String show(num? v) => v == null ? '–' : (v is double ? dbl(v) : '$v');
+    String text(num? v) => v == null ? '' : (v is double ? dbl(v) : '$v');
     final editing = _editRight != null;
     Widget cell(String key, num? mine, num? left, ValueChanged<String> onChanged, {bool decimal = false}) {
       if (editing) {
@@ -1190,7 +1193,9 @@ class _SetRowState extends State<SetRow> {
 
     void setFirst(String v) {
       final n = double.tryParse(v.replaceAll(',', '.'));
-      tracking == TrackingType.distance ? session.setDistance(r, n) : session.setWeightOnly(r, n);
+      tracking == TrackingType.distance
+          ? session.setDistance(r, n)
+          : session.setWeightOnly(r, n == null ? null : Units.fromW(n));
     }
 
     void setSecond(String v) {
@@ -1421,10 +1426,14 @@ class _SetRowState extends State<SetRow> {
         );
 
     String hintOf(num? v) => v == null ? '' : (v is double ? formatKg(v) : '$v');
+    String weightHint(double? kg) => kg == null ? '' : formatW(kg);
     Widget weightField(String hint) => field(
       _weight,
       hint,
-      (v) => both((x) => x.weightKg, (x) => session.setWeight(x, double.tryParse(v.replaceAll(',', '.')))),
+      (v) => both((x) => x.weightKg, (x) {
+        final n = double.tryParse(v.replaceAll(',', '.'));
+        session.setWeight(x, n == null ? null : Units.fromW(n)); // typed in kg or lb, stored in kg
+      }),
       decimal: true,
     );
     Widget secondsCell() => running
@@ -1513,7 +1522,7 @@ class _SetRowState extends State<SetRow> {
               ),
             ),
             if (tracking == TrackingType.duration) ...[
-              Expanded(child: weightField(hintOf(prev?.weightKg))),
+              Expanded(child: weightField(weightHint(prev?.weightKg))),
               Expanded(child: secondsCell()),
             ] else if (tracking == TrackingType.distance && session.setRun?.set == s) ...[
               // Running it now: live metres and time.
@@ -1554,7 +1563,7 @@ class _SetRowState extends State<SetRow> {
                 ),
               ),
             ] else ...[
-              Expanded(child: weightField(hintOf(prev?.weightKg))),
+              Expanded(child: weightField(weightHint(prev?.weightKg))),
               Expanded(
                 child: field(
                   _reps,

@@ -5,12 +5,15 @@ import '../data/exercise_repository.dart';
 import '../workout/calculators.dart';
 import '../workout/stats.dart';
 import 'number_input.dart';
+import '../units/units.dart';
 
-/// A bar the user can load.
+/// A bar the user can load (weight in the unit of its list: kg or lb).
 class BarOption {
   const BarOption(this.label, this.kg);
 
   final String label;
+
+  /// kg in [barOptions], lb in [barOptionsLb].
   final double kg;
 }
 
@@ -24,13 +27,29 @@ const barOptions = [
   BarOption('No bar', 0),
 ];
 
+/// The same bars as US gyms sell them, in pounds.
+const barOptionsLb = [
+  BarOption('Olympic', 45),
+  BarOption("Women's", 35),
+  BarOption('Technique', 15),
+  BarOption('EZ bar', 25),
+  BarOption('Trap bar', 55),
+  BarOption('Smith', 25),
+  BarOption('No bar', 0),
+];
+
 /// Plates that exist in gyms (kg); the user switches off the ones their gym
 /// doesn't have (setting `plates`).
 const allPlates = [25.0, 20.0, 15.0, 10.0, 5.0, 2.5, 2.0, 1.25, 1.0, 0.5];
 
-/// Plates per side for a target weight. Remembers the plates your gym has
-/// and the bar (per exercise when [exerciseId] is given, settings
-/// `bar.<exercise id>`, else setting `bar`).
+/// Pound plates (setting `platesLb`).
+const allPlatesLb = [45.0, 35.0, 25.0, 10.0, 5.0, 2.5, 1.25];
+
+/// Plates per side for a target weight, in kg or – with pounds chosen in
+/// Settings › Units – in pounds with pound plates and bars. Remembers the
+/// plates your gym has and the bar (per exercise when [exerciseId] is given,
+/// settings `bar.<exercise id>`, else setting `bar`; pounds use `platesLb`,
+/// `barLb…`).
 class PlateCalculator extends StatefulWidget {
   const PlateCalculator({super.key, this.initialKg = 60, this.exerciseId});
 
@@ -42,13 +61,22 @@ class PlateCalculator extends StatefulWidget {
 }
 
 class _PlateCalculatorState extends State<PlateCalculator> {
-  late double _target = widget.initialKg;
-  double _bar = 20;
+  /// Everything in this state is in the shown unit (kg or lb).
+  final bool _lb = Units.lb;
+  late double _target = _round(Units.toW(widget.initialKg));
+  late double _bar = _lb ? 45 : 20;
   String _barLabel = 'Olympic';
-  List<double> _plates = standardPlates;
+  late List<double> _plates = _lb ? allPlatesLb : standardPlates;
   bool _loaded = false;
 
-  String get _barKey => widget.exerciseId == null ? 'bar' : 'bar.${widget.exerciseId}';
+  List<BarOption> get _bars => _lb ? barOptionsLb : barOptions;
+  List<double> get _all => _lb ? allPlatesLb : allPlates;
+  double get _step => _lb ? 5 : 2.5;
+  String get _u => _lb ? 'lb' : 'kg';
+  String get _barKey => '${_lb ? 'barLb' : 'bar'}${widget.exerciseId == null ? '' : '.${widget.exerciseId}'}';
+
+  /// Pounds round to the nearest 0.5 lb (60 kg → 132.5 lb), kg stay as given.
+  double _round(double v) => _lb ? (v * 2).roundToDouble() / 2 : v;
 
   @override
   void didChangeDependencies() {
@@ -60,9 +88,9 @@ class _PlateCalculatorState extends State<PlateCalculator> {
 
   Future<void> _load() async {
     final db = Services.of(context).db;
-    final plates = await db.getSetting('plates');
+    final plates = await db.getSetting(_lb ? 'platesLb' : 'plates');
     // Per-exercise bar, else the last one used anywhere.
-    final bar = await db.getSetting(_barKey) ?? await db.getSetting('bar');
+    final bar = await db.getSetting(_barKey) ?? await db.getSetting(_lb ? 'barLb' : 'bar');
     if (!mounted) return;
     setState(() {
       if (plates != null && plates.isNotEmpty) {
@@ -71,33 +99,33 @@ class _PlateCalculatorState extends State<PlateCalculator> {
       final parts = bar?.split('|');
       if (parts != null && parts.length == 2) {
         _barLabel = parts[0];
-        _bar = double.tryParse(parts[1]) ?? 20;
+        _bar = double.tryParse(parts[1]) ?? _bar;
       }
     });
   }
 
-  Future<void> _setBar(String label, double kg) async {
+  Future<void> _setBar(String label, double w) async {
     setState(() {
       _barLabel = label;
-      _bar = kg;
+      _bar = w;
     });
     final db = Services.of(context).db;
-    await db.setSetting(_barKey, '$label|$kg');
-    await db.setSetting('bar', '$label|$kg');
+    await db.setSetting(_barKey, '$label|$w');
+    await db.setSetting(_lb ? 'barLb' : 'bar', '$label|$w');
   }
 
   Future<void> _togglePlate(double p) async {
     final next = _plates.contains(p) ? (_plates.toList()..remove(p)) : [..._plates, p];
     next.sort((a, b) => b.compareTo(a));
     setState(() => _plates = next);
-    await Services.of(context).db.setSetting('plates', next.join(','));
+    await Services.of(context).db.setSetting(_lb ? 'platesLb' : 'plates', next.join(','));
   }
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final result = platesPerSide(_target, bar: _bar, plates: _plates);
-    final custom = !barOptions.any((b) => b.label == _barLabel);
+    final custom = !_bars.any((b) => b.label == _barLabel);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -107,20 +135,20 @@ class _PlateCalculatorState extends State<PlateCalculator> {
             EditableNumber(
               key: const Key('plateTarget'),
               value: _target,
-              title: 'Target weight (kg)',
+              title: 'Target weight ($_u)',
               decimal: true,
-              max: 1000,
-              suffix: 'kg',
-              display: '${formatKg(_target)} kg',
+              max: 2000,
+              suffix: _u,
+              display: '${formatKg(_target)} $_u',
               style: text.titleMedium,
               onChanged: (v) => setState(() => _target = v.toDouble()),
             ),
             const Spacer(),
             IconButton(
-              onPressed: () => setState(() => _target = (_target - 2.5).clamp(0, 1000)),
+              onPressed: () => setState(() => _target = (_target - _step).clamp(0, 2000)),
               icon: const Icon(Icons.remove),
             ),
-            IconButton(onPressed: () => setState(() => _target += 2.5), icon: const Icon(Icons.add)),
+            IconButton(onPressed: () => setState(() => _target += _step), icon: const Icon(Icons.add)),
           ],
         ),
         const SizedBox(height: 8),
@@ -130,7 +158,7 @@ class _PlateCalculatorState extends State<PlateCalculator> {
           spacing: 6,
           runSpacing: 6,
           children: [
-            for (final b in barOptions)
+            for (final b in _bars)
               ChoiceChip(
                 label: Text(b.kg == 0 ? b.label : '${b.label} ${formatKg(b.kg)}'),
                 selected: _barLabel == b.label,
@@ -141,7 +169,13 @@ class _PlateCalculatorState extends State<PlateCalculator> {
               label: Text(custom ? 'Custom ${formatKg(_bar)}' : 'Custom'),
               selected: custom,
               onSelected: (_) async {
-                final v = await promptNumber(context, title: 'Bar weight (kg)', initial: _bar, decimal: true, max: 100);
+                final v = await promptNumber(
+                  context,
+                  title: 'Bar weight ($_u)',
+                  initial: _bar,
+                  decimal: true,
+                  max: 200,
+                );
                 if (v != null) await _setBar('Custom', v.toDouble());
               },
             ),
@@ -153,13 +187,17 @@ class _PlateCalculatorState extends State<PlateCalculator> {
         if (result.perSide.isEmpty)
           Text(_target <= _bar ? 'Just the bar' : 'No plates fit', style: text.bodyLarge)
         else
-          Wrap(spacing: 6, runSpacing: 6, children: [for (final p in result.perSide) PlateView(kg: p)]),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [for (final p in result.perSide) PlateView(kg: p, lb: _lb)],
+          ),
         if (result.remainder > 0)
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(
-              '${formatKg(result.remainder)} kg can\'t be made with your plates – '
-              'closest: ${formatKg(_target - result.remainder)} kg',
+              '${formatKg(result.remainder)} $_u can\'t be made with your plates – '
+              'closest: ${formatKg(_target - result.remainder)} $_u',
             ),
           ),
         const SizedBox(height: 16),
@@ -169,7 +207,7 @@ class _PlateCalculatorState extends State<PlateCalculator> {
           spacing: 6,
           runSpacing: 6,
           children: [
-            for (final p in allPlates)
+            for (final p in _all)
               FilterChip(label: Text(formatKg(p)), selected: _plates.contains(p), onSelected: (_) => _togglePlate(p)),
           ],
         ),
@@ -180,9 +218,11 @@ class _PlateCalculatorState extends State<PlateCalculator> {
 
 /// A plate drawn to scale-ish, coloured like competition plates.
 class PlateView extends StatelessWidget {
-  const PlateView({super.key, required this.kg});
+  const PlateView({super.key, required this.kg, this.lb = false});
 
+  /// The plate's number (kg, or pounds when [lb]).
   final double kg;
+  final bool lb;
 
   static final _colors = <double, Color>{
     25.0: Colors.red,
@@ -197,10 +237,21 @@ class PlateView extends StatelessWidget {
     0.5: Colors.grey,
   };
 
+  /// Pound plates take the colour of the kilo plate they are closest to.
+  static final _colorsLb = <double, Color>{
+    45.0: Colors.blue,
+    35.0: Colors.amber,
+    25.0: Colors.green,
+    10.0: Colors.white,
+    5.0: Colors.black,
+    2.5: Colors.blueGrey,
+    1.25: Colors.grey,
+  };
+
   @override
   Widget build(BuildContext context) {
-    final c = _colors[kg] ?? Colors.grey;
-    final h = 36.0 + kg * 1.6;
+    final c = (lb ? _colorsLb[kg] : _colors[kg]) ?? Colors.grey;
+    final h = 36.0 + (lb ? kg * Units.kgPerLb : kg) * 1.6;
     return Container(
       width: 34,
       height: h,

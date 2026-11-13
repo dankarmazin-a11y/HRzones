@@ -17,6 +17,7 @@ import '../run/run_summary_screen.dart';
 import 'zones_screen.dart';
 import '../theme/emblems.dart';
 import '../guide/get_started.dart';
+import '../../units/units.dart';
 
 /// Run tab: start a run, the run in progress, past runs.
 class RunScreen extends StatelessWidget {
@@ -131,7 +132,7 @@ class _Totals extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('This week', style: text.labelLarge),
-                  Text('${formatKm(km)} km', key: const Key('weekKm'), style: text.headlineSmall),
+                  Text('${formatKm(km)} ${Units.d}', key: const Key('weekKm'), style: text.headlineSmall),
                 ],
               ),
             ),
@@ -160,10 +161,10 @@ class RunTile extends StatelessWidget {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: Emblem(run.kind == RunKind.treadmill ? EmblemKind.stopwatch : EmblemKind.run),
-      title: Text('${formatKm(run.distanceM)} km'),
+      title: Text('${formatKm(run.distanceM)} ${Units.d}'),
       subtitle: HeartText(
         '${runTitle(run)}${run.kind == RunKind.treadmill ? ' · treadmill' : ''}\n'
-        '${formatDuration(Duration(seconds: run.durationS))} · ${formatPace(pace)} /km'
+        '${formatDuration(Duration(seconds: run.durationS))} · ${formatPace(pace)} ${Units.pace}'
         '${run.effort == null ? '' : ' · effort ${run.effort}/10'}'
         '${run.avgHr == null ? '' : ' · ♥ ${run.avgHr}'}',
       ),

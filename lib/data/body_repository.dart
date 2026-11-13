@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import 'database.dart';
+import '../units/units.dart';
 
 /// A kind of body measurement.
 class MeasurementKind {
@@ -33,6 +34,16 @@ const measurementKinds = [
   MeasurementKind('calfR', 'Right calf', 'cm'),
   MeasurementKind('restingHr', 'Resting heart rate', 'bpm', lowerIsBetter: true),
 ];
+
+/// Body weight / lengths shown in the chosen units (stored kg / cm).
+extension MeasurementUnits on MeasurementKind {
+  /// "kg"/"lb", "cm"/"in", or the kind's own unit ("%", "bpm").
+  String get shownUnit => unit == 'kg' ? Units.w : (unit == 'cm' ? Units.len : unit);
+
+  double toShown(double v) => unit == 'kg' ? Units.toW(v) : (unit == 'cm' ? Units.toLen(v) : v);
+
+  double fromShown(double v) => unit == 'kg' ? Units.fromW(v) : (unit == 'cm' ? Units.fromLen(v) : v);
+}
 
 MeasurementKind kindOf(String key) =>
     measurementKinds.firstWhere((k) => k.key == key, orElse: () => MeasurementKind(key, key, ''));

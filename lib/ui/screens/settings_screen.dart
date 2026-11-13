@@ -10,6 +10,7 @@ import '../../workout/training_level.dart';
 import '../../workout/training_place.dart';
 import '../number_input.dart';
 import '../theme/app_theme.dart';
+import '../../units/units.dart';
 
 /// Settings (⚙ on Profile): theme, training, rest timer alerts, sounds.
 class SettingsScreen extends StatelessWidget {
@@ -29,6 +30,9 @@ class SettingsScreen extends StatelessWidget {
         children: [
           Text('Look', style: text.titleMedium),
           const ThemeRow(),
+          const Divider(height: 32),
+          Text('Units', style: text.titleMedium),
+          const UnitsSettings(),
           const Divider(height: 32),
           Text('Training', style: text.titleMedium),
           ListenableBuilder(
@@ -266,7 +270,7 @@ class _RunVoiceSettingsState extends State<RunVoiceSettings> {
   Widget build(BuildContext context) {
     final s = Services.of(context);
     final v = s.run.voice!;
-    String every(int m) => m == 500 ? '½ km' : '${m ~/ 1000} km';
+    String every(int m) => m == 500 ? '½ ${Units.d}' : '${m ~/ 1000} ${Units.d}';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -571,3 +575,67 @@ Future<void> showThemeSheet(BuildContext context) => showModalBottomSheet<void>(
     );
   },
 );
+
+/// Settings › Units: weight kg/lb, body cm/in, distance km/mi. Everything is
+/// stored in kg / cm / metres, so switching never changes your data.
+class UnitsSettings extends StatelessWidget {
+  const UnitsSettings({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Services.of(context);
+    return ValueListenableBuilder<UnitPrefs>(
+      valueListenable: Units.notifier,
+      builder: (context, u, _) {
+        Widget row<T extends Enum>(
+          String key,
+          IconData icon,
+          String title,
+          List<(T, String)> options,
+          T value,
+          UnitPrefs Function(T) change,
+        ) => ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(icon),
+          title: Text(title),
+          trailing: SegmentedButton<T>(
+            key: Key(key),
+            showSelectedIcon: false,
+            style: const ButtonStyle(visualDensity: VisualDensity.compact),
+            segments: [for (final (v, label) in options) ButtonSegment(value: v, label: Text(label))],
+            selected: {value},
+            onSelectionChanged: (v) => s.setUnits(change(v.first)),
+          ),
+        );
+        return Column(
+          children: [
+            row(
+              'unitsWeight',
+              Icons.fitness_center,
+              'Weight',
+              const [(WeightUnit.kg, 'kg'), (WeightUnit.lb, 'lb')],
+              u.weight,
+              (v) => u.copyWith(weight: v),
+            ),
+            row(
+              'unitsLength',
+              Icons.straighten,
+              'Body',
+              const [(LengthUnit.cm, 'cm'), (LengthUnit.inch, 'inch')],
+              u.length,
+              (v) => u.copyWith(length: v),
+            ),
+            row(
+              'unitsDistance',
+              Icons.route_outlined,
+              'Distance',
+              const [(DistanceUnit.km, 'km'), (DistanceUnit.mi, 'mile')],
+              u.distance,
+              (v) => u.copyWith(distance: v),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}

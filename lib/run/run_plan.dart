@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../units/units.dart';
+
 /// One part of a planned run, ended by distance (metres) or moving time
 /// (seconds).
 enum StepKind { warmup, work, recover, cooldown, goal }
@@ -35,8 +37,16 @@ class PlanStep {
   }
 }
 
-String metresText(int m) =>
-    m >= 1000 ? '${(m / 1000).toStringAsFixed(m % 1000 == 0 ? 0 : (m % 100 == 0 ? 1 : 2))} km' : '$m m';
+/// "400 m", "5 km" – with miles chosen, a mile or more shows in miles
+/// ("3.1 mi"); track distances stay in metres.
+String metresText(int m) {
+  if (Units.mi) {
+    if (m < 1600) return '$m m';
+    final v = Units.toD(m.toDouble());
+    return '${(v - v.roundToDouble()).abs() < 0.05 ? v.round() : v.toStringAsFixed(1)} mi';
+  }
+  return m >= 1000 ? '${(m / 1000).toStringAsFixed(m % 1000 == 0 ? 0 : (m % 100 == 0 ? 1 : 2))} km' : '$m m';
+}
 
 String secondsText(int s) =>
     s >= 60 && s % 60 == 0 ? '${s ~/ 60} min' : (s >= 60 ? '${s ~/ 60} min ${s % 60} s' : '$s s');

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../workout/streak.dart';
 import 'run_plan.dart';
+import '../units/units.dart';
 
 /// What kind of run a plan day is.
 enum PlanDayKind {
@@ -44,7 +45,7 @@ class PlanDay {
     final amount =
         runPlanName ??
         (distanceM != null
-            ? '${formatKmShort(distanceM!)} km'
+            ? '${formatKmShort(distanceM!)} ${Units.d}'
             : (durationS != null ? '${(durationS! / 60).round()} min' : null));
     return amount == null ? kind.label : '${kind.label} · $amount';
   }
@@ -86,9 +87,10 @@ class PlanDay {
   }
 }
 
+/// "5", "8.5" – km or miles (label `Units.d`).
 String formatKmShort(int metres) {
-  final km = metres / 1000;
-  return km == km.roundToDouble() ? '${km.round()}' : km.toStringAsFixed(1);
+  final km = Units.toD(metres.toDouble());
+  return (km - km.roundToDouble()).abs() < 0.05 ? '${km.round()}' : km.toStringAsFixed(1);
 }
 
 String encodePlanDays(List<PlanDay> days) => jsonEncode([for (final d in days) d.toJson()]);

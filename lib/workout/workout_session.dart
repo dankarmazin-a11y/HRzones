@@ -1417,7 +1417,7 @@ class WorkoutSession extends ChangeNotifier {
   /// " · 60 kg × 8" – the planned/typed values of a set, if any.
   static String _setTarget(LoggedSet s) {
     final parts = [
-      if (s.weightKg != null && s.weightKg! > 0) '${formatKg(s.weightKg!)} kg',
+      if (s.weightKg != null && s.weightKg! > 0) formatWeight(s.weightKg!),
       if (s.reps != null) '${s.reps}',
       if (s.durationS != null && s.reps == null) '${s.durationS} s',
       if (s.distanceM != null) '${s.distanceM!.round()} m',

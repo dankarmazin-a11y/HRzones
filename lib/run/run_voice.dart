@@ -1,5 +1,6 @@
 import 'geo.dart';
 import 'run_plan.dart';
+import '../units/units.dart';
 
 /// Spoken updates during a run: every km (or ½ / 2 km) the distance, time,
 /// average pace, the last km's pace and the heart rate; plus start, pause,
@@ -13,8 +14,11 @@ enum VoiceItem {
   heartRate('Heart rate'),
   cadence('Cadence');
 
-  const VoiceItem(this.label);
-  final String label;
+  const VoiceItem(this._label);
+  final String _label;
+
+  /// "Last km pace" / "Last mile pace".
+  String get label => this == lastSplit && Units.mi ? 'Last mile pace' : _label;
 }
 
 class RunVoice {
@@ -51,8 +55,12 @@ class RunVoice {
   }
 
   /// "Test voice" in Settings (also when updates are off).
-  void test() =>
-      _say('2 kilometres. Time 11 minutes 40 seconds. Average pace 5 minutes 50 per kilometre.', force: true);
+  void test() => _say(
+    Units.mi
+        ? '2 miles. Time 18 minutes 50 seconds. Average pace 9 minutes 25 per mile.'
+        : '2 kilometres. Time 11 minutes 40 seconds. Average pace 5 minutes 50 per kilometre.',
+    force: true,
+  );
 
   /// A planned run moves to [step] ("Run 400 metres. Repeat 2 of 6.").
   void planStep(PlanStep step, {int? repeat, int repeats = 1}) {
@@ -81,14 +89,18 @@ class RunVoice {
   }
 
   void started() {
-    _next = everyM.toDouble();
+    _next = _every;
     _lastMarkTime = Duration.zero;
     _say('Run started.');
   }
 
   /// The app was reopened during a run: continue from where it is.
+  /// The update interval in metres: [everyM] is "½ / 1 / 2 units", so with
+  /// miles chosen 1000 means one mile.
+  double get _every => everyM * Units.metresPerUnit / 1000;
+
   void restored(double distanceM, Duration moving) {
-    _next = ((distanceM ~/ everyM) + 1) * everyM.toDouble();
+    _next = ((distanceM ~/ _every) + 1) * _every;
     _lastMarkTime = moving;
   }
 
@@ -104,7 +116,7 @@ class RunVoice {
         '${spokenKm(distanceM)} in ${spokenDuration(moving)}.',
         if (pace != null && distanceM >= 200) 'Average pace ${spokenPace(pace)}.',
         for (final e in newRecords.entries)
-          'New record! Fastest ${e.key == 21097 ? 'half marathon' : spokenKm(e.key.toDouble())}, '
+          'New record! Fastest ${e.key == 21097 ? 'half marathon' : '${e.key ~/ 1000} kilometres'}, '
               '${spokenDuration(Duration(seconds: e.value.round()))}.',
       ].join(' '),
     );
@@ -123,10 +135,10 @@ class RunVoice {
     // Interpolating isn't worth it: a fix comes every second.
     final mark = _next;
     while (_next <= distanceM) {
-      _next += everyM;
+      _next += _every;
     }
     final avg = paceSecPerKm(distanceM, moving.inMilliseconds / 1000);
-    final lastPart = paceSecPerKm(everyM.toDouble(), (moving - _lastMarkTime).inMilliseconds / 1000);
+    final lastPart = paceSecPerKm(_every, (moving - _lastMarkTime).inMilliseconds / 1000);
     _lastMarkTime = moving;
     _say(
       [
@@ -134,11 +146,11 @@ class RunVoice {
         if (items.contains(VoiceItem.time)) 'Time ${spokenDuration(moving)}.',
         if (avg != null && items.contains(VoiceItem.avgPace)) 'Average pace ${spokenPace(avg)}.',
         if (currentPace != null && items.contains(VoiceItem.currentPace)) 'Current pace ${spokenPace(currentPace)}.',
-        if (lastPart != null && mark > everyM && items.contains(VoiceItem.lastSplit))
+        if (lastPart != null && mark > _every && items.contains(VoiceItem.lastSplit))
           'Last ${switch (everyM) {
-            500 => 'half kilometre',
-            1000 => 'kilometre',
-            _ => spokenKm(everyM.toDouble()),
+            500 => 'half ${Units.mi ? 'mile' : 'kilometre'}',
+            1000 => Units.mi ? 'mile' : 'kilometre',
+            _ => spokenKm(_every),
           }} ${spokenPace(lastPart)}.',
         if (bpm != null && items.contains(VoiceItem.heartRate)) 'Heart rate $bpm.',
         if (cadence != null && items.contains(VoiceItem.cadence)) 'Cadence ${cadence.round()}.',
@@ -148,12 +160,13 @@ class RunVoice {
   }
 }
 
-/// "1 kilometre", "2.5 kilometres", "5.24 kilometres".
+/// "1 kilometre", "2.5 kilometres", "5.24 kilometres" – or miles.
 String spokenKm(double metres) {
-  final km = metres / 1000;
+  final km = Units.toD(metres);
   final whole = (km - km.roundToDouble()).abs() < 0.005;
   final text = whole ? '${km.round()}' : km.toStringAsFixed(2).replaceFirst(RegExp(r'0$'), '');
-  return '$text ${text == '1' ? 'kilometre' : 'kilometres'}';
+  final unit = Units.mi ? 'mile' : 'kilometre';
+  return '$text ${text == '1' ? unit : '${unit}s'}';
 }
 
 /// "1 hour 5 minutes", "28 minutes 10 seconds", "45 seconds".
@@ -165,11 +178,11 @@ String spokenDuration(Duration d) {
   return unit(s, 'second');
 }
 
-/// "5 minutes 32 per kilometre".
+/// "5 minutes 32 per kilometre" (or "per mile").
 String spokenPace(double secPerKm) {
-  final s = secPerKm.round();
+  final s = Units.paceOut(secPerKm)!.round();
   final m = s ~/ 60, rest = s % 60;
-  return '$m ${m == 1 ? 'minute' : 'minutes'}${rest == 0 ? '' : ' $rest'} per kilometre';
+  return '$m ${m == 1 ? 'minute' : 'minutes'}${rest == 0 ? '' : ' $rest'} per ${Units.mi ? 'mile' : 'kilometre'}';
 }
 
 /// "12 seconds ahead of last time." / "1 minute 5 seconds behind last time."

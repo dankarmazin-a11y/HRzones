@@ -6,6 +6,7 @@ import '../../data/database.dart';
 import '../../data/workout_repository.dart';
 import '../../workout/stats.dart';
 import '../theme/charts.dart';
+import '../../units/units.dart';
 
 /// Records, a progress chart and the history of one exercise.
 class ExerciseProgressSection extends StatelessWidget {
@@ -33,7 +34,8 @@ class ExerciseProgressSection extends StatelessWidget {
         // Oldest → newest for the chart.
         final points = <(DateTime, double)>[
           for (final s in sessions.reversed)
-            if (sessionValue(metric, s.sets.map(SetStat.fromRow)) case final v?) (s.workout.startedAt, v),
+            if (sessionValue(metric, s.sets.map(SetStat.fromRow)) case final v?)
+              (s.workout.startedAt, metric == ProgressMetric.est1RM ? Units.toW(v) : v), // kg or lb
         ];
 
         return Column(
@@ -89,9 +91,9 @@ class ExerciseProgressSection extends StatelessWidget {
   static String _setText(TrackingType t, WorkoutSet s) {
     final w = s.weightKg;
     if (t == TrackingType.duration) {
-      return (w ?? 0) > 0 ? '${s.durationS ?? 0}s +${formatKg(w)}kg' : '${s.durationS ?? 0}s';
+      return (w ?? 0) > 0 ? '${s.durationS ?? 0}s +${formatWeight(w)}' : '${s.durationS ?? 0}s';
     }
-    return (w ?? 0) > 0 ? '${formatKg(w)}×${s.reps ?? 0}' : '${s.reps ?? 0} reps';
+    return (w ?? 0) > 0 ? '${formatW(w)}×${s.reps ?? 0}' : '${s.reps ?? 0} reps';
   }
 }
 
