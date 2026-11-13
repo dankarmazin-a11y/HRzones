@@ -84,6 +84,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ],
       ProfileTab.records => [
+        const GoalsReachedCard(),
+        const SizedBox(height: 12),
         const StrengthRecordsCard(),
         const SizedBox(height: 12),
         TrainingDataBuilder(builder: (context, d) => RunRecordsCard(runs: d.runs)),
