@@ -42,7 +42,6 @@ class ProblemLog extends ChangeNotifier {
   List<ProblemEntry> get entries => List.unmodifiable(_entries.reversed); // newest first
 
   Future<void> Function(String json)? _save;
-  Timer? _saveTimer;
 
   /// Connects the log to the database: loads the saved errors and saves new
   /// ones (set by AppServices once the database is open).
@@ -85,19 +84,20 @@ class ProblemLog extends ChangeNotifier {
     if (_entries.length > maxEntries) _entries.removeRange(0, _entries.length - maxEntries);
   }
 
+  /// Saves right away, one save after the other (no timer: errors are rare
+  /// and repeats are already counted once a minute).
+  Future<void> _saving = Future.value();
+
   void _scheduleSave() {
     final save = _save;
     if (save == null) return;
-    _saveTimer?.cancel();
-    _saveTimer = Timer(const Duration(milliseconds: 500), () {
-      save(jsonEncode([for (final e in _entries) e.toJson()])).catchError((Object _) {});
-    });
+    final json = jsonEncode([for (final e in _entries) e.toJson()]);
+    _saving = _saving.then((_) => save(json)).catchError((Object _) {});
   }
 
   /// Forgets everything (tests).
   @visibleForTesting
   void reset() {
-    _saveTimer?.cancel();
     _entries.clear();
     _save = null;
   }
