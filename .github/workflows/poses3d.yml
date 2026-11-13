@@ -1,0 +1,38 @@
+# Offline tool (not part of the app build): fits Meta's SAM 3D Body to the exercise photos of a
+# group of exercises and uploads the 3D poses as an artifact. Manual runs only.
+# Needs the secret HF_TOKEN (a Hugging Face token whose account was granted access to
+# facebook/sam-3d-body-dinov3). CPU only – a few minutes per photo.
+name: Poses 3D
+
+on:
+  workflow_dispatch:
+    inputs:
+      group:
+        description: Exercise group file in tool/poses
+        default: tool/poses/test_group.json
+
+jobs:
+  fit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Get SAM 3D Body (Meta, SAM License)
+        run: git clone --depth 1 https://github.com/facebookresearch/sam-3d-body /tmp/sam-3d-body
+      - name: Install (CPU)
+        run: |
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install pytorch-lightning opencv-python-headless yacs scikit-image einops timm dill roma loguru optree huggingface_hub braceexpand webdataset pyrootutils hydra-core
+      - name: Fit 3D bodies
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: python tool/poses/sam3d_extract.py /tmp/sam-3d-body "${{ inputs.group }}" out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: poses3d
+          path: |
+            out/poses3d.json
+            out/meshes.npz
