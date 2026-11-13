@@ -75,6 +75,7 @@ class StartMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppTheme.of(context);
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final text = Theme.of(context).textTheme;
     void pick(Future<void> Function(BuildContext) f) => Navigator.of(context).pop(f);
     Widget tile({
@@ -143,8 +144,9 @@ class StartMenu extends StatelessWidget {
                   icon: Icons.fitness_center,
                   title: 'Strength',
                   subtitle: 'Pick a template',
-                  bg: t.ink,
-                  fg: onColor(t.ink),
+                  // Light: the dark ink tile. Dark: the bright colour (ink is light there).
+                  bg: dark ? t.bright : t.ink,
+                  fg: onColor(dark ? t.bright : t.ink),
                   action: quickStartStrength,
                 ),
                 const SizedBox(width: 8),

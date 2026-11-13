@@ -290,7 +290,7 @@ class _Controls extends StatelessWidget {
                 key: const Key('saveRun'),
                 style: FilledButton.styleFrom(
                   minimumSize: const Size.fromHeight(60),
-                  textStyle: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+                  textStyle: const TextStyle(fontFamily: 'Inter', fontSize: 22, fontWeight: FontWeight.w800),
                 ),
                 onPressed: () => Navigator.pop(c, 'save'),
                 child: const Text('Save'),

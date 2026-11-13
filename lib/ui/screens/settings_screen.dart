@@ -286,6 +286,7 @@ class _RunVoiceSettingsState extends State<RunVoiceSettings> {
           Padding(
             padding: const EdgeInsets.only(left: 56),
             child: SegmentedButton<int>(
+              showSelectedIcon: false,
               key: const Key('runVoiceEvery'),
               segments: [
                 for (final m in const [500, 1000, 2000]) ButtonSegment(value: m, label: Text(every(m))),
@@ -327,6 +328,7 @@ class _RunVoiceSettingsState extends State<RunVoiceSettings> {
               children: [
                 Expanded(
                   child: SegmentedButton<String>(
+                    showSelectedIcon: false,
                     key: const Key('voiceKind'),
                     segments: const [
                       ButtonSegment(value: 'default', label: Text('Default')),

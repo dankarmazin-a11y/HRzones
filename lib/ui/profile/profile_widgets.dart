@@ -200,7 +200,8 @@ class _MonthCalendarCardState extends State<MonthCalendarCard> {
           return Container(
             key: Key('calDay_$n'),
             decoration: BoxDecoration(
-              color: v == 0 ? (future ? null : t.field) : (v == 3 ? null : tint(v)),
+              // Only training days are tinted; empty days stay plain (grey looked like data).
+              color: v == 0 || v == 3 ? null : tint(v),
               gradient: v == 3
                   ? LinearGradient(
                       begin: Alignment.topLeft,

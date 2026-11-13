@@ -116,7 +116,13 @@ class _HomeShellState extends State<HomeShell> {
                     child: PrimaryScrollController(
                       controller: _scroll[i],
                       automaticallyInheritForPlatforms: TargetPlatform.values.toSet(),
-                      child: screen,
+                      // The Start button sticks up above the tab bar: keep
+                      // every tab's content (and the Run tab's Run button)
+                      // clear of it.
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: StartButton.size / 2),
+                        child: screen,
+                      ),
                     ),
                   ),
                 ),

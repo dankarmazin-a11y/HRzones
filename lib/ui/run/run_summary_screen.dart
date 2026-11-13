@@ -286,6 +286,7 @@ class _RouteCardState extends State<_RouteCard> {
           Padding(
             padding: const EdgeInsets.only(bottom: 4),
             child: SegmentedButton<bool>(
+              showSelectedIcon: false,
               key: const Key('routeMode'),
               segments: const [
                 ButtonSegment(value: false, label: Text('Route'), icon: Icon(Icons.route)),

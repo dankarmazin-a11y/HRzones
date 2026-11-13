@@ -281,7 +281,13 @@ ThemeData buildAppTheme(AppPalette p, Brightness brightness) {
       selectedColor: primary,
       secondarySelectedColor: primary,
       checkmarkColor: onColor(primary),
-      labelStyle: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, color: ink),
+      // Selected chips are filled with the primary colour, so their text must
+      // switch to the matching "on" colour (it was invisible before).
+      labelStyle: TextStyle(
+        fontFamily: 'Inter',
+        fontWeight: FontWeight.w600,
+        color: WidgetStateColor.resolveWith((s) => s.contains(WidgetState.selected) ? onColor(primary) : ink),
+      ),
       secondaryLabelStyle: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700, color: onColor(primary)),
     ),
     switchTheme: SwitchThemeData(

@@ -368,6 +368,7 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
                 ),
               const SizedBox(height: 8),
               SegmentedButton<bool>(
+                showSelectedIcon: false,
                 key: const Key('runKind'),
                 segments: const [
                   ButtonSegment(value: false, label: Text('Outdoor'), icon: Icon(Icons.landscape_outlined)),

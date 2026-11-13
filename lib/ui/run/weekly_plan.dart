@@ -544,6 +544,7 @@ class _DayEditorState extends State<_DayEditor> {
               Row(
                 children: [
                   SegmentedButton<bool>(
+                    showSelectedIcon: false,
                     segments: const [
                       ButtonSegment(value: true, label: Text('km')),
                       ButtonSegment(value: false, label: Text('min')),

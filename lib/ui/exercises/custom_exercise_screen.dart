@@ -75,6 +75,7 @@ class _CustomExerciseScreenState extends State<CustomExerciseScreen> {
           ),
           const SizedBox(height: 16),
           SegmentedButton<TrackingType>(
+            showSelectedIcon: false,
             segments: [
               for (final MapEntry(:key, :value) in _trackingLabels.entries)
                 ButtonSegment(value: key, label: Text(value)),
