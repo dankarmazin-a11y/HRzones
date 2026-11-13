@@ -690,11 +690,15 @@ class _ExerciseCard extends StatelessWidget {
                             // Interval timers: "Timer · Stretching", not a second "Stretching" card.
                             if (e.exercise.isInterval) const TextSpan(text: 'Timer · '),
                             TextSpan(text: e.exercise.name),
-                            // A saved permanent note: a small yellow label, so you know to look.
+                            // A saved permanent note: a small slanted sticky note; tap it to
+                            // open or fold the full note.
                             if (e.exercise.hasNote)
-                              const WidgetSpan(
+                              WidgetSpan(
                                 alignment: PlaceholderAlignment.middle,
-                                child: Padding(padding: EdgeInsets.only(left: 6), child: NoteBadge()),
+                                child: Padding(
+                                  padding: const EdgeInsets.only(left: 8),
+                                  child: NoteBadge(open: !e.noteHidden, onTap: () => session.toggleNote(e)),
+                                ),
                               ),
                           ],
                         ),
@@ -1948,26 +1952,62 @@ class IntervalRow extends StatelessWidget {
   }
 }
 
-/// Small yellow "Note" label next to an exercise name that has a permanent
-/// note.
+/// Small slanted sticky note next to an exercise name that has a permanent
+/// note; tap it to open or fold the full note.
 class NoteBadge extends StatelessWidget {
-  const NoteBadge({super.key});
+  const NoteBadge({super.key, this.open = false, this.onTap});
+
+  final bool open;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: open ? 'Hide note' : 'Show note',
+    child: GestureDetector(
+      key: const Key('noteBadge'),
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(4), // a bigger tap target
+        child: Transform.rotate(
+          angle: open ? 0 : -0.16,
+          child: Container(
+            width: 22,
+            height: 22,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFE066),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(3),
+                topRight: Radius.circular(3),
+                bottomLeft: Radius.circular(3),
+                bottomRight: Radius.circular(9), // the curled corner
+              ),
+              boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 3, offset: Offset(1, 2))],
+              border: open ? Border.all(color: const Color(0xFFE6A700), width: 1.5) : null,
+            ),
+            padding: const EdgeInsets.fromLTRB(4, 6, 6, 5),
+            child: const Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [_NoteLine(width: 12), _NoteLine(width: 12), _NoteLine(width: 7)],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _NoteLine extends StatelessWidget {
+  const _NoteLine({required this.width});
+
+  final double width;
 
   @override
   Widget build(BuildContext context) => Container(
-    key: const Key('noteBadge'),
-    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-    decoration: BoxDecoration(color: const Color(0xFFFFD54F), borderRadius: BorderRadius.circular(6)),
-    child: const Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.push_pin, size: 12, color: Colors.black87),
-        SizedBox(width: 2),
-        Text(
-          'Note',
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.black87),
-        ),
-      ],
-    ),
+    width: width,
+    height: 1.6,
+    decoration: BoxDecoration(color: const Color(0xFF8A6A00), borderRadius: BorderRadius.circular(1)),
   );
 }
