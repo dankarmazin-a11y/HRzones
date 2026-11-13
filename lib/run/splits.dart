@@ -1,20 +1,23 @@
 import 'geo.dart';
 
-/// One kilometre of a run (the last one may be shorter).
+/// One kilometre (or mile) of a run (the last one may be shorter).
 class KmSplit {
-  const KmSplit({required this.km, required this.distanceM, required this.seconds, this.avgHr});
+  const KmSplit({required this.km, required this.distanceM, required this.seconds, this.avgHr, this.lengthM = 1000});
 
   /// 1, 2, 3…
   final int km;
 
-  /// 1000, or less for the last, unfinished kilometre.
+  /// [lengthM], or less for the last, unfinished piece.
   final double distanceM;
+
+  /// 1000 for km splits, 1609.344 for mile splits.
+  final double lengthM;
 
   /// Moving time for this kilometre (pauses don't count).
   final double seconds;
   final int? avgHr;
 
-  bool get partial => distanceM < 999.5;
+  bool get partial => distanceM < lengthM - 0.5;
 
   /// Seconds per km.
   double? get pace => paceSecPerKm(distanceM, seconds);
@@ -27,7 +30,8 @@ typedef SplitPoint = ({DateTime time, double lat, double lon, double? accuracy, 
 /// live run, so the splits add up to the run's distance. Time between two
 /// points of the same segment counts; a pause (new segment) doesn't.
 /// A last piece shorter than [minPartialM] is left out.
-List<KmSplit> computeSplits(Iterable<SplitPoint> points, {double minPartialM = 50}) {
+/// [splitM] is the split length: 1000 (km) or 1609.344 (miles).
+List<KmSplit> computeSplits(Iterable<SplitPoint> points, {double minPartialM = 50, double splitM = 1000}) {
   final tracker = DistanceTracker();
   final out = <KmSplit>[];
   var dist = 0.0, secs = 0.0;
@@ -41,6 +45,7 @@ List<KmSplit> computeSplits(Iterable<SplitPoint> points, {double minPartialM = 5
         distanceM: metres,
         seconds: seconds,
         avgHr: hrCount == 0 ? null : (hrSum / hrCount).round(),
+        lengthM: splitM,
       ),
     );
     hrSum = 0;
@@ -65,11 +70,11 @@ List<KmSplit> computeSplits(Iterable<SplitPoint> points, {double minPartialM = 5
     }
     dist += add;
     secs += dt < 0 ? 0 : dt;
-    while (dist >= 1000) {
-      final over = dist - 1000;
+    while (dist >= splitM) {
+      final over = dist - splitM;
       // The part of this step beyond the km mark belongs to the next km.
       final overTime = add > 0 ? dt * (over / add).clamp(0, 1) : 0.0;
-      close(1000, secs - overTime);
+      close(splitM, secs - overTime);
       dist = over;
       secs = overTime;
     }

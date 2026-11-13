@@ -6,6 +6,7 @@ import '../../data/workout_repository.dart';
 import '../../workout/stats.dart';
 import '../../workout/streak.dart';
 import '../theme/app_theme.dart';
+import '../../units/units.dart';
 
 /// Strength workouts and runs together, for the Profile cards.
 class TrainingData {
@@ -147,12 +148,10 @@ class AllTimeCard extends StatelessWidget {
             Row(
               children: [
                 NumberTile('${d.count}', 'workouts', divider: false),
-                NumberTile((d.metres / 1000).toStringAsFixed(0), 'km run'),
+                NumberTile(Units.toD(d.metres).toStringAsFixed(0), '${Units.d} run'),
                 NumberTile(
-                  d.volume >= 1000
-                      ? '${(d.volume / 1000).toStringAsFixed(d.volume >= 100000 ? 0 : 1)} t'
-                      : formatKg(d.volume),
-                  'lifted',
+                  formatBigWeight(d.volume, decimals: Units.toW(d.volume) >= 100000 ? 0 : 1),
+                  '${bigWeightUnit(d.volume)} lifted'.trim(),
                 ),
                 NumberTile('${d.minutes ~/ 60} h', 'trained'),
               ],
@@ -348,7 +347,7 @@ class MonthlyRecapCard extends StatelessWidget {
             children: [
               Text('${monthName(from)} recap', style: text.labelMedium),
               Text(
-                '${d.count} workout${d.count == 1 ? '' : 's'} · ${(d.metres / 1000).toStringAsFixed(0)} km · $sets sets',
+                '${d.count} workout${d.count == 1 ? '' : 's'} · ${Units.toD(d.metres).toStringAsFixed(0)} ${Units.d} · $sets sets',
                 style: text.titleMedium?.copyWith(fontWeight: FontWeight.w900),
               ),
               Text('${d.minutes ~/ 60} h ${d.minutes % 60} min of training', style: text.bodySmall),
@@ -434,7 +433,7 @@ class StrengthRecordsCard extends StatelessWidget {
                     for (final (l, name) in list)
                       RecordBox(
                         label: name,
-                        value: '${formatKg(l.estimated1Rm)} kg',
+                        value: formatWeight(l.estimated1Rm),
                         detail: 'est. 1RM · ${shortDate(l.date)}',
                       ),
                   ],
@@ -458,12 +457,14 @@ class Milestone {
 
 List<Milestone> milestones(TrainingData d) {
   final longest = d.runs.fold(0.0, (v, r) => r.distanceM > v ? r.distanceM : v);
-  final km = d.metres / 1000;
+  // Distance milestones count in the chosen unit (100 km or 100 miles…);
+  // race distances keep their names.
+  final run = Units.toD(d.metres);
   return [
     for (final n in const [10, 50, 100, 250, 500]) Milestone('$n', 'workouts', d.count >= n),
     for (final (m, label) in const [(5000.0, '5 km'), (10000.0, '10 km'), (21097.0, 'half')])
       Milestone('1st', label, longest >= m),
-    for (final n in const [100, 500, 1000]) Milestone('$n', 'km run', km >= n),
+    for (final n in const [100, 500, 1000]) Milestone('$n', '${Units.d} run', run >= n),
   ];
 }
 

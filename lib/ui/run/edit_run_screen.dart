@@ -7,6 +7,7 @@ import '../workout/workout_summary_screen.dart' show formatDate;
 import '../number_input.dart';
 import 'run_summary_screen.dart';
 import '../theme/app_theme.dart';
+import '../../units/units.dart';
 
 /// Log a run by hand ([run] null: treadmill, or the phone stayed at home)
 /// or edit a finished run: start, time, distance, kind, average heart rate.
@@ -148,14 +149,15 @@ class _EditRunScreenState extends State<EditRunScreen> {
               title: const Text('Distance'),
               trailing: EditableNumber(
                 key: const Key('editDistance'),
-                value: _km,
-                title: 'Distance (km)',
+                // _km stays in km; shown and typed in km or miles.
+                value: double.parse(Units.toD(_km * 1000).toStringAsFixed(2)),
+                title: 'Distance (${Units.d})',
                 decimal: true,
                 min: 0,
                 max: 300,
-                suffix: 'km',
-                display: '${_km.toStringAsFixed(2)} km',
-                onChanged: (v) => setState(() => _km = v.toDouble()),
+                suffix: Units.d,
+                display: '${formatKm(_km * 1000)} ${Units.d}',
+                onChanged: (v) => setState(() => _km = Units.fromD(v.toDouble()) / 1000),
               ),
             ),
             ListTile(
@@ -188,7 +190,7 @@ class _EditRunScreenState extends State<EditRunScreen> {
             ),
             Padding(
               padding: const EdgeInsets.only(left: 56, bottom: 8),
-              child: Text('Pace ${formatPace(pace)} /km', style: text.bodyMedium),
+              child: Text('Pace ${formatPace(pace)} ${Units.pace}', style: text.bodyMedium),
             ),
           ],
           ListTile(
@@ -278,7 +280,7 @@ class _CutSlider extends StatelessWidget {
         Text(
           value == null
               ? 'Ends at ${two(end.hour)}:${two(end.minute)} (no change)'
-              : 'Ends at ${two(at.hour)}:${two(at.minute)} · ${formatKm(tracker.distanceM)} km',
+              : 'Ends at ${two(at.hour)}:${two(at.minute)} · ${formatKm(tracker.distanceM)} ${Units.d}',
           key: const Key('cutLabel'),
         ),
       ],

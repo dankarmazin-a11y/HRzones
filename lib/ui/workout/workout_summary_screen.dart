@@ -104,7 +104,7 @@ class WorkoutSummaryScreen extends StatelessWidget {
             runSpacing: 8,
             children: [
               _Stat(label: 'Duration', value: formatDuration(s.duration)),
-              _Stat(label: 'Volume', value: '${formatKg(s.volume)} kg'),
+              _Stat(label: 'Volume', value: formatWeight(s.volume)),
               _Stat(label: 'Sets', value: '${s.setCount}'),
               if (s.avgHr != null) _Stat(label: 'Avg HR', value: '${s.avgHr}'),
               if (s.maxHr != null) _Stat(label: 'Max HR', value: '${s.maxHr}'),
@@ -172,13 +172,13 @@ class WorkoutSummaryScreen extends StatelessWidget {
       SetType.normal => '',
     };
     if (t == TrackingType.duration) {
-      return (w == null || w == 0) ? '$prefix${secs ?? 0} s' : '$prefix${secs ?? 0} s with +${formatKg(w)} kg';
+      return (w == null || w == 0) ? '$prefix${secs ?? 0} s' : '$prefix${secs ?? 0} s with +${formatWeight(w)}';
     }
     if (t == TrackingType.distance) {
       return '$prefix${formatKg(metres ?? 0)} m in ${formatDuration(Duration(seconds: secs ?? 0))}';
     }
     if (w == null || w == 0) return '$prefix${reps ?? 0} reps';
-    return '$prefix${formatKg(w)} kg × ${reps ?? 0}';
+    return '$prefix${formatWeight(w)} × ${reps ?? 0}';
   }
 }
 

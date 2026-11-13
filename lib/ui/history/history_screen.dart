@@ -133,7 +133,7 @@ class WorkoutTile extends StatelessWidget {
         title: Text(w.name),
         subtitle: HeartText(
           '${formatDate(w.startedAt)}\n'
-          '${formatDuration(duration)} · ${item.setCount} sets · ${formatKg(item.volume)} kg'
+          '${formatDuration(duration)} · ${item.setCount} sets · ${formatWeight(item.volume)}'
           '${w.avgHr != null ? ' · ♥ ${w.avgHr}' : ''}\n'
           '${item.exerciseNames.join(', ')}',
           maxLines: 3,

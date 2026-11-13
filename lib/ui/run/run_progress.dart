@@ -8,6 +8,7 @@ import '../../run/geo.dart';
 import '../../workout/streak.dart';
 import '../theme/charts.dart';
 import '../theme/app_theme.dart';
+import '../../units/units.dart';
 
 /// Running charts: km per week, pace over time and aerobic fitness (metres
 /// per heartbeat).
@@ -32,14 +33,14 @@ class RunProgressScreen extends StatelessWidget {
             children: [
               _ChartCard(
                 key: const Key('weeklyKmChart'),
-                title: 'Km per week',
+                title: Units.mi ? 'Miles per week' : 'Km per week',
                 subtitle: 'Last 12 weeks',
                 child: _WeeklyKm(runs: runs),
               ),
               _ChartCard(
                 key: const Key('paceChart'),
                 title: 'Average pace',
-                subtitle: 'Each outdoor run of 1 km or more – lower is faster',
+                subtitle: 'Each outdoor run of 1 km or more – lower is faster (per ${Units.mi ? 'mile' : 'km'})',
                 child: _RunLine(
                   runs: runs.where((r) => r.kind == RunKind.outdoor && r.distanceM >= 1000).toList(),
                   value: (r) => paceSecPerKm(r.distanceM, r.durationS.toDouble()),
@@ -105,7 +106,7 @@ class _WeeklyKm extends StatelessWidget {
     final km = {for (final w in weeks) w: 0.0};
     for (final r in runs) {
       final w = weekStart(r.startedAt);
-      if (km.containsKey(w)) km[w] = km[w]! + r.distanceM / 1000;
+      if (km.containsKey(w)) km[w] = km[w]! + Units.toD(r.distanceM); // km or miles
     }
     final maxKm = km.values.fold(0.0, (a, b) => a > b ? a : b);
     return BarChart(
@@ -117,7 +118,7 @@ class _WeeklyKm extends StatelessWidget {
           touchTooltipData: BarTouchTooltipData(
             getTooltipColor: (_) => AppTheme.of(context).ink,
             getTooltipItem: (g, _, rod, _) =>
-                BarTooltipItem('${rod.toY.toStringAsFixed(1)} km', const TextStyle(color: Colors.white)),
+                BarTooltipItem('${rod.toY.toStringAsFixed(1)} ${Units.d}', const TextStyle(color: Colors.white)),
           ),
         ),
         titlesData: FlTitlesData(

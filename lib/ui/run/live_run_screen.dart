@@ -17,6 +17,7 @@ import 'run_map.dart';
 import 'run_plans.dart';
 import 'run_start.dart';
 import 'run_summary_screen.dart';
+import '../../units/units.dart';
 
 /// The run being recorded: distance, time, pace, heart rate; pause / finish.
 /// Bold white numbers on a dark background (readable while running).
@@ -169,12 +170,12 @@ class _Numbers extends StatelessWidget {
                 style: TimerStyle.digits.copyWith(fontSize: 120),
               ),
             ),
-            Text('Kilometres', style: label),
+            Text(Units.mi ? 'Miles' : 'Kilometres', style: label),
             const SizedBox(height: 32),
             Row(
               children: [
                 stat(formatDuration(run.moving), 'Time', key: const Key('runTime')),
-                stat(formatPace(run.currentPace), 'Pace /km', key: const Key('runPace')),
+                stat(formatPace(run.currentPace), 'Pace ${Units.pace}', key: const Key('runPace')),
                 stat(formatPace(run.avgPace), 'Avg pace', key: const Key('runAvgPace')),
               ],
             ),
@@ -279,7 +280,7 @@ class _Controls extends StatelessWidget {
               ? 'Treadmill run, ${formatDuration(run.moving)}. Next: the distance.'
               : tooShort
               ? 'This run is shorter than 50 m. Save it anyway?'
-              : '${formatKm(run.distanceM)} km in ${formatDuration(run.moving)}',
+              : '${formatKm(run.distanceM)} ${Units.d} in ${formatDuration(run.moving)}',
         ),
         // One above the other, Save biggest and boldest.
         actions: [
@@ -347,15 +348,15 @@ class _Controls extends StatelessWidget {
     final nav = Navigator.of(context);
     final km = await promptNumber(
       context,
-      title: 'Distance (km) – from the treadmill',
-      initial: 5,
+      title: 'Distance (${Units.d}) – from the treadmill',
+      initial: Units.mi ? 3 : 5,
       decimal: true,
       min: 0,
       max: 100,
-      suffix: 'km',
+      suffix: Units.d,
     );
     if (km == null) return;
-    final id = await run.finish(distanceM: km * 1000);
+    final id = await run.finish(distanceM: Units.fromD(km.toDouble()));
     if (id == null) return;
     runVibration(times: 2);
     await nav.pushReplacement(MaterialPageRoute(builder: (_) => RunSummaryScreen(runId: id)));
@@ -452,7 +453,7 @@ class _SimulatedControlsState extends State<_SimulatedControls> {
       child: Column(
         children: [
           Text(
-            'Simulated GPS (preview) · pace ${formatPace(s.paceSecPerKm)} /km',
+            'Simulated GPS (preview) · pace ${formatPace(s.paceSecPerKm)} ${Units.pace}',
             style: const TextStyle(color: Colors.white54, fontSize: 12),
           ),
           Slider(
@@ -592,9 +593,9 @@ class _Strip extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(8, 12, 8, 4),
       child: Row(
         children: [
-          stat(formatKm(run.distanceM), 'km', const Key('runDistance')),
+          stat(formatKm(run.distanceM), Units.d, const Key('runDistance')),
           stat(formatDuration(run.moving), 'Time', const Key('runTime')),
-          stat(formatPace(run.currentPace), 'Pace /km', const Key('runPace')),
+          stat(formatPace(run.currentPace), 'Pace ${Units.pace}', const Key('runPace')),
         ],
       ),
     );

@@ -7,6 +7,7 @@ import '../../run/best_efforts.dart';
 import '../../run/geo.dart';
 import '../../workout/stats.dart';
 import 'run_summary_screen.dart';
+import '../../units/units.dart';
 
 String _time(double seconds) => formatDuration(Duration(seconds: seconds.round()));
 
@@ -52,7 +53,7 @@ class RunRecordsCard extends StatelessWidget {
                 Text('Records', style: text.titleMedium),
                 for (final e in recordDistances.entries)
                   row(e.value, r.fastest[e.key], (x) => _time(x.value), Key('record_${e.key}')),
-                row('Longest run', r.longest, (x) => '${formatKm(x.value)} km', const Key('record_longest')),
+                row('Longest run', r.longest, (x) => '${formatKm(x.value)} ${Units.d}', const Key('record_longest')),
               ],
             ),
           ),

@@ -29,6 +29,7 @@ import 'run/motion_source.dart';
 import 'run/run_session.dart';
 import 'run/run_voice.dart';
 import 'workout/workout_session.dart';
+import 'units/units.dart';
 
 /// Everything the screens need: database repositories, HR monitor and the
 /// current workout session.
@@ -127,6 +128,12 @@ class AppServices {
   Future<void> setPalette(AppPalette p) async {
     palette.value = p;
     await db.setSetting('palette', p.name);
+  }
+
+  /// Display units kg/lb, cm/in, km/mi (setting `units`, "kg,cm,km").
+  Future<void> setUnits(UnitPrefs u) async {
+    Units.notifier.value = u;
+    await db.setSetting('units', u.encode());
   }
 
   /// Training level (setting `level`, default intermediate).
@@ -310,6 +317,7 @@ class AppServices {
     final theme = await db.getSetting('theme');
     themeMode.value = ThemeMode.values.where((m) => m.name == theme).firstOrNull ?? ThemeMode.system;
     palette.value = AppPalette.byName(await db.getSetting('palette'));
+    Units.notifier.value = UnitPrefs.decode(await db.getSetting('units'));
     final placeName = await db.getSetting('place');
     place.value = TrainingPlace.values.where((p) => p.name == placeName).firstOrNull ?? TrainingPlace.gym;
     zonesEnabled.value = await db.getSetting('zones') != '0';

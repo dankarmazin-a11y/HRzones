@@ -12,6 +12,7 @@ import '../../run/geo.dart';
 import '../../workout/stats.dart';
 import 'run_map.dart';
 import 'run_summary_screen.dart' show runTitle;
+import '../../units/units.dart';
 
 /// A picture of the run – the route on the map and the big numbers – to
 /// send or post. Shown first so you can see what will be shared.
@@ -62,7 +63,7 @@ class _ShareRunScreenState extends State<ShareRunScreen> {
         ShareParams(
           files: [XFile.fromData(bytes, name: name, mimeType: 'image/png')],
           fileNameOverrides: [name],
-          text: '${formatKm(widget.run.distanceM)} km run',
+          text: '${formatKm(widget.run.distanceM)} ${Units.d} run',
           sharePositionOrigin: box == null ? null : box.localToGlobal(Offset.zero) & box.size,
         ),
       );
@@ -112,7 +113,7 @@ class _ShareRunScreenState extends State<ShareRunScreen> {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                       child: Text(
-                        '${formatKm(r.distanceM)} km',
+                        '${formatKm(r.distanceM)} ${Units.d}',
                         style: const TextStyle(color: Colors.white, fontSize: 56, fontWeight: FontWeight.w900),
                       ),
                     ),
@@ -121,7 +122,7 @@ class _ShareRunScreenState extends State<ShareRunScreen> {
                       child: Row(
                         children: [
                           stat(formatDuration(Duration(seconds: r.durationS)), 'Time'),
-                          stat(formatPace(pace), 'Pace /km'),
+                          stat(formatPace(pace), 'Pace ${Units.pace}'),
                           if (r.avgHr != null) stat('${r.avgHr}', 'Avg HR'),
                         ],
                       ),

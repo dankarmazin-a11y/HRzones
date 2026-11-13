@@ -4,6 +4,7 @@ import '../../workout/calculators.dart';
 import '../../workout/stats.dart';
 import '../number_input.dart';
 import '../plate_calculator.dart';
+import '../../units/units.dart';
 
 /// Plate calculator + 1RM calculator, prefilled from the current set.
 /// [exerciseId] remembers the bar per exercise.
@@ -60,13 +61,13 @@ class _CalculatorsSheetState extends State<_CalculatorsSheet> {
                         Row(
                           children: [
                             EditableNumber(
-                              value: _weight,
-                              title: 'Weight (kg)',
+                              value: double.parse(formatW(_weight)),
+                              title: 'Weight (${Units.w})',
                               decimal: true,
-                              max: 1000,
-                              display: '${formatKg(_weight)} kg',
+                              max: 2000,
+                              display: formatWeight(_weight),
                               style: text.titleMedium,
-                              onChanged: (v) => setState(() => _weight = v.toDouble()),
+                              onChanged: (v) => setState(() => _weight = Units.fromW(v.toDouble())),
                             ),
                             Text(' × ', style: text.titleMedium),
                             EditableNumber(
@@ -81,10 +82,7 @@ class _CalculatorsSheetState extends State<_CalculatorsSheet> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        Text(
-                          'Estimated 1RM: ${formatKg(double.parse(oneRm.toStringAsFixed(1)))} kg',
-                          style: text.headlineSmall,
-                        ),
+                        Text('Estimated 1RM: ${formatWeight(oneRm)}', style: text.headlineSmall),
                         const SizedBox(height: 4),
                         Text('Epley formula – most accurate up to ~10 reps.', style: text.bodySmall),
                         const SizedBox(height: 12),
@@ -93,7 +91,7 @@ class _CalculatorsSheetState extends State<_CalculatorsSheet> {
                             dense: true,
                             contentPadding: EdgeInsets.zero,
                             leading: Text('$pct%', style: text.titleSmall),
-                            title: Text('${formatKg(kg)} kg'),
+                            title: Text(formatWeight(kg)),
                             trailing: Text('≈ $r rep${r == 1 ? '' : 's'}'),
                           ),
                       ],

@@ -24,6 +24,7 @@ import '../../hr/hr_monitor.dart';
 import '../../hr/zones.dart';
 import '../../run/route_zones.dart';
 import '../zone_colors.dart';
+import '../../units/units.dart';
 
 /// A finished run: distance, time, pace, heart rate.
 class RunSummaryScreen extends StatelessWidget {
@@ -151,7 +152,7 @@ class _BodyState extends State<_Body> {
               return Row(
                 children: [
                   tile(formatDuration(Duration(seconds: run.durationS)), 'Time'),
-                  tile(formatPace(pace), 'Avg pace /km'),
+                  tile(formatPace(pace), 'Avg pace ${Units.pace}'),
                   tile(kcal == null ? '–' : '${kcal.round()}', kcal == null ? 'kcal (add weight)' : 'Calories'),
                 ],
               );
@@ -445,6 +446,7 @@ class _SplitsSectionState extends State<_SplitsSection> {
     setState(
       () => _splits = computeSplits(
         points.map((p) => (time: p.time, lat: p.lat, lon: p.lon, accuracy: p.accuracy, segment: p.segment, hr: p.hr)),
+        splitM: Units.metresPerUnit, // km or mile splits
       ),
     );
   }
@@ -474,13 +476,16 @@ class _SplitsSectionState extends State<_SplitsSection> {
               children: [
                 Text('Splits', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
                 const Spacer(),
-                if (avg != null) Text('avg ${formatPace(avg)} /km', style: muted),
+                if (avg != null) Text('avg ${formatPace(avg)} ${Units.pace}', style: muted),
               ],
             ),
             if (fastest != null)
               Padding(
                 padding: const EdgeInsets.only(top: 2),
-                child: Text('Fastest: km ${fastest.km} in ${formatPace(fastest.pace)}', style: muted),
+                child: Text(
+                  'Fastest: ${Units.mi ? 'mile' : 'km'} ${fastest.km} in ${formatPace(fastest.pace)}',
+                  style: muted,
+                ),
               ),
             const SizedBox(height: 12),
             for (final x in splits)
@@ -492,7 +497,7 @@ class _SplitsSectionState extends State<_SplitsSection> {
                     SizedBox(
                       width: 40,
                       child: Text(
-                        x.partial ? (x.distanceM / 1000).toStringAsFixed(2) : '${x.km}',
+                        x.partial ? Units.toD(x.distanceM).toStringAsFixed(2) : '${x.km}',
                         style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                       ),
                     ),
@@ -605,7 +610,7 @@ class _ClimbAndCadenceState extends State<_ClimbAndCadence> {
       if (p.segment != seg) tracker.newSegment();
       seg = p.segment;
       tracker.add(GeoFix(time: p.time, lat: p.lat, lon: p.lon, accuracy: p.accuracy));
-      profile.add((tracker.distanceM / 1000, p.altitude!));
+      profile.add((Units.toD(tracker.distanceM), p.altitude!)); // km or miles
     }
     final smooth = smoothAltitudes([for (final x in profile) x.$2]);
     if (!mounted) return;
@@ -721,7 +726,7 @@ class _ElevationChart extends StatelessWidget {
                     maxIncluded: false,
                     getTitlesWidget: (v, meta) => SideTitleWidget(
                       meta: meta,
-                      child: Text(v == 0 ? '0 km' : _kmLabel(v), style: label),
+                      child: Text(v == 0 ? '0 ${Units.d}' : _kmLabel(v), style: label),
                     ),
                   ),
                 ),
@@ -798,7 +803,7 @@ class _RunCompareCardState extends State<RunCompareCard> {
                     key: const Key('compareTime'),
                   ),
                   if (pace != null && oldPace != null)
-                    Text('Pace ${formatPace(oldPace)} → ${formatPace(pace)} /km (${diff(pace, oldPace)})'),
+                    Text('Pace ${formatPace(oldPace)} → ${formatPace(pace)} ${Units.pace} (${diff(pace, oldPace)})'),
                   const SizedBox(height: 4),
                 ],
                 TextButton.icon(

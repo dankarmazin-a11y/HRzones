@@ -5,8 +5,16 @@ import '../../app_services.dart';
 import '../../data/shoe_repository.dart';
 import '../number_input.dart';
 import '../theme/emblems.dart';
+import '../../units/units.dart';
 
-String _km(double km) => km.toStringAsFixed(km >= 100 ? 0 : 1);
+/// Shoe km (stored in km) in the chosen unit: "412" / "256.0".
+String _km(double km) {
+  final v = Units.toD(km * 1000);
+  return v.toStringAsFixed(v >= 100 ? 0 : 1);
+}
+
+double _shown(double km) => double.parse(Units.toD(km * 1000).toStringAsFixed(1));
+double _stored(num v) => Units.fromD(v.toDouble()) / 1000;
 
 /// Run tab: your shoes with their km; tap for the shoes screen.
 class ShoesCard extends StatelessWidget {
@@ -37,7 +45,7 @@ class ShoesCard extends StatelessWidget {
                     ],
                   ),
                   if (active.isEmpty)
-                    Text('Add your running shoes to count their km.', style: text.bodySmall)
+                    Text('Add your running shoes to count their ${Units.mi ? 'miles' : 'km'}.', style: text.bodySmall)
                   else
                     for (final x in active.take(3)) ShoeBar(shoe: x),
                 ],
@@ -71,7 +79,7 @@ class ShoeBar extends StatelessWidget {
               if (shoe.shoe.isDefault) const Icon(Icons.star, size: 16),
               Expanded(child: Text(shoe.shoe.name, style: text.bodyLarge)),
               Text(
-                '${_km(shoe.km)} / ${_km(shoe.shoe.limitKm)} km',
+                '${_km(shoe.km)} / ${_km(shoe.shoe.limitKm)} ${Units.d}',
                 style: text.bodyMedium?.copyWith(color: worn ? Colors.orange.shade800 : null),
               ),
             ],
@@ -114,12 +122,12 @@ class ShoesScreen extends StatelessWidget {
         builder: (context, snap) {
           final list = snap.data ?? const <ShoeKm>[];
           if (list.isEmpty) {
-            return const Center(
+            return Center(
               child: Padding(
-                padding: EdgeInsets.all(24),
+                padding: const EdgeInsets.all(24),
                 child: Text(
-                  'Add the shoes you run in. Every run adds its km, and you get a reminder when they reach '
-                  'their replacement km (about 700 km for most running shoes).',
+                  'Add the shoes you run in. Every run adds its distance, and you get a reminder when they reach '
+                  'their replacement distance (about ${Units.mi ? '430 miles' : '700 km'} for most running shoes).',
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -221,16 +229,16 @@ class _ShoeDialogState extends State<_ShoeDialog> {
             const SizedBox(height: 12),
             Row(
               children: [
-                const Expanded(child: Text('Km already on them')),
+                Expanded(child: Text('${Units.mi ? 'Miles' : 'Km'} already on them')),
                 EditableNumber(
                   key: const Key('shoeStartKm'),
-                  value: _start,
-                  title: 'Km already on them',
+                  value: _shown(_start),
+                  title: '${Units.mi ? 'Miles' : 'Km'} already on them',
                   decimal: true,
                   max: 5000,
-                  suffix: 'km',
-                  display: '${_km(_start)} km',
-                  onChanged: (v) => setState(() => _start = v.toDouble()),
+                  suffix: Units.d,
+                  display: '${_km(_start)} ${Units.d}',
+                  onChanged: (v) => setState(() => _start = _stored(v)),
                 ),
               ],
             ),
@@ -239,13 +247,13 @@ class _ShoeDialogState extends State<_ShoeDialog> {
                 const Expanded(child: Text('Replace at')),
                 EditableNumber(
                   key: const Key('shoeLimitKm'),
-                  value: _limit,
-                  title: 'Replace at (km)',
-                  min: 50,
+                  value: _shown(_limit),
+                  title: 'Replace at (${Units.d})',
+                  min: 30,
                   max: 5000,
-                  suffix: 'km',
-                  display: '${_km(_limit)} km',
-                  onChanged: (v) => setState(() => _limit = v.toDouble()),
+                  suffix: Units.d,
+                  display: '${_km(_limit)} ${Units.d}',
+                  onChanged: (v) => setState(() => _limit = _stored(v)),
                 ),
               ],
             ),
@@ -293,8 +301,8 @@ class RunShoeRow extends StatelessWidget {
               ? null
               : Text(
                   shoe.wornOut
-                      ? '${_km(shoe.km)} km – time for new shoes?'
-                      : '${_km(shoe.km)} of ${_km(shoe.shoe.limitKm)} km',
+                      ? '${_km(shoe.km)} ${Units.d} – time for new shoes?'
+                      : '${_km(shoe.km)} of ${_km(shoe.shoe.limitKm)} ${Units.d}',
                   style: shoe.wornOut ? TextStyle(color: Colors.orange.shade800) : null,
                 ),
           trailing: const Icon(Icons.edit_outlined, size: 18),
@@ -328,7 +336,7 @@ Future<String?> pickShoe(BuildContext context, {String? current}) async {
           for (final x in list)
             ListTile(
               title: Text(x.shoe.name),
-              subtitle: Text('${_km(x.km)} km'),
+              subtitle: Text('${_km(x.km)} ${Units.d}'),
               trailing: current == x.shoe.id ? const Icon(Icons.check) : null,
               onTap: () => Navigator.pop(c, x.shoe.id),
             ),

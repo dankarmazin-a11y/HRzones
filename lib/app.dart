@@ -15,6 +15,7 @@ import 'ui/start_menu.dart';
 import 'ui/workout/forgotten_workout.dart';
 import 'ui/workout/running_workout_bar.dart';
 import 'ui/theme/emblems.dart';
+import 'units/units.dart';
 
 class HrZonesApp extends StatelessWidget {
   const HrZonesApp({super.key, required this.services});
@@ -28,7 +29,7 @@ class HrZonesApp extends StatelessWidget {
       child: HrScope(
         monitor: services.hr,
         child: ListenableBuilder(
-          listenable: Listenable.merge([services.themeMode, services.palette]),
+          listenable: Listenable.merge([services.themeMode, services.palette, Units.notifier]),
           builder: (context, _) => MaterialApp(
             title: 'HR Zones',
             debugShowCheckedModeBanner: false,

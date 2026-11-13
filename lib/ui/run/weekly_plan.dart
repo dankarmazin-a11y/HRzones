@@ -6,6 +6,8 @@ import '../../run/training_plan.dart';
 import '../../workout/streak.dart';
 import '../number_input.dart';
 import 'run_start.dart';
+import '../../workout/stats.dart';
+import '../../units/units.dart';
 
 const _dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const _dayLetters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -501,8 +503,9 @@ class _DayEditor extends StatefulWidget {
 class _DayEditorState extends State<_DayEditor> {
   late PlanDayKind? _kind = widget.current?.kind;
   late bool _byKm = widget.current?.durationS == null;
+  // Distance in the shown unit (km or miles), time in minutes.
   late double? _amount = widget.current?.distanceM != null
-      ? widget.current!.distanceM! / 1000
+      ? double.parse(Units.toD(widget.current!.distanceM!.toDouble()).toStringAsFixed(2))
       : (widget.current?.durationS != null ? widget.current!.durationS! / 60 : null);
   late String? _runPlanId = widget.current?.runPlanId;
   String? _runPlanName;
@@ -545,9 +548,9 @@ class _DayEditorState extends State<_DayEditor> {
                 children: [
                   SegmentedButton<bool>(
                     showSelectedIcon: false,
-                    segments: const [
-                      ButtonSegment(value: true, label: Text('km')),
-                      ButtonSegment(value: false, label: Text('min')),
+                    segments: [
+                      ButtonSegment(value: true, label: Text(Units.d)),
+                      const ButtonSegment(value: false, label: Text('min')),
                     ],
                     selected: {_byKm},
                     onSelectionChanged: (v) => setState(() => _byKm = v.first),
@@ -559,7 +562,7 @@ class _DayEditorState extends State<_DayEditor> {
                       onPressed: () async {
                         final v = await promptNumber(
                           context,
-                          title: _byKm ? 'Distance (km)' : 'Time (minutes)',
+                          title: _byKm ? 'Distance (${Units.d})' : 'Time (minutes)',
                           initial: _amount,
                           decimal: _byKm,
                           max: _byKm ? 100 : 600,
@@ -569,7 +572,7 @@ class _DayEditorState extends State<_DayEditor> {
                       child: Text(
                         _amount == null
                             ? 'Set amount'
-                            : '${_byKm ? _amount : _amount!.round()} ${_byKm ? 'km' : 'min'}',
+                            : '${_byKm ? formatKg(_amount) : _amount!.round()} ${_byKm ? Units.d : 'min'}',
                       ),
                     ),
                   ),
@@ -616,7 +619,7 @@ class _DayEditorState extends State<_DayEditor> {
                               week: widget.week,
                               weekday: widget.weekday,
                               kind: k,
-                              distanceM: _runPlanId == null && a != null && _byKm ? (a * 1000).round() : null,
+                              distanceM: _runPlanId == null && a != null && _byKm ? Units.fromD(a).round() : null,
                               durationS: _runPlanId == null && a != null && !_byKm ? (a * 60).round() : null,
                               runPlanId: _runPlanId,
                               runPlanName: _runPlanId == null ? null : (_runPlanName ?? widget.current?.runPlanName),

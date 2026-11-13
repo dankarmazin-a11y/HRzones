@@ -1,4 +1,5 @@
 import '../data/database.dart';
+import '../units/units.dart';
 
 /// Estimated one-rep max (Epley).
 double estimated1RM(double weightKg, int reps) => reps <= 1 ? weightKg : weightKg * (1 + reps / 30);
@@ -113,11 +114,34 @@ List<PersonalRecord> findRecords({required Iterable<SetStat> current, required I
   return out;
 }
 
+/// A plain number with up to 2 decimals and no trailing zeros: 60, 62.5,
+/// 61.25 (also used for RPE and metres – no unit conversion).
 String formatKg(double? kg) {
   if (kg == null) return '';
-  // Up to 2 decimals (1.25 kg plates), no trailing zeros: 60, 62.5, 61.25.
   return kg.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
 }
+
+/// A stored weight (kg) as a number in the chosen unit: "60" / "132.3".
+/// Pounds get one decimal (typed whole pounds come back exactly).
+String formatW(double? kg) {
+  if (kg == null) return '';
+  final v = Units.toW(kg);
+  return Units.lb ? v.toStringAsFixed(1).replaceFirst(RegExp(r'\.0$'), '') : formatKg(v);
+}
+
+/// Big totals (volume lifted): "850", "12.4 t" (tonnes) or "27.3k" pounds.
+/// The label is [bigWeightUnit].
+String formatBigWeight(double kg, {int decimals = 1}) {
+  final v = Units.toW(kg);
+  if (v < 10000) return formatW(kg);
+  return Units.lb ? '${(v / 1000).toStringAsFixed(decimals)}k' : '${(v / 1000).toStringAsFixed(decimals)} t';
+}
+
+/// "lb" for pounds; tonnes already carry " t".
+String bigWeightUnit(double kg) => Units.toW(kg) < 10000 ? Units.w : (Units.lb ? 'lb' : '');
+
+/// "60 kg" / "132.3 lb".
+String formatWeight(double? kg) => kg == null ? '' : '${formatW(kg)} ${Units.w}';
 
 String formatDuration(Duration d) {
   final h = d.inHours, m = d.inMinutes % 60, s = d.inSeconds % 60;
@@ -128,7 +152,7 @@ String formatDuration(Duration d) {
 String formatRecord(RecordKind kind, double v) => switch (kind) {
   RecordKind.maxReps => '${v.round()} reps',
   RecordKind.longestDuration => formatDuration(Duration(seconds: v.round())),
-  _ => '${formatKg(v)} kg',
+  _ => formatWeight(v),
 };
 
 /// What the progress chart of an exercise shows.

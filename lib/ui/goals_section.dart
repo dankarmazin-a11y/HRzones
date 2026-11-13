@@ -9,6 +9,7 @@ import '../run/best_efforts.dart';
 import '../workout/stats.dart';
 import 'exercises/exercise_library_screen.dart';
 import 'number_input.dart';
+import '../units/units.dart';
 
 /// Goals with progress bars. [limit] shows only the first few (Home).
 class GoalsSection extends StatelessWidget {
@@ -65,7 +66,11 @@ class GoalsSection extends StatelessWidget {
                           child: ListTile(
                             leading: const Icon(Icons.flag_outlined),
                             title: const Text('No goals yet'),
-                            subtitle: const Text('e.g. Bench 100 kg, body weight 80 kg, or 5 km under 25 min'),
+                            subtitle: Text(
+                              Units.lb
+                                  ? 'e.g. Bench 225 lb, body weight 180 lb, or 5 km under 25 min'
+                                  : 'e.g. Bench 100 kg, body weight 80 kg, or 5 km under 25 min',
+                            ),
                             trailing: const Icon(Icons.add),
                             onTap: () => addGoal(context),
                           ),
@@ -255,15 +260,16 @@ Future<void> editGoal(BuildContext context, GoalProgress g) async {
             Row(
               children: [
                 const Text('Target: '),
+                // Shown and typed in the chosen units; stored in kg / cm / km.
                 EditableNumber(
-                  value: target,
+                  value: double.parse(g.toShown(target).toStringAsFixed(1)),
                   title: 'Target (${g.unit})',
                   decimal: true,
                   min: 0,
-                  max: 1000,
+                  max: 2000,
                   suffix: g.unit,
-                  display: '${formatKg(target)} ${g.unit}',
-                  onChanged: (v) => setState(() => target = v.toDouble()),
+                  display: _value(g, target),
+                  onChanged: (v) => setState(() => target = g.fromShown(v.toDouble())),
                 ),
               ],
             ),
@@ -326,7 +332,7 @@ Future<void> addGoal(BuildContext context) async {
           ListTile(
             leading: const Icon(Icons.fitness_center),
             title: const Text('Lift a weight'),
-            subtitle: const Text('e.g. Barbell Bench Press 100 kg'),
+            subtitle: Text('e.g. Barbell Bench Press ${Units.lb ? '225 lb' : '100 kg'}'),
             onTap: () => Navigator.pop(c, GoalType.liftWeight),
           ),
           ListTile(
@@ -338,15 +344,15 @@ Future<void> addGoal(BuildContext context) async {
           ListTile(
             key: const Key('goalRunWeek'),
             leading: const Icon(Icons.directions_run),
-            title: const Text('Run km per week'),
-            subtitle: const Text('e.g. 20 km every week'),
+            title: Text('Run ${Units.mi ? 'miles' : 'km'} per week'),
+            subtitle: Text(Units.mi ? 'e.g. 12 miles every week' : 'e.g. 20 km every week'),
             onTap: () => Navigator.pop(c, GoalType.runKmPerWeek),
           ),
           ListTile(
             key: const Key('goalRunDistance'),
             leading: const Icon(Icons.route),
             title: const Text('Run a distance'),
-            subtitle: const Text('e.g. 10 km in one run'),
+            subtitle: Text(Units.mi ? 'e.g. 6 miles in one run' : 'e.g. 10 km in one run'),
             onTap: () => Navigator.pop(c, GoalType.runDistance),
           ),
           ListTile(
@@ -371,14 +377,14 @@ Future<void> addGoal(BuildContext context) async {
       if (!context.mounted) return;
       final target = await promptNumber(
         context,
-        title: '${ex.name}: target (kg)',
-        initial: best == null ? 60 : best + 5,
+        title: '${ex.name}: target (${Units.w})',
+        initial: double.parse(Units.toW(best == null ? 60 : best + 5).toStringAsFixed(1)),
         decimal: true,
         min: 1,
-        max: 1000,
-        suffix: 'kg',
+        max: 2000,
+        suffix: Units.w,
       );
-      if (target != null) await s.goals.addLift(ex.id, target.toDouble());
+      if (target != null) await s.goals.addLift(ex.id, Units.fromW(target.toDouble()));
     case GoalType.measurement:
       final kind = await showModalBottomSheet<MeasurementKind>(
         context: context,
@@ -390,7 +396,7 @@ Future<void> addGoal(BuildContext context) async {
               shrinkWrap: true,
               children: [
                 for (final k in measurementKinds)
-                  ListTile(title: Text(k.label), trailing: Text(k.unit), onTap: () => Navigator.pop(c, k)),
+                  ListTile(title: Text(k.label), trailing: Text(k.shownUnit), onTap: () => Navigator.pop(c, k)),
               ],
             ),
           ),
@@ -401,35 +407,35 @@ Future<void> addGoal(BuildContext context) async {
       if (!context.mounted) return;
       final target = await promptNumber(
         context,
-        title: '${kind.label}: target (${kind.unit})',
-        initial: latest ?? 0,
+        title: '${kind.label}: target (${kind.shownUnit})',
+        initial: double.parse(kind.toShown(latest ?? 0).toStringAsFixed(1)),
         decimal: true,
-        max: 1000,
-        suffix: kind.unit,
+        max: 2000,
+        suffix: kind.shownUnit,
       );
-      if (target != null) await s.goals.addMeasurement(kind.key, target.toDouble());
+      if (target != null) await s.goals.addMeasurement(kind.key, kind.fromShown(target.toDouble()));
     case GoalType.runKmPerWeek:
       final target = await promptNumber(
         context,
-        title: 'Km per week',
-        initial: 20,
+        title: Units.mi ? 'Miles per week' : 'Km per week',
+        initial: Units.mi ? 12 : 20,
         decimal: true,
         min: 1,
         max: 500,
-        suffix: 'km',
+        suffix: Units.d,
       );
-      if (target != null) await s.goals.addRun(GoalType.runKmPerWeek, target.toDouble());
+      if (target != null) await s.goals.addRun(GoalType.runKmPerWeek, Units.fromD(target.toDouble()) / 1000);
     case GoalType.runDistance:
       final target = await promptNumber(
         context,
         title: 'Distance in one run',
-        initial: 10,
+        initial: Units.mi ? 6 : 10,
         decimal: true,
         min: 1,
         max: 200,
-        suffix: 'km',
+        suffix: Units.d,
       );
-      if (target != null) await s.goals.addRun(GoalType.runDistance, target.toDouble());
+      if (target != null) await s.goals.addRun(GoalType.runDistance, Units.fromD(target.toDouble()) / 1000);
     case GoalType.runTime:
       final d = await showModalBottomSheet<int>(
         context: context,
@@ -462,7 +468,7 @@ Future<void> addGoal(BuildContext context) async {
   }
 }
 
-/// "26:30" for run times, "12.4 km", "82.5 kg"…
+/// "26:30" for run times, "12.4 km", "82.5 kg", "181.9 lb"… ([v] as stored).
 String _value(GoalProgress g, double v) => g.goal.type == GoalType.runTime
     ? minutesText(v)
-    : '${g.goal.type == GoalType.runKmPerWeek || g.goal.type == GoalType.runDistance ? v.toStringAsFixed(1) : formatKg(v)} ${g.unit}';
+    : '${formatKg(double.parse(g.toShown(v).toStringAsFixed(1)))} ${g.unit}';

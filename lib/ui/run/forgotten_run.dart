@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../run/geo.dart';
 import '../../run/run_session.dart';
 import 'run_summary_screen.dart';
+import '../../units/units.dart';
 
 /// "Still running?" – a run still recording without movement for 20 min,
 /// or paused for 30 min: finish it where you stopped, keep going, or
@@ -20,7 +21,7 @@ Future<void> askAboutForgottenRun(BuildContext context, RunSession run) async {
       title: const Text('Still running?'),
       content: Text(
         '${pausedAt != null ? 'Your run has been paused for $ago.' : 'Your run is still recording, but you haven\'t moved for $ago.'}'
-        '\n\n${formatKm(run.distanceM)} km so far.',
+        '\n\n${formatKm(run.distanceM)} ${Units.d} so far.',
       ),
       actions: [
         if (run.distanceM < 50)
