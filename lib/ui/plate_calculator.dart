@@ -231,12 +231,14 @@ class _PlateCalculatorState extends State<PlateCalculator> {
   }
 }
 
-/// Plate colours (competition colours, a touch softer – docs/DESIGN.md):
-/// 25 red, 20 blue, 15 yellow, 10 green, 5 white, small change in the same
-/// order. Pound plates take the colour of the kilo plate they are closest to.
+/// Plate colours (owner picks, 2026-11-13): the pound colours for both –
+/// 45 lb blue, 35 yellow, 25 green, 10 white, 5 red, 2.5 black – and kilo
+/// plates take the colour of their pound twin (20 kg ≈ 45 lb …); 25 kg has
+/// no twin and is purple.
 Color plateColor(double w, {bool lb = false}) {
-  const red = Color(0xFFE5484D), blue = Color(0xFF3E63DD), yellow = Color(0xFFFFC53D);
-  const green = Color(0xFF30A46C), white = Color(0xFFF4F4F5), black = Color(0xFF2B2E33), steel = Color(0xFFA9B1BA);
+  const blue = Color(0xFF3E63DD), yellow = Color(0xFFFFC53D), green = Color(0xFF30A46C);
+  const white = Color(0xFFF4F4F5), red = Color(0xFFE5484D), black = Color(0xFF2B2E33);
+  const purple = Color(0xFF8E4EC6), steel = Color(0xFFA9B1BA);
   if (lb) {
     return switch (w) {
       45 => blue,
@@ -249,22 +251,26 @@ Color plateColor(double w, {bool lb = false}) {
     };
   }
   return switch (w) {
-    25 => red,
+    25 => purple,
     20 => blue,
     15 => yellow,
     10 => green,
     5 => white,
     2.5 => red,
     2 => blue,
-    1.5 => yellow,
+    1.25 => black,
     1 => green,
     0.5 => white,
     _ => steel,
   };
 }
 
-/// One plate seen from the side: taller and thicker the heavier it is, with
-/// a soft shine so it looks round.
+/// The thin darker outline every plate has (white plates stay visible).
+const _plateEdge = Color(0x59000000);
+
+/// One plate seen from the side: flat colour, square corners, a thin
+/// outline – no shadow, no shine (owner, 2026-11-13). Taller and thicker
+/// the heavier it is.
 class PlateView extends StatelessWidget {
   const PlateView({super.key, required this.kg, this.lb = false});
 
@@ -276,8 +282,8 @@ class PlateView extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = plateColor(kg, lb: lb);
     final w = lb ? kg * Units.kgPerLb : kg; // size by real weight
-    final h = 30.0 + (w.clamp(0, 25)) * 2.6;
-    final thick = 13.0 + (w.clamp(0, 25)) * 0.42;
+    final h = 30.0 + (w.clamp(0, 25)) * 2.8;
+    final thick = 14.0 + (w.clamp(0, 25)) * 0.5;
     final light = c.computeLuminance() > 0.5;
     return Container(
       width: thick,
@@ -285,15 +291,8 @@ class PlateView extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 1),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(4),
-        gradient: LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [Color.lerp(c, Colors.white, 0.28)!, c, Color.lerp(c, Colors.black, 0.18)!],
-          stops: const [0, 0.45, 1],
-        ),
-        border: light ? Border.all(color: const Color(0x33000000)) : null,
-        boxShadow: const [BoxShadow(color: Color(0x26000000), blurRadius: 3, offset: Offset(1, 2))],
+        color: c,
+        border: Border.all(color: _plateEdge, width: 1.5),
       ),
       child: RotatedBox(
         quarterTurns: 3,
@@ -312,8 +311,8 @@ class PlateView extends StatelessWidget {
   }
 }
 
-/// The bar from the side: collar, the plates of one side (heaviest next to
-/// the collar), then the sleeve and the bar running on.
+/// The bar from the side: the bar, the collar, the plates of one side
+/// (heaviest next to the collar), then the sleeve. Flat and square.
 class LoadedBar extends StatelessWidget {
   const LoadedBar({super.key, required this.plates, this.lb = false, this.emptyText = ''});
 
@@ -328,43 +327,30 @@ class LoadedBar extends StatelessWidget {
     final ext = Theme.of(context).extension<AppTheme>();
     final field = ext?.field ?? scheme.surfaceContainerHighest;
     final muted = ext?.muted ?? scheme.onSurfaceVariant;
-    const steel = Color(0xFFB4BBC3);
-    final bar = Container(
-      height: 10,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(5),
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color.lerp(steel, Colors.white, 0.5)!, steel, Color.lerp(steel, Colors.black, 0.25)!],
-        ),
-      ),
-    );
+    const bar = SizedBox(height: 10, child: ColoredBox(color: Color(0xFFA9B1BA)));
     return Container(
-      height: 112,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(color: field, borderRadius: BorderRadius.circular(10)),
+      height: 120,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      color: field,
       child: Row(
         children: [
           // The bar coming from the middle, and the collar.
-          SizedBox(width: 22, child: bar),
-          Container(
-            width: 8,
-            height: 30,
-            decoration: BoxDecoration(color: const Color(0xFF8A939D), borderRadius: BorderRadius.circular(2)),
-          ),
+          const SizedBox(width: 22, child: bar),
+          const SizedBox(width: 8, height: 30, child: ColoredBox(color: Color(0xFF7D8791))),
           if (plates.isEmpty)
             Expanded(
               child: Stack(
                 alignment: Alignment.center,
                 children: [
                   bar,
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(color: field, borderRadius: BorderRadius.circular(6)),
-                    child: Text(
-                      emptyText,
-                      style: TextStyle(color: muted, fontWeight: FontWeight.w600),
+                  ColoredBox(
+                    color: field,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      child: Text(
+                        emptyText,
+                        style: TextStyle(color: muted, fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ),
                 ],
@@ -381,7 +367,7 @@ class LoadedBar extends StatelessWidget {
                 ),
               ),
             ),
-            Expanded(child: bar),
+            const Expanded(child: bar),
           ],
         ],
       ),
@@ -389,7 +375,7 @@ class LoadedBar extends StatelessWidget {
   }
 }
 
-/// A small coloured dot for a plate in the "plates in your gym" chips.
+/// A small square of the plate's colour in the "plates in your gym" chips.
 class PlateDot extends StatelessWidget {
   const PlateDot({super.key, required this.kg, this.lb = false});
 
@@ -402,8 +388,7 @@ class PlateDot extends StatelessWidget {
     height: 12,
     decoration: BoxDecoration(
       color: plateColor(kg, lb: lb),
-      shape: BoxShape.circle,
-      border: Border.all(color: const Color(0x33000000)),
+      border: Border.all(color: _plateEdge),
     ),
   );
 }
