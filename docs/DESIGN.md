@@ -58,3 +58,7 @@ Profile. Settings is a gear button at the top right of Profile.
 
 ## Build status
 Every rule above is in the app as of 2026-11-12 (steps 1–6, see CLAUDE.md › Phase 3 – UI & looks). Still open: realistic body figures (needs artwork), app name, and whether the app icon follows the theme.
+
+## Round 9–10 (2026-11-13)
+- Start button: word **Train**, big outlined ▷ with the word solid and bold, soft glow of the bright colour; the tab bar rises around it like a hill.
+- Loading screen: dark ink, the app-icon heart beating (lub-dub), the five zone colours lighting up in turn.

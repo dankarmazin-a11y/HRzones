@@ -11,7 +11,7 @@ void main() {
     final s = (await tester.runAsync(testServices))!;
     await tester.pumpWidget(HrZonesApp(services: s));
     await settle(tester);
-    expect(find.text('Start'), findsOneWidget);
+    expect(find.text('Train'), findsOneWidget);
     // No Tools tab any more.
     expect(find.descendant(of: find.byType(NavigationBar), matching: find.text('Tools')), findsNothing);
 

@@ -11,20 +11,26 @@ import 'timers/timers_screen.dart';
 class StartButton extends StatelessWidget {
   const StartButton({super.key});
 
-  static const size = 66.0;
+  /// The circle; the tab bar rises around it (`StartBump`).
+  static const size = 70.0;
+
+  /// How far the circle sticks up above the tab bar.
+  static const overhang = size / 2 + 6;
 
   @override
   Widget build(BuildContext context) {
     final s = Services.of(context);
     final scheme = Theme.of(context).colorScheme;
-    final nav = Theme.of(context).navigationBarTheme.backgroundColor ?? scheme.surface;
+    final t = AppTheme.of(context);
     return ListenableBuilder(
       listenable: Listenable.merge([s.session, s.run]),
       builder: (context, _) {
         final busy = s.session.active != null || s.run.active;
+        // Owner pick (2026-11-13): big outlined play icon, the word solid and
+        // bold, a soft glow of the bright colour around the circle.
         return Semantics(
           button: true,
-          label: busy ? 'Back to your workout' : 'Start',
+          label: busy ? 'Back to your workout' : 'Train',
           child: GestureDetector(
             key: const Key('startButton'),
             onTap: () => openStart(context),
@@ -34,18 +40,28 @@ class StartButton extends StatelessWidget {
               decoration: BoxDecoration(
                 color: scheme.primary,
                 shape: BoxShape.circle,
-                border: Border.all(color: nav, width: 4),
-                boxShadow: const [BoxShadow(color: Color(0x47000000), blurRadius: 20, offset: Offset(0, 8))],
+                boxShadow: [
+                  BoxShadow(color: t.bright.withValues(alpha: 0.22), spreadRadius: 6),
+                  BoxShadow(color: t.bright.withValues(alpha: 0.42), blurRadius: 22, offset: const Offset(0, 8)),
+                ],
               ),
               alignment: Alignment.center,
-              child: Text(
-                busy ? 'Back' : 'Start',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  color: scheme.onPrimary,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 14.5,
-                ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CustomPaint(size: const Size.square(30), painter: _OutlinedPlay(scheme.onPrimary)),
+                  Text(
+                    busy ? 'Back' : 'Train',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      color: scheme.onPrimary,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 13,
+                      height: 1.1,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -53,6 +69,69 @@ class StartButton extends StatelessWidget {
       },
     );
   }
+}
+
+/// ▷ with rounded corners, drawn as an outline.
+class _OutlinedPlay extends CustomPainter {
+  _OutlinedPlay(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.scale(size.width / 24, size.height / 24);
+    canvas.drawPath(
+      Path()
+        ..moveTo(8, 5.2)
+        ..lineTo(8, 18.8)
+        ..lineTo(18.8, 12)
+        ..close(),
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.2
+        ..strokeJoin = StrokeJoin.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_OutlinedPlay old) => old.color != color;
+}
+
+/// The tab bar's top edge rising like a hill around the Start button.
+class StartBump extends StatelessWidget {
+  const StartBump({super.key, required this.color});
+
+  static const width = 200.0;
+  static const height = 28.0;
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(size: const Size(width, height + 1), painter: _BumpPainter(color));
+}
+
+class _BumpPainter extends CustomPainter {
+  _BumpPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width, h = StartBump.height;
+    final path = Path()
+      ..moveTo(0, h)
+      ..cubicTo(w * 0.22, h, w * 0.24, 0, w * 0.5, 0)
+      ..cubicTo(w * 0.76, 0, w * 0.78, h, w, h)
+      ..lineTo(w, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawShadow(path, Colors.black, 3, false);
+    canvas.drawPath(path, Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(_BumpPainter old) => old.color != color;
 }
 
 /// Start button: back to a running workout or run, else the Start menu.
@@ -135,7 +214,7 @@ class StartMenu extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Start', style: text.titleLarge),
+            Text('Train', style: text.titleLarge),
             const SizedBox(height: 12),
             Row(
               children: [

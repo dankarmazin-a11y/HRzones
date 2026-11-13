@@ -116,13 +116,7 @@ class _HomeShellState extends State<HomeShell> {
                     child: PrimaryScrollController(
                       controller: _scroll[i],
                       automaticallyInheritForPlatforms: TargetPlatform.values.toSet(),
-                      // The Start button sticks up above the tab bar: keep
-                      // every tab's content (and the Run tab's Run button)
-                      // clear of it.
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: StartButton.size / 2),
-                        child: screen,
-                      ),
+                      child: screen,
                     ),
                   ),
                 ),
@@ -133,41 +127,53 @@ class _HomeShellState extends State<HomeShell> {
             children: [
               const RunningWorkoutBar(),
               const RunningRunBar(),
+              // The Start button and the bar's bump stick up above the tab
+              // bar. They stay inside the Stack (taps outside a Stack's box
+              // are lost); the space also keeps every tab's content clear.
               Stack(
-                clipBehavior: Clip.none,
                 alignment: Alignment.topCenter,
                 children: [
-                  NavigationBar(
-                    selectedIndex: _slot(_tab),
-                    onDestinationSelected: (i) {
-                      if (i == 2) return; // the Start button's gap
-                      _select(AppTab.values[i < 2 ? i : i - 1]);
-                    },
-                    destinations: const [
-                      NavigationDestination(
-                        icon: Icon(Icons.home_outlined),
-                        selectedIcon: Icon(Icons.home),
-                        label: 'Home',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.fitness_center_outlined),
-                        selectedIcon: Icon(Icons.fitness_center),
-                        label: 'Strength',
-                      ),
-                      NavigationDestination(icon: SizedBox(width: 24, height: 24), label: '', enabled: false),
-                      NavigationDestination(
-                        icon: EmblemIcon(EmblemKind.run),
-                        selectedIcon: EmblemIcon(EmblemKind.run, bold: true),
-                        label: 'Run',
-                      ),
-                      NavigationDestination(
-                        icon: Icon(Icons.person_outline),
-                        selectedIcon: Icon(Icons.person),
-                        label: 'Profile',
-                      ),
-                    ],
+                  Padding(
+                    padding: const EdgeInsets.only(top: StartButton.overhang),
+                    child: NavigationBar(
+                      selectedIndex: _slot(_tab),
+                      onDestinationSelected: (i) {
+                        if (i == 2) return; // the Start button's gap
+                        _select(AppTab.values[i < 2 ? i : i - 1]);
+                      },
+                      destinations: const [
+                        NavigationDestination(
+                          icon: Icon(Icons.home_outlined),
+                          selectedIcon: Icon(Icons.home),
+                          label: 'Home',
+                        ),
+                        NavigationDestination(
+                          icon: Icon(Icons.fitness_center_outlined),
+                          selectedIcon: Icon(Icons.fitness_center),
+                          label: 'Strength',
+                        ),
+                        NavigationDestination(icon: SizedBox(width: 24, height: 24), label: '', enabled: false),
+                        NavigationDestination(
+                          icon: EmblemIcon(EmblemKind.run),
+                          selectedIcon: EmblemIcon(EmblemKind.run, bold: true),
+                          label: 'Run',
+                        ),
+                        NavigationDestination(
+                          icon: Icon(Icons.person_outline),
+                          selectedIcon: Icon(Icons.person),
+                          label: 'Profile',
+                        ),
+                      ],
+                    ),
                   ),
-                  const Positioned(top: -StartButton.size / 2, child: StartButton()),
+                  Positioned(
+                    top: StartButton.overhang - StartBump.height,
+                    child: StartBump(
+                      color:
+                          Theme.of(context).navigationBarTheme.backgroundColor ?? Theme.of(context).colorScheme.surface,
+                    ),
+                  ),
+                  const Positioned(top: 0, child: StartButton()),
                 ],
               ),
             ],
