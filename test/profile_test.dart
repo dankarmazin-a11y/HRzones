@@ -25,12 +25,40 @@ void main() {
 
     await tester.tap(find.byKey(const Key('profileTab_records')));
     await settle(tester);
-    expect(find.byKey(const Key('strengthRecords')), findsOneWidget);
+    expect(find.byKey(const Key('strengthRecords'), skipOffstage: false), findsOneWidget);
+    expect(find.byKey(const Key('goalsReached')), findsOneWidget);
+    expect(find.textContaining('Goals you reach show up here'), findsOneWidget, reason: 'no goal reached yet');
     expect(find.byKey(const Key('allTime')), findsNothing);
 
     await tester.tap(find.byKey(const Key('profileTab_body')));
     await settle(tester);
     expect(find.text('Body measurements'), findsOneWidget);
+    await tearDownApp(tester, s);
+  });
+
+  testWidgets('a reached goal shows in Records with a check and the date it was reached', (tester) async {
+    final s = (await tester.runAsync(() async {
+      final s = await testServices();
+      await s.body.add('weight', 82);
+      await s.goals.addMeasurement('weight', 80);
+      await s.body.add('weight', 79.5); // goal reached
+      return s;
+    }))!;
+    await tester.pumpWidget(HrZonesApp(services: s));
+    await settle(tester);
+    await tester.tap(find.text('Profile').last);
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('profileTab_records')));
+    await settle(tester);
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+    await settle(tester);
+    expect(
+      find.descendant(of: find.byKey(const Key('goalsReached')), matching: find.byIcon(Icons.check_rounded)),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Reached'), findsOneWidget);
+    final g = (await tester.runAsync(() => s.goals.watchAll().first))!.single;
+    expect(g.achievedAt, isNotNull, reason: 'the day it was reached is saved');
     await tearDownApp(tester, s);
   });
 }

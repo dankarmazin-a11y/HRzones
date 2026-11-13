@@ -141,7 +141,27 @@ class GoalRepository {
     return best;
   }
 
+  /// Progress of [g]; the first time a goal is reached its date is saved
+  /// (`goals.achieved_at`) for Profile › Records › Goals reached.
   Future<GoalProgress> progress(Goal g) async {
+    final p = await _progressOf(g);
+    if (!p.achieved || g.achievedAt != null) return p;
+    final now = DateTime.now();
+    await (db.update(
+      db.goals,
+    )..where((x) => x.id.equals(g.id))).write(GoalsCompanion(achievedAt: Value(now), updatedAt: Value(now)));
+    return GoalProgress(
+      goal: g.copyWith(achievedAt: Value(now)),
+      title: p.title,
+      current: p.current,
+      progress: p.progress,
+      unit: p.unit,
+      toShown: p.toShown,
+      fromShown: p.fromShown,
+    );
+  }
+
+  Future<GoalProgress> _progressOf(Goal g) async {
     switch (g.type) {
       case GoalType.liftWeight:
         final ex = await exercises.byId(g.exerciseId ?? '');

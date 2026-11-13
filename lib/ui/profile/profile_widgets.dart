@@ -224,18 +224,6 @@ class _MonthCalendarCardState extends State<MonthCalendarCard> {
                     fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
-                if (v != 0)
-                  Positioned(
-                    bottom: 3,
-                    child: Container(
-                      width: 4,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: v == 1 ? t.second : (v == 2 ? t.bright : t.ink),
-                      ),
-                    ),
-                  ),
               ],
             ),
           );
