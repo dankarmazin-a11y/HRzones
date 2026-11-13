@@ -257,7 +257,9 @@ class WorkoutSession extends ChangeNotifier {
     final end = _editEndedAt;
     if (w == null || end == null) return null;
     for (final e in w.exercises) {
-      e.sets.removeWhere((s) => !s.done && s.weightKg == null && s.reps == null && s.durationS == null);
+      e.sets.removeWhere(
+        (s) => !s.done && s.weightKg == null && s.reps == null && s.durationS == null && s.distanceM == null,
+      );
       for (final s in e.sets) {
         s.completedAt ??= end;
       }
@@ -457,9 +459,23 @@ class WorkoutSession extends ChangeNotifier {
     w.hrPresetId = p?.id;
     if (p != null && !templateMode && !editMode) {
       hr.setRange(HrRange(min: p.minBpm, max: p.maxBpm));
-      if (!hr.running) await hr.start();
+      if (!hr.running) {
+        await hr.start();
+        _hrStartedByWorkout = true;
+      }
     }
     _changed();
+  }
+
+  /// Heart-rate monitoring was switched on by this workout's preset: it is
+  /// switched off again when the workout ends (it used to keep running –
+  /// battery, and zone beeps after the workout).
+  bool _hrStartedByWorkout = false;
+
+  Future<void> _stopWorkoutHr() async {
+    if (!_hrStartedByWorkout) return;
+    _hrStartedByWorkout = false;
+    await hr.stop();
   }
 
   /// Workout (or template draft) from a template: planned sets keep their
@@ -752,11 +768,13 @@ class WorkoutSession extends ChangeNotifier {
     }
     e.sets.add(
       LoggedSet(
-        type: last?.type == SetType.warmup ? SetType.normal : (last?.type ?? SetType.normal),
-        weightKg: last?.weightKg,
-        reps: last?.reps,
-        durationS: last?.durationS,
-      )..subExercise = last?.subExercise,
+          type: last?.type == SetType.warmup ? SetType.normal : (last?.type ?? SetType.normal),
+          weightKg: last?.weightKg,
+          reps: last?.reps,
+          durationS: last?.durationS,
+        )
+        ..distanceM = last?.distanceM
+        ..subExercise = last?.subExercise,
     );
     _changed();
   }
@@ -1184,6 +1202,7 @@ class WorkoutSession extends ChangeNotifier {
   bool _finishing = false;
 
   Future<WorkoutSummary> _finish(ActiveWorkout w, DateTime? endedAt) async {
+    await stopSetRun(save: false); // GPS off (a Run set still measuring)
     _timer = null;
     _ticker?.cancel();
     _syncRestNotice();
@@ -1199,6 +1218,7 @@ class WorkoutSession extends ChangeNotifier {
     _active = null;
     restNotifier?.cancelIdle();
     _releaseAudio();
+    await _stopWorkoutHr();
     notifyListeners();
     return summary;
   }
@@ -1213,6 +1233,7 @@ class WorkoutSession extends ChangeNotifier {
       notifyListeners();
       return;
     }
+    await stopSetRun(save: false); // GPS off (a Run set still measuring)
     _timer = null;
     _ticker?.cancel();
     _syncRestNotice();
@@ -1221,6 +1242,7 @@ class WorkoutSession extends ChangeNotifier {
     _active = null;
     restNotifier?.cancelIdle();
     _releaseAudio();
+    await _stopWorkoutHr();
     notifyListeners();
   }
 
