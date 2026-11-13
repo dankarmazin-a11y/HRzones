@@ -89,6 +89,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
                   child: SegmentedButton<_Show>(
+                    showSelectedIcon: false,
                     key: const Key('historyFilter'),
                     segments: const [
                       ButtonSegment(value: _Show.all, label: Text('All')),

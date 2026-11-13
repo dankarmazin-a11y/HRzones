@@ -176,7 +176,7 @@ class ActiveWorkoutScreen extends StatelessWidget {
                           backgroundColor: Colors.red.shade700,
                           foregroundColor: Colors.white,
                           minimumSize: const Size.fromHeight(48),
-                          textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                          textStyle: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700),
                         ),
                         onPressed: () => _discard(context, session),
                         child: const Text('Discard workout'),

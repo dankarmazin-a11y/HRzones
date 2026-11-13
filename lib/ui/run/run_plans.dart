@@ -215,6 +215,7 @@ class _PlanEditorScreenState extends State<PlanEditorScreen> {
           ),
           const SizedBox(height: 16),
           SegmentedButton<bool>(
+            showSelectedIcon: false,
             key: const Key('planType'),
             segments: const [
               ButtonSegment(value: false, label: Text('Goal'), icon: Icon(Icons.flag_outlined)),

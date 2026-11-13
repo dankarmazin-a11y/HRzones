@@ -59,6 +59,8 @@ void main() {
 
     // Today: an easy 5 km.
     final wd = DateTime.now().weekday;
+    await tester.ensureVisible(find.byKey(Key('planDay_$wd'), skipOffstage: false));
+    await settle(tester);
     await tester.tap(find.byKey(Key('planDay_$wd')));
     await settle(tester);
     await tester.tap(find.byKey(const Key('kind_easy')));

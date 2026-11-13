@@ -6,6 +6,7 @@ import 'ui/theme/app_theme.dart';
 
 import 'app.dart';
 import 'app_services.dart';
+import 'ui/theme/heart_logo.dart';
 
 /// Shown from the very first frame while [AppServices.open] runs, so the
 /// app never sits on a black screen: it shows the current step, and the
@@ -66,38 +67,48 @@ class _StartupAppState extends State<StartupApp> {
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(AppPalette.fallback, Brightness.light),
       home: Scaffold(
+        // The app icon's dark ink with the beating heart (owner pick, 2026-11-13).
+        backgroundColor: AppPalette.fallback.ink,
         body: SafeArea(
           child: Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.monitor_heart_outlined, size: 56, color: AppColors.heart),
-                  const SizedBox(height: 16),
-                  Text('HR Zones', style: Theme.of(context).textTheme.headlineSmall),
-                  const SizedBox(height: 24),
-                  if (_error == null) ...[
-                    const CircularProgressIndicator(),
-                    const SizedBox(height: 16),
-                    Text('$_step…', key: const Key('startupStep')),
-                    if (_slow) ...[
-                      const SizedBox(height: 16),
+              child: DefaultTextStyle.merge(
+                style: const TextStyle(color: Colors.white70, fontFamily: 'Inter'),
+                textAlign: TextAlign.center,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_error == null) const BeatingHeart() else const HeartLogo(),
+                    const SizedBox(height: 18),
+                    const Text(
+                      'HR Zones',
+                      style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 10),
+                    if (_error == null) ...[
+                      Text('$_step…', key: const Key('startupStep'), style: const TextStyle(fontSize: 13)),
+                      if (_slow) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          'This is taking unusually long (stuck at "$_step"). '
+                          'Please send a screenshot of this screen.',
+                          key: const Key('startupSlow'),
+                        ),
+                      ],
+                    ] else ...[
                       Text(
-                        'This is taking unusually long (stuck at "$_step"). '
-                        'Please send a screenshot of this screen.',
-                        key: const Key('startupSlow'),
-                        textAlign: TextAlign.center,
+                        'Could not start ($_step).',
+                        key: const Key('startupError'),
+                        style: const TextStyle(color: Colors.white),
                       ),
+                      const SizedBox(height: 8),
+                      SelectableText('$_error', textAlign: TextAlign.center),
+                      const SizedBox(height: 16),
+                      const Text('Please send a screenshot of this screen.'),
                     ],
-                  ] else ...[
-                    Text('Could not start ($_step).', key: const Key('startupError')),
-                    const SizedBox(height: 8),
-                    SelectableText('$_error', textAlign: TextAlign.center),
-                    const SizedBox(height: 16),
-                    const Text('Please send a screenshot of this screen.'),
                   ],
-                ],
+                ),
               ),
             ),
           ),

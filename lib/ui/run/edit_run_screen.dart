@@ -119,6 +119,7 @@ class _EditRunScreenState extends State<EditRunScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           SegmentedButton<RunKind>(
+            showSelectedIcon: false,
             key: const Key('editRunKind'),
             segments: const [
               ButtonSegment(value: RunKind.outdoor, label: Text('Outdoor'), icon: Icon(Icons.landscape_outlined)),

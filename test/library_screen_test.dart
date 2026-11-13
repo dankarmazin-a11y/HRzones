@@ -11,6 +11,8 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('Strength').last);
     await settle(tester);
+    await tester.ensureVisible(find.text('Exercises', skipOffstage: false));
+    await settle(tester);
     await tester.tap(find.text('Exercises'));
     await settle(tester);
     expect(find.text('Barbell Bench Press'), findsOneWidget);

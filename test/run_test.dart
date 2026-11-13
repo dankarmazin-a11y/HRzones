@@ -306,6 +306,8 @@ void main() {
 
     await tester.tap(find.text('Strength').last);
     await settle(tester);
+    await tester.ensureVisible(find.text('Start empty workout', skipOffstage: false));
+    await settle(tester);
     await tester.tap(find.text('Start empty workout'));
     await settle(tester);
     expect(find.text('Run in progress'), findsOneWidget);
