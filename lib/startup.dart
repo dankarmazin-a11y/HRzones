@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'feedback/problem_log.dart';
+
 import 'ui/theme/app_theme.dart';
 
 import 'app.dart';
@@ -48,6 +50,7 @@ class _StartupAppState extends State<StartupApp> {
       if (mounted) setState(() => _services = s);
     } catch (e, st) {
       debugPrint('Startup failed at "$_step": $e\n$st');
+      ProblemLog.instance.record('Start-up failed at "$_step": $e', st);
       _watchdog?.cancel();
       if (mounted) setState(() => _error = e);
     }

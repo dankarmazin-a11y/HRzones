@@ -1,3 +1,5 @@
+import '../feedback/report_problem.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 
@@ -28,6 +30,9 @@ class SettingsScreen extends StatelessWidget {
         scrollCacheExtent: const ScrollCacheExtent.pixels(4000),
         padding: const EdgeInsets.all(16),
         children: [
+          Text('Help', style: text.titleMedium),
+          const HelpSection(),
+          const Divider(height: 32),
           Text('Look', style: text.titleMedium),
           const ThemeRow(),
           const Divider(height: 32),
