@@ -36,9 +36,10 @@ The owner is not a developer. Explain steps plainly, keep instructions short, an
 - **Phase 2 – running (done 2026-11-06):** GPS route + map, pace, km splits, voice announcements, HR zones on route, PRs (1k/5k/10k/HM).
 - **Phase 3 – body & progress:** ~~weight, body fat, circumferences, charts~~ (done early in Profile), muscle heat map, weekly stats, export (JSON/CSV).
 - **Phase 4 – full check (owner, 2026-11-13):** review the whole app for bugs, possible errors and improvements; Android risks; safety rules for AI-written code. See `docs/REVIEW.md`.
+- **Phase 5 – Android (owner, 2026-11-13: before the beta; start only when the owner says go):** rules in `docs/ANDROID.md`.
 - **Gate:** owner uses it for a full month instead of Hevy/NRC → buy Developer account.
-- **Phase 5 – closed beta:** HealthKit + AirPods HR, TestFlight to 20–50 testers, Live Activity.
-- **Phase 6 – public:** cloud sync, Android, design polish, App Store.
+- **Phase 6 – closed beta on iPhone + Android together:** HealthKit + AirPods HR, TestFlight + Google Play closed testing, 20–50 testers.
+- **Phase 7 – public:** cloud sync, design polish, App Store + Google Play.
 
 ### Phase 1 status
 - Done: Flutter project at repo root (`lib/`, `ios/`, `web/`, bundle id `com.hrzones.app`, Flutter 3.47.9 pinned in CI); 4-tab shell; `HeartRateSource` interface + simulated source; 5 zones (220 − age); `ZoneAlertEngine` (5 s grace, 2 bpm hysteresis, cooldown, 15 s no-signal) with unit tests; native iOS beeper ported from Phase 0 (`ios/Runner/BeeperPlugin.swift`, channel `hrzones/beeper`); CI workflow `build.yml` (check → web preview + IPA).
