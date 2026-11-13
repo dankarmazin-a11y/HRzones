@@ -1,0 +1,19 @@
+# Line-figure poses (Phase 4, waiting for the owner's style pick)
+
+Body keypoints read from the two free-exercise-db photos of each exercise with
+MediaPipe Pose Landmarker (heavy model), offline – nothing runs in the app.
+
+- `extract.py <imgdir> <out.json> <model.task> <ids…>` – downloads `<id>/0.jpg` and `1.jpg`,
+  writes the 33 landmarks per photo. Needs `pip install mediapipe` and the model
+  `pose_landmarker_heavy.task` (storage.googleapis.com/mediapipe-models/…), plus `libegl1`.
+- `quality.py <all.json> <quality.json>` – marks exercises where the body wasn't found or is
+  hard to see (average joint visibility < 0.45). 2026-11-13: 821 good, 52 need a look.
+- `canon2d.py <all.json> <quality.json> <poses.json>` – uniform figures: 15 points per frame (head, shoulders, elbows, wrists,
+  hips, knees, ankles, toes), same body size, floor at y=880, side-on figures face right, `s` = how side-on (for the bar).
+
+Mockup: https://claude.ai/artifact/GNPyueDWW1a8yTupNqxtUf (owner: style B in light mode, C in dark).
+
+- `sam3d_extract.py` + `.github/workflows/poses3d.yml` (manual "Poses 3D" run): Meta SAM 3D Body
+  (SAM License, commercial use allowed) fits a 3D body with real proportions to the photos of
+  `test_group.json`; needs the GitHub secret `HF_TOKEN` (Hugging Face account with access to
+  facebook/sam-3d-body-dinov3). Output artifact `poses3d` (keypoints, joints, pose parameters, meshes).
