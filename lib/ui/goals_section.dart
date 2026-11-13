@@ -10,6 +10,7 @@ import '../workout/stats.dart';
 import 'exercises/exercise_library_screen.dart';
 import 'number_input.dart';
 import '../units/units.dart';
+import 'theme/app_theme.dart';
 
 /// Goals with progress bars. [limit] shows only the first few (Home).
 class GoalsSection extends StatelessWidget {
@@ -472,3 +473,73 @@ Future<void> addGoal(BuildContext context) async {
 String _value(GoalProgress g, double v) => g.goal.type == GoalType.runTime
     ? minutesText(v)
     : '${formatKg(double.parse(g.toShown(v).toStringAsFixed(1)))} ${g.unit}';
+
+/// Profile › Records: the goals you have reached, each with a ✓ (owner,
+/// 2026-11-13). Live, like [GoalsSection].
+class GoalsReachedCard extends StatelessWidget {
+  const GoalsReachedCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Services.of(context);
+    final text = Theme.of(context).textTheme;
+    final t = AppTheme.of(context);
+    return StreamBuilder<List<WorkoutListItem>>(
+      stream: s.workouts.watchFinished(),
+      builder: (context, _) => StreamBuilder<List<Run>>(
+        stream: s.runs.watchFinished(),
+        builder: (context, _) => StreamBuilder<List<BodyMeasurement>>(
+          stream: s.body.watchAll(),
+          builder: (context, _) => StreamBuilder<List<Goal>>(
+            stream: s.goals.watchAll(),
+            builder: (context, snap) => FutureBuilder<List<GoalProgress>>(
+              future: Future.wait((snap.data ?? const <Goal>[]).map(s.goals.progress)),
+              builder: (context, p) {
+                final reached = (p.data ?? const <GoalProgress>[]).where((g) => g.achieved).toList();
+                return Card(
+                  key: const Key('goalsReached'),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text('Goals reached', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 6),
+                        if (reached.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Text(
+                              'Goals you reach show up here with a check mark.',
+                              style: text.bodyMedium?.copyWith(color: t.muted),
+                            ),
+                          ),
+                        for (final g in reached)
+                          ListTile(
+                            key: Key('reached_${g.goal.id}'),
+                            contentPadding: EdgeInsets.zero,
+                            leading: Container(
+                              width: 28,
+                              height: 28,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(color: t.bright, shape: BoxShape.circle),
+                              child: Icon(Icons.check_rounded, size: 18, color: t.onBright),
+                            ),
+                            title: Text(g.title, style: const TextStyle(fontWeight: FontWeight.w700)),
+                            subtitle: Text(
+                              g.goal.achievedAt == null
+                                  ? 'Reached'
+                                  : 'Reached ${g.goal.achievedAt!.day}/${g.goal.achievedAt!.month}/${g.goal.achievedAt!.year}',
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
