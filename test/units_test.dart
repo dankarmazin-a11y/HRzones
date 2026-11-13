@@ -98,6 +98,7 @@ void main() {
     await tester.tap(find.byType(RunningWorkoutBar));
     await settle(tester);
     expect(find.text('LB'), findsWidgets);
+    expect(find.text('lb×reps'), findsOneWidget, reason: 'the tracking chip follows Settings › Units');
     await tester.enterText(find.byType(SetNumberField).first, '135');
     await tester.pump();
     expect(s.session.active!.exercises.single.sets.first.weightKg, closeTo(61.235, 0.001));

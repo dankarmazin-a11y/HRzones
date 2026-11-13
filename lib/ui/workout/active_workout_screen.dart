@@ -599,7 +599,7 @@ class TrackingToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (icon, label) = switch (type) {
-      TrackingType.weightReps => (Icons.fitness_center, 'kg×reps'),
+      TrackingType.weightReps => (Icons.fitness_center, '${Units.w}×reps'), // unit from Settings › Units only
       TrackingType.bodyweightReps => (Icons.repeat, 'reps'),
       TrackingType.duration => (Icons.timer_outlined, 'time'),
       TrackingType.distance => (Icons.straighten, 'metres'),
