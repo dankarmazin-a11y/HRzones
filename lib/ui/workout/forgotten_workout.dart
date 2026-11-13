@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../app_services.dart';
 import '../../workout/stats.dart';
 import '../../workout/workout_session.dart';
+import '../feedback/report_problem.dart';
 import '../run/forgotten_run.dart';
 import 'active_workout_screen.dart';
 import 'workout_summary_screen.dart';
@@ -55,7 +56,17 @@ class _ForgottenWorkoutWatcherState extends State<ForgottenWorkoutWatcher> {
       return;
     }
     final session = Services.of(context).session;
-    if (session.active == null || session.idleFor < WorkoutSession.idleAfter) return;
+    if (session.active == null) {
+      // Nothing running: maybe time for "How do you like HR Zones?".
+      _asking = true;
+      try {
+        await maybeAskForRating(context);
+      } finally {
+        _asking = false;
+      }
+      return;
+    }
+    if (session.idleFor < WorkoutSession.idleAfter) return;
     _asking = true;
     try {
       await askAboutForgottenWorkout(context, session);

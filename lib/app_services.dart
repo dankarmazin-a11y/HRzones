@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'ui/theme/app_theme.dart';
 
 import 'beep/sounds.dart';
+import 'feedback/problem_log.dart';
+import 'feedback/rating.dart';
 import 'data/body_repository.dart';
 import 'data/database.dart';
 import 'data/goal_repository.dart';
@@ -243,6 +245,31 @@ class AppServices {
     await run.restore();
   }
 
+  // ── Rate the app (1–5 stars; owner, 2026-11-13) ─────────────────────
+  /// True when the "How do you like HR Zones?" question is due: a week after
+  /// the first open, then every month.
+  Future<bool> ratingDue({DateTime? now}) async {
+    final first = DateTime.tryParse(await db.getSetting('firstOpenAt') ?? '');
+    if (first == null) return false;
+    return RatingSchedule.due(
+      now: now ?? DateTime.now(),
+      firstOpen: first,
+      lastAsked: DateTime.tryParse(await db.getSetting('rateAskedAt') ?? ''),
+    );
+  }
+
+  /// The question was shown: [stars] 1–5, or null for "Not now" (asked
+  /// again in a month either way).
+  Future<void> answerRating(int? stars, {DateTime? now}) async {
+    final at = now ?? DateTime.now();
+    await db.setSetting('rateAskedAt', at.toIso8601String());
+    if (stars == null) return;
+    final list = Rating.decode(await db.getSetting('ratings'))..add(Rating(at, stars));
+    await db.setSetting('ratings', Rating.encode(list));
+  }
+
+  Future<List<Rating>> ratings() async => Rating.decode(await db.getSetting('ratings'));
+
   /// First launch: show the setup walk-through (level, place, age, …).
   /// Setting `onboarded`; only checked for the real app database.
   final needsOnboarding = ValueNotifier<bool>(false);
@@ -305,6 +332,15 @@ class AppServices {
       } else {
         s.needsOnboarding.value = true;
       }
+    }
+    // The app's own error log (Report a problem) is kept in the database.
+    ProblemLog.instance.attach(
+      saved: await s.db.getSetting('problemLog'),
+      save: (json) => s.db.setSetting('problemLog', json),
+    );
+    // For the "rate the app" question: a week after the first open.
+    if (await s.db.getSetting('firstOpenAt') == null) {
+      await s.db.setSetting('firstOpenAt', DateTime.now().toIso8601String());
     }
     onStep?.call('Restoring your workout');
     await s.session.restore();

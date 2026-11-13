@@ -1,11 +1,25 @@
+import 'dart:ui' show PlatformDispatcher;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'app_services.dart';
+import 'feedback/problem_log.dart';
 import 'startup.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  // Errors are written to the app's own log (Settings › Report a problem).
+  // Nothing leaves the phone unless the user shares a report.
+  final flutterError = FlutterError.onError;
+  FlutterError.onError = (details) {
+    ProblemLog.instance.record(details.exception, details.stack);
+    flutterError?.call(details);
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    ProblemLog.instance.record(error, stack);
+    return false; // still printed as before
+  };
   // Draw the start screen right away (never a black screen), then open the
   // database etc. behind it.
   runApp(
