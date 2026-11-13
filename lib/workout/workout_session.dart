@@ -645,6 +645,12 @@ class WorkoutSession extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Opens / folds the permanent note (tap on the sticky-note tag).
+  void toggleNote(LoggedExercise e) {
+    e.noteHidden = !e.noteHidden;
+    notifyListeners();
+  }
+
   /// Adds stretches as rows of a "Stretching" card.
   void addStretches(LoggedExercise card, List<Exercise> stretches) {
     _addStretchRows(card, stretches);

@@ -145,9 +145,13 @@ void main() {
     await settle(tester);
     await tester.tap(find.byType(RunningWorkoutBar)); // open the running workout
     await settle(tester);
+    // Folded at first: only the small slanted sticky note next to the name.
+    expect(find.byKey(const Key('stickyNote')), findsNothing);
+    expect(find.byKey(const Key('noteBadge')), findsOneWidget, reason: 'sticky-note tag next to the name');
+    await tester.tap(find.byKey(const Key('noteBadge')));
+    await settle(tester);
     expect(find.byKey(const Key('stickyNote')), findsOneWidget);
     expect(find.text('Seat on 4, grip outside the rings'), findsOneWidget);
-    expect(find.byKey(const Key('noteBadge')), findsOneWidget, reason: 'yellow label next to the name');
     expect(find.textContaining('Note from '), findsOneWidget);
     expect(find.text('Felt the left shoulder'), findsOneWidget);
     await tester.tap(find.byTooltip('Hide for this workout'));

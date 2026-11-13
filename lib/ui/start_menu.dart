@@ -126,7 +126,6 @@ class _BumpPainter extends CustomPainter {
       ..lineTo(w, size.height)
       ..lineTo(0, size.height)
       ..close();
-    canvas.drawShadow(path, Colors.black, 3, false);
     canvas.drawPath(path, Paint()..color = color);
   }
 

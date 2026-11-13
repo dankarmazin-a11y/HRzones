@@ -47,8 +47,9 @@ class LoggedExercise {
   String notes = '';
   final List<LoggedSet> sets;
 
-  /// The permanent sticky note was closed for this workout.
-  bool noteHidden = false;
+  /// The permanent note is folded away (owner, 2026-11-13: it starts folded
+  /// behind a small slanted sticky-note tag next to the name; tap to open).
+  bool noteHidden = true;
 
   /// Sets from the last finished workout with this exercise, by index.
   List<WorkoutSet> previous = const [];
