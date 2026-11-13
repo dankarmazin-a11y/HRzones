@@ -88,4 +88,4 @@ sources: `docs/REVIEW.md` §3–4.
 32. Closed beta on both platforms at the same time: TestFlight (iPhone) + Google Play closed
     testing (Android). Google Play needs a minimum number of testers for a set time before a
     public release on new personal accounts – check the current rule at that time.
-33. Map tiles must come from a provider that allows apps before the beta (see REVIEW.md §2).
+33. Map tiles must come from a provider that allows apps before the beta (see REVIEW.md §2). Now: Stadia Maps (key from the `STADIA_KEY` secret). Owner's later plan: **Google Maps on Android**, Apple Maps on iPhone.

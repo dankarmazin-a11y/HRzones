@@ -22,6 +22,13 @@ RouteSegments routeSegments(Iterable<({double lat, double lon, int segment})> po
 
 const routeColor = Color(0xFFFF5722);
 
+/// Map tiles: Stadia Maps ("Outdoors") when the app is built with a key
+/// (`--dart-define=STADIA_KEY=…` from the GitHub secret `STADIA_KEY`), else
+/// the OpenStreetMap server – fine for testing, but its policy doesn't allow
+/// apps with many users (docs/REVIEW.md §2).
+const _stadiaKey = String.fromEnvironment('STADIA_KEY');
+const _stadia = _stadiaKey != '';
+
 /// OpenStreetMap with the route. Tiles are cached on the phone (flutter_map's
 /// built-in cache), so a map seen once loads without data the next time.
 class RunMap extends StatelessWidget {
@@ -92,9 +99,12 @@ class RunMap extends StatelessWidget {
       children: [
         if (loadTiles)
           TileLayer(
-            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            urlTemplate: _stadia
+                ? 'https://tiles.stadiamaps.com/tiles/outdoors/{z}/{x}/{y}{r}.png?api_key=$_stadiaKey'
+                : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
             userAgentPackageName: 'com.hrzones.app',
-            maxNativeZoom: 19,
+            retinaMode: _stadia && RetinaMode.isHighDensity(context),
+            maxNativeZoom: _stadia ? 20 : 19,
           )
         else
           const ColoredBox(color: Color(0xFFE8E4DA), child: SizedBox.expand()),
@@ -113,15 +123,18 @@ class RunMap extends StatelessWidget {
           ],
         ),
         // Required credit for the map, kept small in the corner.
-        const Align(
+        Align(
           alignment: Alignment.bottomRight,
           child: Padding(
-            padding: EdgeInsets.all(4),
+            padding: const EdgeInsets.all(4),
             child: DecoratedBox(
               decoration: BoxDecoration(color: Color(0xB3FFFFFF), borderRadius: BorderRadius.all(Radius.circular(4))),
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                child: Text('© OpenStreetMap', style: TextStyle(fontSize: 9, color: Colors.black87)),
+                child: Text(
+                  _stadia ? '© Stadia Maps © OpenMapTiles © OpenStreetMap' : '© OpenStreetMap',
+                  style: const TextStyle(fontSize: 9, color: Colors.black87),
+                ),
               ),
             ),
           ),
