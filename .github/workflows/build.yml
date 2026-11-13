@@ -96,7 +96,7 @@ jobs:
           cache: true
       - run: flutter pub get
       - name: Build iOS app (unsigned)
-        run: flutter build ios --release --no-codesign --dart-define=APP_BUILD="${GITHUB_SHA::7} $(date -u +%Y-%m-%d)"
+        run: flutter build ios --release --no-codesign --dart-define=APP_BUILD="${GITHUB_SHA::7} $(date -u +%Y-%m-%d)" --dart-define=STADIA_KEY="${{ secrets.STADIA_KEY }}"
       - name: Package IPA
         run: |
           APP=build/ios/iphoneos/Runner.app
