@@ -54,7 +54,8 @@ class AppServices {
     run = RunSession(runs: runs, hr: hr, location: location, motion: location == null ? MotionSource.create() : null)
       ..voice = RunVoice(hr.beeper.speak)
       ..notifier = restNotifier
-      ..plans = runPlans.byId;
+      ..plans = runPlans.byId
+      ..presetFor = ((id) async => zonesEnabled.value ? presets.byId(id) : null);
     session.locationFor = () => run.location;
     session.live = live;
     run.live = live;

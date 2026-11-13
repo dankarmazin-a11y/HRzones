@@ -172,6 +172,10 @@ class RunSession extends ChangeNotifier {
   /// Looks up a planned run (set by AppServices; used when restoring).
   Future<RunPlan?> Function(String id)? plans;
 
+  /// Looks up the run's heart-rate preset when the run is restored after the
+  /// app was closed (set by AppServices; returns null when zones are off).
+  Future<HrPreset?> Function(String? id)? presetFor;
+
   /// "Still running?" notification (set by AppServices).
   RestNotifier? notifier;
 
@@ -584,6 +588,16 @@ class RunSession extends ChangeNotifier {
     _lastMoveAt = _route.isEmpty ? row.startedAt : _route.last.time;
     _moveMark = distanceM;
     voice?.restored(distanceM, moving);
+    // The app was closed mid-run: turn the run's heart-rate beeps back on
+    // (they stayed off before – the run went on without zone alerts).
+    final preset = await presetFor?.call(row.hrPresetId);
+    if (preset != null) {
+      hr.setRange(HrRange(min: preset.minBpm, max: preset.maxBpm));
+      if (!hr.running) {
+        await hr.start();
+        _hrStartedByRun = true;
+      }
+    }
     _hookAlerts();
     _planId = row.planId;
     final planRow = row.planId == null ? null : await plans?.call(row.planId!);
@@ -764,6 +778,9 @@ class RunSession extends ChangeNotifier {
   Future<void> _saveRun({DateTime? endedAt, int? avgHr, int? maxHr, Map<int, double>? bests, String? laps}) async {
     final id = _id, start = _startedAt;
     if (id == null || start == null) return;
+    // A save every few seconds must never land after Finish wrote the end
+    // (the run would open as "still running" next time).
+    if (endedAt == null && _finishing) return;
     await runs.saveRun(
       RunsCompanion.insert(
         id: Value(id),
