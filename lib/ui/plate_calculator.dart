@@ -6,6 +6,7 @@ import '../workout/calculators.dart';
 import '../workout/stats.dart';
 import 'number_input.dart';
 import '../units/units.dart';
+import 'theme/app_theme.dart';
 
 /// A bar the user can load (weight in the unit of its list: kg or lb).
 class BarOption {
@@ -182,16 +183,23 @@ class _PlateCalculatorState extends State<PlateCalculator> {
           ],
         ),
         const SizedBox(height: 16),
-        Text('Each side', style: text.titleSmall),
+        // The bar seen from the side, loaded like in the mockups: colourful
+        // plates by size, then the bar's sleeve.
+        LoadedBar(
+          key: const Key('loadedBar'),
+          plates: result.perSide,
+          lb: _lb,
+          emptyText: _target <= _bar ? 'Just the bar' : 'No plates fit',
+        ),
         const SizedBox(height: 8),
-        if (result.perSide.isEmpty)
-          Text(_target <= _bar ? 'Just the bar' : 'No plates fit', style: text.bodyLarge)
-        else
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [for (final p in result.perSide) PlateView(kg: p, lb: _lb)],
-          ),
+        Text(
+          result.perSide.isEmpty
+              ? 'Bar ${formatKg(_bar)} $_u'
+              : 'Each side: ${formatKg(result.perSide.fold<double>(0, (a, b) => a + b))} $_u  ·  '
+                    '${result.perSide.map(formatKg).join(' + ')}',
+          key: const Key('perSideText'),
+          style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+        ),
         if (result.remainder > 0)
           Padding(
             padding: const EdgeInsets.only(top: 8),
@@ -208,7 +216,14 @@ class _PlateCalculatorState extends State<PlateCalculator> {
           runSpacing: 6,
           children: [
             for (final p in _all)
-              FilterChip(label: Text(formatKg(p)), selected: _plates.contains(p), onSelected: (_) => _togglePlate(p)),
+              FilterChip(
+                // Every plate keeps its colour; the fill shows which you have.
+                showCheckmark: false,
+                avatar: PlateDot(kg: p, lb: _lb),
+                label: Text(formatKg(p)),
+                selected: _plates.contains(p),
+                onSelected: (_) => _togglePlate(p),
+              ),
           ],
         ),
       ],
@@ -216,7 +231,40 @@ class _PlateCalculatorState extends State<PlateCalculator> {
   }
 }
 
-/// A plate drawn to scale-ish, coloured like competition plates.
+/// Plate colours (competition colours, a touch softer – docs/DESIGN.md):
+/// 25 red, 20 blue, 15 yellow, 10 green, 5 white, small change in the same
+/// order. Pound plates take the colour of the kilo plate they are closest to.
+Color plateColor(double w, {bool lb = false}) {
+  const red = Color(0xFFE5484D), blue = Color(0xFF3E63DD), yellow = Color(0xFFFFC53D);
+  const green = Color(0xFF30A46C), white = Color(0xFFF4F4F5), black = Color(0xFF2B2E33), steel = Color(0xFFA9B1BA);
+  if (lb) {
+    return switch (w) {
+      45 => blue,
+      35 => yellow,
+      25 => green,
+      10 => white,
+      5 => red,
+      2.5 => black,
+      _ => steel,
+    };
+  }
+  return switch (w) {
+    25 => red,
+    20 => blue,
+    15 => yellow,
+    10 => green,
+    5 => white,
+    2.5 => red,
+    2 => blue,
+    1.5 => yellow,
+    1 => green,
+    0.5 => white,
+    _ => steel,
+  };
+}
+
+/// One plate seen from the side: taller and thicker the heavier it is, with
+/// a soft shine so it looks round.
 class PlateView extends StatelessWidget {
   const PlateView({super.key, required this.kg, this.lb = false});
 
@@ -224,55 +272,140 @@ class PlateView extends StatelessWidget {
   final double kg;
   final bool lb;
 
-  static final _colors = <double, Color>{
-    25.0: Colors.red,
-    20.0: Colors.blue,
-    15.0: Colors.amber,
-    10.0: Colors.green,
-    5.0: Colors.white,
-    2.5: Colors.black,
-    2.0: Colors.blueGrey,
-    1.25: Colors.grey,
-    1.0: Colors.grey,
-    0.5: Colors.grey,
-  };
-
-  /// Pound plates take the colour of the kilo plate they are closest to.
-  static final _colorsLb = <double, Color>{
-    45.0: Colors.blue,
-    35.0: Colors.amber,
-    25.0: Colors.green,
-    10.0: Colors.white,
-    5.0: Colors.black,
-    2.5: Colors.blueGrey,
-    1.25: Colors.grey,
-  };
-
   @override
   Widget build(BuildContext context) {
-    final c = (lb ? _colorsLb[kg] : _colors[kg]) ?? Colors.grey;
-    final h = 36.0 + (lb ? kg * Units.kgPerLb : kg) * 1.6;
+    final c = plateColor(kg, lb: lb);
+    final w = lb ? kg * Units.kgPerLb : kg; // size by real weight
+    final h = 30.0 + (w.clamp(0, 25)) * 2.6;
+    final thick = 13.0 + (w.clamp(0, 25)) * 0.42;
+    final light = c.computeLuminance() > 0.5;
     return Container(
-      width: 34,
+      width: thick,
       height: h,
+      margin: const EdgeInsets.symmetric(horizontal: 1),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: c,
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: Colors.black26),
+        gradient: LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [Color.lerp(c, Colors.white, 0.28)!, c, Color.lerp(c, Colors.black, 0.18)!],
+          stops: const [0, 0.45, 1],
+        ),
+        border: light ? Border.all(color: const Color(0x33000000)) : null,
+        boxShadow: const [BoxShadow(color: Color(0x26000000), blurRadius: 3, offset: Offset(1, 2))],
       ),
       child: RotatedBox(
         quarterTurns: 3,
         child: Text(
           formatKg(kg),
+          maxLines: 1,
           style: TextStyle(
-            color: c.computeLuminance() > 0.5 ? Colors.black : Colors.white,
-            fontWeight: FontWeight.bold,
+            fontFamily: 'Inter',
+            color: light ? const Color(0xFF2B2E33) : Colors.white,
+            fontWeight: FontWeight.w800,
+            fontSize: w >= 5 ? 11 : 9,
           ),
         ),
       ),
     );
   }
+}
+
+/// The bar from the side: collar, the plates of one side (heaviest next to
+/// the collar), then the sleeve and the bar running on.
+class LoadedBar extends StatelessWidget {
+  const LoadedBar({super.key, required this.plates, this.lb = false, this.emptyText = ''});
+
+  final List<double> plates;
+  final bool lb;
+  final String emptyText;
+
+  @override
+  Widget build(BuildContext context) {
+    // Works without the app theme too (calculator sheets in tests).
+    final scheme = Theme.of(context).colorScheme;
+    final ext = Theme.of(context).extension<AppTheme>();
+    final field = ext?.field ?? scheme.surfaceContainerHighest;
+    final muted = ext?.muted ?? scheme.onSurfaceVariant;
+    const steel = Color(0xFFB4BBC3);
+    final bar = Container(
+      height: 10,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(5),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color.lerp(steel, Colors.white, 0.5)!, steel, Color.lerp(steel, Colors.black, 0.25)!],
+        ),
+      ),
+    );
+    return Container(
+      height: 112,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(color: field, borderRadius: BorderRadius.circular(10)),
+      child: Row(
+        children: [
+          // The bar coming from the middle, and the collar.
+          SizedBox(width: 22, child: bar),
+          Container(
+            width: 8,
+            height: 30,
+            decoration: BoxDecoration(color: const Color(0xFF8A939D), borderRadius: BorderRadius.circular(2)),
+          ),
+          if (plates.isEmpty)
+            Expanded(
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  bar,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(color: field, borderRadius: BorderRadius.circular(6)),
+                    child: Text(
+                      emptyText,
+                      style: TextStyle(color: muted, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else ...[
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [for (final p in plates) PlateView(kg: p, lb: lb)],
+                ),
+              ),
+            ),
+            Expanded(child: bar),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// A small coloured dot for a plate in the "plates in your gym" chips.
+class PlateDot extends StatelessWidget {
+  const PlateDot({super.key, required this.kg, this.lb = false});
+
+  final double kg;
+  final bool lb;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 12,
+    height: 12,
+    decoration: BoxDecoration(
+      color: plateColor(kg, lb: lb),
+      shape: BoxShape.circle,
+      border: Border.all(color: const Color(0x33000000)),
+    ),
+  );
 }
 
 /// Tools › Plate calculator.
