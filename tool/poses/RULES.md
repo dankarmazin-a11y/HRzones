@@ -16,8 +16,10 @@ Every exercise figure is made with these rules, in this order. Code: `mockup3d_t
 5. **Floor** = the lowest point of the body. Nothing is drawn below it.
 6. The two photos are lined up on the body parts **touching the floor/pad in both** (feet,
    hands, forearms, knees…). Hanging exercises are lined up on the hands.
-7. **Lying exercises** (name has lying / prone / supine) are often photographed from above:
-   the camera is tilted so the torso lies flat.
+7. **Lying exercises** are often photographed from above: the camera is tilted so the torso
+   lies flat. Lying = the name has lying, prone, supine, bench press, floor press, pullover,
+   skull crusher, Tate press, fly/flye, chest press or close-grip press – and not incline,
+   decline, standing, seated, machine or cable.
 8. **Hands and feet both on the floor** (push-up, plank): the body is turned around the feet
    until the hands rest on the floor too.
 9. **Level body:** the shoulders and hips are levelled left-to-right. Tilts under 25° are
@@ -59,23 +61,28 @@ Every exercise figure is made with these rules, in this order. Code: `mockup3d_t
     shoulder width, front squat 1.05 ×, hip thrust ≥ 1.2 ×). Both hands are placed exactly on
     the bar – no floating, no impossible arm movement.
 22. Dumbbells: in each palm along the shoulder line; kettlebells hang below the hand.
-23. **Bench under the shoulders** when the shoulders rest 30–75 cm high in both photos and the
+23. Props need the name to agree (geometry alone mistook crawls and stretches for sitting):
+    a shoulder bench needs hip thrust / bench / bridge in the name; a seat needs seated /
+    sitting / seat / machine / bench / chair / box. **Hanging** is decided by the name only:
+    pull-up, chin-up, hanging, muscle-up, toes-to-bar, knees-to-elbows ("hang position" in a
+    clean is not hanging).
+24. **Bench under the shoulders** when the shoulders rest 30–75 cm high in both photos and the
     torso is close to horizontal (hip thrust). **Seat** when the pelvis is 30–80 cm high with
     thighs roughly level and shins upright (seated press). **Pull-up bar** above the hands when
     hanging. Props are flat, grey, behind the body.
 
 ## 6. Look
-24. Line figure only (owner pick). Style **B** in light mode (dark lines), style **C** in dark
+25. Line figure only (owner pick). Style **B** in light mode (dark lines), style **C** in dark
     mode (white lines). Head = filled oval; equal line widths.
-25. **Working muscles only:** main muscles in the bright colour, secondary muscles lighter,
+26. **Working muscles only:** main muscles in the bright colour, secondary muscles lighter,
     everything else plain. Each line is split where the muscles sit: shoulders = top 35 % of
     the upper arm + shoulder line; biceps/triceps = rest of the upper arm; forearms; glutes =
     top 25 % of the thigh + hip line; quads/hamstrings/adductors/abductors = rest of the thigh;
     calves = shin; abs/lower back = lower 45 % of the spine; chest/lats/middle back = upper
     spine; traps/neck = neck.
-26. In the app: moving on the exercise page and in the exercise list; **still** (end pose)
+27. In the app: moving on the exercise page and in the exercise list; **still** (end pose)
     when small next to a name in a workout or template. Show photos stays one tap away.
 
 ## 7. Checking
-27. After a full run every exercise is checked by eye in batches (review page). Fixes go in as
+28. After a full run every exercise is checked by eye in batches (review page). Fixes go in as
     rules first; only true one-offs get a per-exercise override.

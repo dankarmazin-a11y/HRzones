@@ -76,12 +76,15 @@ function full0(f){const o={...f};o.pelvis=V.mid(f.hip_l,f.hip_r);o.head=V.add(V.
 // the feet (lowest point / ankles), or the hands when hanging.
 function rotAbout(p,c,k,ang){const q=V.sub(p,c),co=Math.cos(ang),sn=Math.sin(ang),kq=V.dot(k,q),cr=[k[1]*q[2]-k[2]*q[1],k[2]*q[0]-k[0]*q[2],k[0]*q[1]-k[1]*q[0]];
   return V.add(c,V.add(V.add(V.mul(q,co),V.mul(cr,sn)),V.mul(k,kq*(1-co))));}
-function isHanging(ex,F){return /pull-?up|chin-?up|hang/i.test(META[ex.id].name)||F.every(f=>Math.min(f.wr_l[1],f.wr_r[1])<f.neck[1]-.15);}
+// hanging is decided by the name only: arms overhead also happen lying down or pressing
+function isHanging(ex,F){return /pull-?up|chin-?up|hanging|muscle[- ]?up|toes[- ]to[- ]bar|knees[- ]to[- ]elbows/i.test(META[ex.id].name);}
 function aligned(ex){
   if(ex.al)return ex.al;let F=ex.j.map(full0);
   // Lying exercises are often photographed from above: tilt the camera (around its left-right
   // axis) so the torso lies flat on the pad.
-  ex.lying=/lying|prone|supine/i.test(META[ex.id].name);
+  // lying on the back / front: by name (incline/decline work keeps its angle)
+  const nm=META[ex.id].name;
+  ex.lying=/lying|prone|supine|bench press|floor press|pullover|skull ?crusher|tate press|\bfly|\bflye|chest press|close-grip press/i.test(nm)&&!/incline|decline|standing|seated|machine|cable/i.test(nm);
   if(ex.lying){
     let sy=0,sz=0;for(const f of F){const sp=V.sub(f.neck,f.pelvis);sy+=sp[1];sz+=sp[2];}
     let ang=Math.atan2(sy,sz);if(ang>Math.PI/2)ang-=Math.PI;if(ang<-Math.PI/2)ang+=Math.PI;
@@ -220,8 +223,10 @@ function props(ex){
     // shoulders resting (torso part high off the floor in both frames while the body is low/lying): bench under the shoulders
     const shoulderRest=F.every(f=>{const sm=V.mid(f.sh_l,f.sh_r);return h(sm)>.3&&h(sm)<.75&&Math.abs(sm[1]-f.pelvis[1])<.35;})&&F.some(f=>Math.abs(f.neck[1]-f.pelvis[1])<.3);
     const seated=F.every(f=>{const th=V.sub(f.kn_l,f.hip_l),sh=V.sub(f.an_l,f.kn_l);return h(f.pelvis)>.3&&h(f.pelvis)<.8&&Math.abs(th[1])<.6*Math.hypot(th[0],th[2])+.05&&Math.abs(sh[1])>.7*V.len(sh);});
-    if(shoulderRest){const top=Math.max(...F.map(f=>V.mid(f.sh_l,f.sh_r)[1]))+.07;const x=F.reduce((s,f)=>s+V.mid(f.sh_l,f.sh_r)[0],0)/2;P.push({type:'bench',x,top,w:.42,floor});}
-    else if(seated){const top=Math.max(...F.map(f=>f.pelvis[1]))+.09;const x=F.reduce((s,f)=>s+f.pelvis[0],0)/2-.05;P.push({type:'bench',x,top,w:.4,floor});}
+    // a bench or seat only where the exercise name says there is one
+    const nm=META[ex.id].name,benchName=/hip thrust|bench|bridge/i.test(nm),seatName=/seated|sitting|seat|machine|bench|chair|box/i.test(nm);
+    if(shoulderRest&&benchName){const top=Math.max(...F.map(f=>V.mid(f.sh_l,f.sh_r)[1]))+.07;const x=F.reduce((s,f)=>s+V.mid(f.sh_l,f.sh_r)[0],0)/2;P.push({type:'bench',x,top,w:.42,floor});}
+    else if(seated&&seatName){const top=Math.max(...F.map(f=>f.pelvis[1]))+.09;const x=F.reduce((s,f)=>s+f.pelvis[0],0)/2-.05;P.push({type:'bench',x,top,w:.4,floor});}
   }
   return ex.props=P;
 }
