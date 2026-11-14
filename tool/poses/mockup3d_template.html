@@ -38,8 +38,8 @@ p{margin:0;max-width:72ch}
 </style>
 <div class="wrap">
   <header style="display:flex;flex-direction:column;gap:12px">
-    <h1>Line figures, round 5</h1>
-    <p class="muted">Every exercise now uses the same slim, fit body. The barbell sits where it belongs (upper back, front of the shoulders, hips or hands), and only the working muscles are coloured: main muscle in orange, secondary muscles in light orange. Light mode is style B, dark mode style C.</p>
+    <h1>Line figures, round 6</h1>
+    <p class="muted">The camera is fixed for each exercise; only the body moves. Feet that stand stay planted, hands stay on the bar, the floor or the pull-up bar, and parts that do not work in the exercise hold still. Main muscle in orange, secondary in light orange. Light mode is style B, dark mode style C.</p>
     <div class="seg" role="group" aria-label="Phone look">
       <button id="lk-light" data-look="light" aria-pressed="true">Light (B)</button>
       <button id="lk-dark" data-look="dark" aria-pressed="false">Dark (C)</button>
@@ -49,9 +49,9 @@ p{margin:0;max-width:72ch}
   <div class="heads" aria-hidden="true"><span>Exercise</span><span>Round 2 (before)</span><span><b>New line figure</b></span><span>Fit standard body (3D)</span></div>
   <div id="rows" style="display:flex;flex-direction:column;gap:10px"></div>
   <section class="notes">
-    <div class="card"><h3>Barbell rules</h3><p>Back squat, good morning, barbell lunge, split squat, step-up, calf raise: on the upper back, behind the neck. Front squat: front of the shoulders. Hip thrust, glute bridge: across the hips. Everything else: across the palms. The bar always runs left to right across the body.</p></div>
-    <div class="card"><h3>Working muscles</h3><p>Each line of the figure is split where the muscles sit: shoulders at the top of the arm, glutes at the top of the thigh, chest and back on the upper spine, abs and lower back on the lower spine. Only the muscles the exercise works are coloured.</p></div>
-    <div class="card"><h3>One fit body</h3><p>The photos show different people. Now every pose is redrawn with the same lean, athletic body, so all figures have the same proportions.</p></div>
+    <div class="card"><h3>Planted and holding</h3><p>A foot on the floor in both photos is pinned and the leg bends to reach it. Hands on the floor or on a pull-up bar are pinned the same way. Nothing goes through the floor.</p></div>
+    <div class="card"><h3>Barbell</h3><p>One grip width for the whole movement, both hands exactly on the bar, and the bar stays level. It sits on the upper back, the front of the shoulders, the hips or in the hands, by exercise.</p></div>
+    <div class="card"><h3>No extra movement</h3><p>A body part that turns less than 6° between the photos stays still. Legs that don't work in the exercise hold one pose; on hanging exercises they hang straight down.</p></div>
   </section>
 </div>
 <script>
@@ -79,7 +79,8 @@ function aligned(ex){
   if(ex.al)return ex.al;let F=ex.j.map(full0);
   // Lying exercises are often photographed from above: tilt the camera (around its left-right
   // axis) so the torso lies flat on the pad.
-  if(/lying|prone|supine/i.test(META[ex.id].name)){
+  ex.lying=/lying|prone|supine/i.test(META[ex.id].name);
+  if(ex.lying){
     let sy=0,sz=0;for(const f of F){const sp=V.sub(f.neck,f.pelvis);sy+=sp[1];sz+=sp[2];}
     let ang=Math.atan2(sy,sz);if(ang>Math.PI/2)ang-=Math.PI;if(ang<-Math.PI/2)ang+=Math.PI;
     const c=Math.cos(ang),sn=Math.sin(ang);
@@ -90,7 +91,28 @@ function aligned(ex){
     if(hang)a=V.mid(f.wr_l,f.wr_r);
     else{let low=-1e9;for(const k in f)low=Math.max(low,f[k][1]);const m=V.mid(f.an_l,f.an_r);a=[m[0],low,m[2]];}
     const o={};for(const k in f)o[k]=V.sub(f[k],a);return o;});
-  ex.hang=hang;return ex.al;
+  ex.hang=hang;
+  // hands and feet both on the floor (push-up, plank…): the photo often shows the body a little
+  // tilted – turn it around the feet until the hands rest on the floor too
+  const A=ex.al,hgt=p=>-p[1];
+  const onFloor=!hang&&A.every(f=>hgt(V.mid(f.wr_l,f.wr_r))<.35&&hgt(V.mid(f.an_l,f.an_r))<.2);
+  const span=V.sub(V.mid(A[0].wr_l,A[0].wr_r),V.mid(A[0].an_l,A[0].an_r));
+  if(onFloor&&Math.hypot(span[0],span[2])>.8){
+    const am=V.mid(V.mid(A[0].an_l,A[0].an_r),V.mid(A[1].an_l,A[1].an_r)),wm=V.mid(V.mid(A[0].wr_l,A[0].wr_r),V.mid(A[1].wr_l,A[1].wr_r));
+    const v=V.sub(wm,am),hz=Math.hypot(v[0],v[2]);const ang=Math.atan2(-v[1],hz); // how far the hands are above the feet
+    const k=V.norm([-v[2],0,v[0]]); // turn around the horizontal axis across the body, through the feet
+    const rot=p=>{const q=V.sub(p,am),c=Math.cos(ang),sn=Math.sin(ang),kq=V.dot(k,q),cr=[k[1]*q[2]-k[2]*q[1],k[2]*q[0]-k[0]*q[2],k[0]*q[1]-k[1]*q[0]];
+      return V.add(am,V.add(V.add(V.mul(q,c),V.mul(cr,sn)),V.mul(k,kq*(1-c))));};
+    let R=A.map(f=>{const o={};for(const kk in f)o[kk]=rot(f[kk]);return o;});
+    // if that lifted the hands instead, turn the other way
+    if(Math.abs(hgt(V.mid(R[0].wr_l,R[0].wr_r))-hgt(V.mid(R[0].an_l,R[0].an_r)))>Math.abs(v[1])){const ang2=-ang;
+      const rot2=p=>{const q=V.sub(p,am),c=Math.cos(ang2),sn=Math.sin(ang2),kq=V.dot(k,q),cr=[k[1]*q[2]-k[2]*q[1],k[2]*q[0]-k[0]*q[2],k[0]*q[1]-k[1]*q[0]];
+        return V.add(am,V.add(V.add(V.mul(q,c),V.mul(cr,sn)),V.mul(k,kq*(1-c))));};
+      R=A.map(f=>{const o={};for(const kk in f)o[kk]=rot2(f[kk]);return o;});}
+    // floor again at the lowest hand/foot point
+    ex.al=R.map(f=>{let low=-1e9;for(const kk of ['wr_l','wr_r','an_l','an_r','toe_l','toe_r','heel_l','heel_r'])low=Math.max(low,f[kk][1]);const o={};for(const kk in f)o[kk]=V.sub(f[kk],[0,low,0]);return o;});
+  }
+  return ex.al;
 }
 const MOVERS=['wr_l','wr_r','el_l','el_r','kn_l','kn_r','an_l','an_r','pelvis','neck'];
 function chooseView(ex){
@@ -115,8 +137,61 @@ function chooseView(ex){
   ex.th=best.th;ex.phi=best.phi;
 }
 function full(f,ex){if(ex.th===undefined)chooseView(ex);const src=aligned(ex)[ex.j.indexOf(f)];const o={};for(const k in src)o[k]=rotY(src[k],ex.th);return o;}
-function pose(ex,t){const [a,b]=ex.j.map(f=>full(f,ex));const o={pelvis:V.add(V.mul(a.pelvis,1-t),V.mul(b.pelvis,t))};
-  for(const [c,p] of BONES){const da=V.sub(a[c],a[p]),db=V.sub(b[c],b[p]);const L=(V.len(da)+V.len(db))/2;o[c]=V.add(o[p],V.mul(slerp(V.norm(da),V.norm(db),t),L));}return o;}
+// ── Pose at time t: joints turn (limbs keep their length); tiny wobbles are removed ──
+const STILL=6*Math.PI/180; // a bone that turns less than this between the photos stays still
+function pose0(ex,t){const [a,b]=ex.j.map(f=>full(f,ex));const o={pelvis:V.add(V.mul(a.pelvis,1-t),V.mul(b.pelvis,t))};
+  if(V.len(V.sub(a.pelvis,b.pelvis))<.04)o.pelvis=V.mid(a.pelvis,b.pelvis);
+  // legs that don't work in this exercise hold one steady pose (the straighter one) instead of swinging
+  const m=META[ex.id],all=[...m.mus,...(m.sec||[])];
+  const legsIdle=!all.some(x=>LEGS.includes(x));
+  const knee=f=>V.dot(V.norm(V.sub(f.hip_l,f.kn_l)),V.norm(V.sub(f.an_l,f.kn_l)))+V.dot(V.norm(V.sub(f.hip_r,f.kn_r)),V.norm(V.sub(f.an_r,f.kn_r)));
+  const legFrame=knee(a)<knee(b)?a:b; // more open knees = straighter legs
+  const LEGBONES=new Set(['kn_l','an_l','toe_l','heel_l','kn_r','an_r','toe_r','heel_r']);
+  for(const [c,p] of BONES){const da=V.sub(a[c],a[p]),db=V.sub(b[c],b[p]);const L=(V.len(da)+V.len(db))/2;
+    const na=V.norm(da),nb=V.norm(db);const still=Math.acos(Math.max(-1,Math.min(1,V.dot(na,nb))))<STILL;
+    let dir=still?V.norm(V.add(na,nb)):slerp(na,nb,t);
+    if(legsIdle&&!ex.lying&&LEGBONES.has(c)){
+      dir=V.norm(V.sub(legFrame[c],legFrame[p]));
+      // hanging: idle legs hang straight down, knees a touch forward
+      if(ex.hang&&(c[0]==='k'||c[0]==='a')){const fw=bodyAxes(a).fwd;dir=V.norm(V.add([0,1,0],V.mul([fw[0],0,fw[2]],c[0]==='k'?.12:-.05)));}
+    }
+    o[c]=V.add(o[p],V.mul(dir,L));}
+  return o;}
+// two-bone reach (shoulder→elbow→wrist, hip→knee→ankle): put the end on target, bend the middle
+// joint the way it bends in the photos
+function reach(A,M0,T,L1,L2){let dv=V.sub(T,A);let d=V.len(dv);const dir=V.norm(dv);d=Math.max(Math.abs(L1-L2)+1e-3,Math.min(L1+L2-1e-3,d));
+  const ca=(L1*L1+d*d-L2*L2)/(2*L1*d),sa=Math.sqrt(Math.max(0,1-ca*ca));
+  let h=V.sub(M0,A);h=V.sub(h,V.mul(dir,V.dot(h,dir)));const n=V.len(h)>1e-4?V.norm(h):V.norm([dir[1],-dir[0],0]);
+  return {mid:V.add(A,V.add(V.mul(dir,L1*ca),V.mul(n,L1*sa))),end:V.add(A,V.mul(dir,d))};}
+function boneLen(ex,a,b){const F=ex.j.map(f=>full(f,ex));return (V.len(V.sub(F[0][a],F[0][b]))+V.len(V.sub(F[1][a],F[1][b])))/2;}
+// things that must stay put: planted feet, hands on the floor / on a fixed bar
+function contacts(ex){
+  if(ex.ct)return ex.ct;const F=ex.j.map(f=>full(f,ex));const ct={};
+  const h=p=>-p[1];const hd=(p,q)=>Math.hypot(p[0]-q[0],p[2]-q[2]);
+  const mv={l:hd(F[0].an_l,F[1].an_l),r:hd(F[0].an_r,F[1].an_r)};
+  for(const s of ['l','r']){
+    const other=s==='l'?'r':'l';const planted=mv[s]<.3||(mv[s]<.45&&mv[s]<mv[other]);
+    if(h(F[0]['an_'+s])<.15&&h(F[1]['an_'+s])<.15&&planted){
+      ct['an_'+s]=V.mid(F[0]['an_'+s],F[1]['an_'+s]);
+      ct['toe_'+s]=V.add(ct['an_'+s],V.mid(V.sub(F[0]['toe_'+s],F[0]['an_'+s]),V.sub(F[1]['toe_'+s],F[1]['an_'+s])));
+      ct['heel_'+s]=V.add(ct['an_'+s],V.mid(V.sub(F[0]['heel_'+s],F[0]['an_'+s]),V.sub(F[1]['heel_'+s],F[1]['an_'+s])));}
+    const handFixed=ex.hang||(h(F[0]['wr_'+s])<.15&&h(F[1]['wr_'+s])<.15);
+    if(handFixed&&V.len(V.sub(F[0]['wr_'+s],F[1]['wr_'+s]))<.3)ct['wr_'+s]=V.mid(F[0]['wr_'+s],F[1]['wr_'+s]);
+  }
+  ex.L={arm:[boneLen(ex,'sh_l','el_l'),boneLen(ex,'el_l','wr_l')],leg:[boneLen(ex,'hip_l','kn_l'),boneLen(ex,'kn_l','an_l')]};
+  // barbell grip: one fixed width for the whole movement
+  const W=F.map(f=>V.len(V.sub(f.wr_l,f.wr_r))/2),sh=F.map(f=>V.len(V.sub(f.sh_l,f.sh_r))/2);
+  ex.grip=Math.max(.2,(W[0]+W[1])/2);ex.shw=(sh[0]+sh[1])/2;
+  return ex.ct=ct;}
+function setArm(P,ex,s,T){const r=reach(P['sh_'+s],P['el_'+s],T,ex.L.arm[0],ex.L.arm[1]);P['el_'+s]=r.mid;P['wr_'+s]=r.end;}
+function pose(ex,t){const P=pose0(ex,t);const ct=contacts(ex);
+  for(const s of ['l','r']){
+    if(ct['an_'+s]){const r=reach(P['hip_'+s],P['kn_'+s],ct['an_'+s],ex.L.leg[0],ex.L.leg[1]);P['kn_'+s]=r.mid;
+      const off=V.sub(r.end,ct['an_'+s]);P['an_'+s]=r.end;P['toe_'+s]=V.add(ct['toe_'+s],off);P['heel_'+s]=V.add(ct['heel_'+s],off);}
+    if(ct['wr_'+s])setArm(P,ex,s,ct['wr_'+s]);}
+  // nothing goes through the floor
+  if(!ex.hang)for(const k in P)if(P[k][1]>0)P[k]=[P[k][0],0,P[k][2]];
+  return P;}
 // ── Props: bench / seat under a body resting on one, bar above hanging hands ──
 function props(ex){
   if(ex.props)return ex.props;const F=ex.j.map(f=>full(f,ex));let floor=-1e9;for(const f of F)for(const k in f)floor=Math.max(floor,f[k][1]);
@@ -132,7 +207,12 @@ function props(ex){
   }
   return ex.props=P;
 }
-function frameBox(ex){let lo=1e9,x0=1e9,x1=-1e9;for(const f of ex.j.map(f=>full(f,ex))){for(const k in f){lo=Math.min(lo,-f[k][1]);x0=Math.min(x0,f[k][0]);x1=Math.max(x1,f[k][0]);}}return {low:-lo,cx:(x0+x1)/2};}
+// frame each exercise from the figure as drawn (sampled over the whole movement); the view then
+// stays fixed – only the body moves
+function frameBox(ex){let lo=1e9,hi=-1e9,x0=1e9,x1=-1e9;ex.box={cx:0,low:0};
+  for(let i=0;i<=8;i++){const P=pose(ex,i/8);for(const k in P){lo=Math.min(lo,P[k][1]);hi=Math.max(hi,P[k][1]);x0=Math.min(x0,P[k][0]);x1=Math.max(x1,P[k][0]);}}
+  // standing exercises keep the floor at the bottom; hanging ones are centred
+  return ex.hang?{low:hi+(2.4*.94-(hi-lo))/2-.1,cx:(x0+x1)/2}:{low:0,cx:(x0+x1)/2};}
 // a weight plate: a real disc (thickness, darker edge, lighter face, centre hole)
 function disc(ctx,S,pxm,c,n,r,thick,base,face){
   const nn=V.norm(n), ang=Math.atan2(nn[1],nn[0]), squash=Math.max(Math.abs(nn[2]),.08);
@@ -161,14 +241,17 @@ function bodyAxes(P){const lr=V.norm(V.sub(P.sh_l,P.sh_r)),up=V.norm(V.sub(P.nec
   let fwd=V.norm([lr[1]*up[2]-lr[2]*up[1],lr[2]*up[0]-lr[0]*up[2],lr[0]*up[1]-lr[1]*up[0]]);
   if(V.dot(fwd,V.sub(P.head,P.neck))<0&&Math.abs(V.dot(fwd,V.sub(P.head,P.neck)))>.01)fwd=V.mul(fwd,-1);
   return {lr,up,fwd};}
-function barbell(P,name){const {lr,up,fwd}=bodyAxes(P),place=barPlace(name);
-  if(place==='back'){const top=V.add(V.mid(P.sh_l,P.sh_r),V.mul(V.sub(P.neck,V.mid(P.sh_l,P.sh_r)),.5));return {c:V.sub(top,V.mul(fwd,.08)),d:lr};}
-  if(place==='front'){return {c:V.add(V.add(V.mid(P.sh_l,P.sh_r),V.mul(fwd,.09)),V.mul(up,.02)),d:lr};}
-  if(place==='hips'){return {c:V.add(V.mid(P.hip_l,P.hip_r),[0,-.13,0]),d:V.norm(V.sub(P.hip_l,P.hip_r))};}
-  // in the hands: just past the wrists (the palms), along the line between the hands
-  const fl=V.norm(V.sub(P.wr_l,P.el_l)),fr=V.norm(V.sub(P.wr_r,P.el_r));
-  const c=V.mid(V.add(P.wr_l,V.mul(fl,.05)),V.add(P.wr_r,V.mul(fr,.05)));
-  const w=V.sub(P.wr_l,P.wr_r);return {c,d:V.len(w)>.25?V.norm(w):lr};}
+function barbell(P,name,ex){const {lr,up,fwd}=bodyAxes(P),place=barPlace(name);let c,d,hw;
+  if(place==='back'){const top=V.add(V.mid(P.sh_l,P.sh_r),V.mul(V.sub(P.neck,V.mid(P.sh_l,P.sh_r)),.5));c=V.sub(top,V.mul(fwd,.08));d=lr;hw=Math.max(ex.shw*1.6,.3);}
+  else if(place==='front'){c=V.add(V.add(V.mid(P.sh_l,P.sh_r),V.mul(fwd,.09)),V.mul(up,.02));d=lr;hw=ex.shw*1.05;}
+  else if(place==='hips'){c=V.add(V.mid(P.hip_l,P.hip_r),[0,-.13,0]);d=V.norm(V.sub(P.hip_l,P.hip_r));hw=Math.max(ex.shw*1.2,.25);}
+  else{c=V.mid(P.wr_l,P.wr_r);const w=V.sub(P.wr_l,P.wr_r);d=V.len(w)>.25?V.norm(w):lr;hw=ex.grip;}
+  // keep the bar level left-to-right (no tilting in the hands)
+  d=V.norm([d[0],0,d[2]]);
+  // both hands on the bar, the same width apart all the time
+  setArm(P,ex,'l',V.add(c,V.mul(d,hw)));setArm(P,ex,'r',V.sub(c,V.mul(d,hw)));
+  return {c,d};}
+
 // ── Working muscles ────────────────────────────────────────────────
 // Each body line is split where muscles sit; main muscles in the bright colour, secondary
 // muscles lighter, everything else plain.
@@ -196,10 +279,10 @@ function draw3d(cv,id,t,mode){
     if(pr.type==='pullbar'){const s=S([pr.x,pr.y,0]);ctx.strokeStyle=propCol;ctx.lineWidth=.035*pxm;ctx.beginPath();ctx.moveTo(s[0]-.5*pxm,s[1]);ctx.lineTo(s[0]+.5*pxm,s[1]);ctx.stroke();}
   }
   const items=[];const lw=.05*pxm;
+  if(m.eq==='barbell'){const {c,d}=barbell(P,m.name,ex);items.push({rod:[c,d],z:c[2]+.05});for(const sg of [1,-1]){const pc=V.add(c,V.mul(d,sg*.92));items.push({plate:[pc,d,.225,.06],z:pc[2]});}}
   for(const [a,b,f0,f1,ms] of PIECES){const A=V.add(P[a],V.mul(V.sub(P[b],P[a]),f0)),B=V.add(P[a],V.mul(V.sub(P[b],P[a]),f1));
     items.push({line:[A,B],col:colFor(ms),w:ms.length?lw:lw*.8,z:(A[2]+B[2])/2});}
   items.push({head:true,z:P.head[2]-.01});
-  if(m.eq==='barbell'){const {c,d}=barbell(P,m.name);items.push({rod:[c,d],z:c[2]+.05});for(const sg of [1,-1]){const pc=V.add(c,V.mul(d,sg*.92));items.push({plate:[pc,d,.225,.06],z:pc[2]});}}
   if(m.eq==='dumbbell'||m.eq==='kettlebells'){const {lr}=bodyAxes(P);for(const w of ['l','r']){const fo=V.norm(V.sub(P['wr_'+w],P['el_'+w]));const c=V.add(P['wr_'+w],V.mul(fo,.05));items.push({db:[c,lr,m.eq==='kettlebells'],z:c[2]-.02});}}
   items.sort((x,y)=>y.z-x.z);
   const eqBase=dark?'#9AA3B2':'#59627A', eqFace=dark?'#C7CCD6':'#7B849B';
