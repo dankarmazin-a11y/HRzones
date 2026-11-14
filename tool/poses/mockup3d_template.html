@@ -38,7 +38,7 @@ p{margin:0;max-width:72ch}
 </style>
 <div class="wrap">
   <header style="display:flex;flex-direction:column;gap:12px">
-    <h1>Line figures, round 6</h1>
+    <h1>Line figures, round 7</h1>
     <p class="muted">The camera is fixed for each exercise; only the body moves. Feet that stand stay planted, hands stay on the bar, the floor or the pull-up bar, and parts that do not work in the exercise hold still. Main muscle in orange, secondary in light orange. Light mode is style B, dark mode style C.</p>
     <div class="seg" role="group" aria-label="Phone look">
       <button id="lk-light" data-look="light" aria-pressed="true">Light (B)</button>
@@ -51,7 +51,7 @@ p{margin:0;max-width:72ch}
   <section class="notes">
     <div class="card"><h3>Planted and holding</h3><p>A foot on the floor in both photos is pinned and the leg bends to reach it. Hands on the floor or on a pull-up bar are pinned the same way. Nothing goes through the floor.</p></div>
     <div class="card"><h3>Barbell</h3><p>One grip width for the whole movement, both hands exactly on the bar, and the bar stays level. It sits on the upper back, the front of the shoulders, the hips or in the hands, by exercise.</p></div>
-    <div class="card"><h3>No extra movement</h3><p>A body part that turns less than 6° between the photos stays still. Legs that don't work in the exercise hold one pose; on hanging exercises they hang straight down.</p></div>
+    <div class="card"><h3>No tilting, no extra movement</h3><p>The shoulders and hips are levelled left-to-right (small tilts under 25° are photo or model errors). The two photos are lined up on what touches the floor or pad in both, so the body doesn't drift. Parts that turn less than 6° stay still; idle legs hold one pose, and on hanging exercises they hang in line with the body with soft knees.</p></div>
   </section>
 </div>
 <script>
@@ -74,6 +74,8 @@ function rotY(p,th){const c=Math.cos(th),s=Math.sin(th);return [p[0]*c-p[2]*s,p[
 function full0(f){const o={...f};o.pelvis=V.mid(f.hip_l,f.hip_r);o.head=V.add(V.mid(f.ear_l,f.ear_r),V.mul(V.sub(V.mid(f.ear_l,f.ear_r),f.neck),0.15));return o;}
 // Each photo's body comes with its own origin: line the two frames up on what stays put –
 // the feet (lowest point / ankles), or the hands when hanging.
+function rotAbout(p,c,k,ang){const q=V.sub(p,c),co=Math.cos(ang),sn=Math.sin(ang),kq=V.dot(k,q),cr=[k[1]*q[2]-k[2]*q[1],k[2]*q[0]-k[0]*q[2],k[0]*q[1]-k[1]*q[0]];
+  return V.add(c,V.add(V.add(V.mul(q,co),V.mul(cr,sn)),V.mul(k,kq*(1-co))));}
 function isHanging(ex,F){return /pull-?up|chin-?up|hang/i.test(META[ex.id].name)||F.every(f=>Math.min(f.wr_l[1],f.wr_r[1])<f.neck[1]-.15);}
 function aligned(ex){
   if(ex.al)return ex.al;let F=ex.j.map(full0);
@@ -86,10 +88,21 @@ function aligned(ex){
     const c=Math.cos(ang),sn=Math.sin(ang);
     F=F.map(f=>{const o={};for(const k in f){const p=f[k];o[k]=[p[0],p[1]*c-p[2]*sn,p[1]*sn+p[2]*c];}return o;});
   }
+  // Level the body left-to-right: a small sideways tilt is the photo angle or the model's guess,
+  // not the exercise (bigger tilts, like a side plank, are kept)
+  {let lr=[0,0,0];for(const f of F)lr=V.add(lr,V.add(V.sub(f.hip_l,f.hip_r),V.sub(f.sh_l,f.sh_r)));
+   const lh=[lr[0],0,lr[2]];const ang=Math.acos(Math.max(-1,Math.min(1,V.dot(V.norm(lr),V.norm(lh)))));
+   if(ang>.01&&ang<25*Math.PI/180){const ax=V.norm([lr[1]*lh[2]-lr[2]*lh[1],lr[2]*lh[0]-lr[0]*lh[2],lr[0]*lh[1]-lr[1]*lh[0]]);
+     F=F.map(f=>{const c=f.pelvis,o={};for(const k in f)o[k]=rotAbout(f[k],c,ax,ang);return o;});}}
   const hang=isHanging(ex,F);
+  // Line the two photos up on what doesn't move: the body parts touching the floor/pad in both
+  // (feet, hands, forearms…), or the hands when hanging
+  const lowOf=f=>{let l=-1e9;for(const k in f)l=Math.max(l,f[k][1]);return l;};
+  const touching=f=>{const l=lowOf(f);return new Set(Object.keys(f).filter(k=>l-f[k][1]<.15));};
+  const T0=touching(F[0]),T1=touching(F[1]);const common=[...T0].filter(k=>T1.has(k));
   ex.al=F.map(f=>{let a;
     if(hang)a=V.mid(f.wr_l,f.wr_r);
-    else{let low=-1e9;for(const k in f)low=Math.max(low,f[k][1]);const m=V.mid(f.an_l,f.an_r);a=[m[0],low,m[2]];}
+    else{const keys=common.length?common:['an_l','an_r'];let c=[0,0,0];for(const k of keys)c=V.add(c,f[k]);c=V.mul(c,1/keys.length);a=[c[0],lowOf(f),c[2]];}
     const o={};for(const k in f)o[k]=V.sub(f[k],a);return o;});
   ex.hang=hang;
   // hands and feet both on the floor (push-up, plank…): the photo often shows the body a little
@@ -153,7 +166,12 @@ function pose0(ex,t){const [a,b]=ex.j.map(f=>full(f,ex));const o={pelvis:V.add(V
     if(legsIdle&&!ex.lying&&LEGBONES.has(c)){
       dir=V.norm(V.sub(legFrame[c],legFrame[p]));
       // hanging: idle legs hang straight down, knees a touch forward
-      if(ex.hang&&(c[0]==='k'||c[0]==='a')){const fw=bodyAxes(a).fwd;dir=V.norm(V.add([0,1,0],V.mul([fw[0],0,fw[2]],c[0]==='k'?.12:-.05)));}
+      if(ex.hang&&(c[0]==='k'||c[0]==='a')){
+        // hang in line with the body (the spine direction, pulled a bit toward straight down),
+        // thighs slightly forward, shins slightly back = soft knees
+        const spine=V.norm(V.add(V.norm(V.sub(o.pelvis,V.add(V.mul(a.neck,1-t),V.mul(b.neck,t)))),[0,1,0]));
+        const fw=bodyAxes(t<.5?a:b).fwd,f2=V.norm([fw[0],0,fw[2]]);
+        dir=V.norm(V.add(spine,V.mul(f2,c[0]==='k'?.18:-.12)));}
     }
     o[c]=V.add(o[p],V.mul(dir,L));}
   return o;}
@@ -171,7 +189,7 @@ function contacts(ex){
   const mv={l:hd(F[0].an_l,F[1].an_l),r:hd(F[0].an_r,F[1].an_r)};
   for(const s of ['l','r']){
     const other=s==='l'?'r':'l';const planted=mv[s]<.3||(mv[s]<.45&&mv[s]<mv[other]);
-    if(h(F[0]['an_'+s])<.15&&h(F[1]['an_'+s])<.15&&planted){
+    if(!ex.hang&&h(F[0]['an_'+s])<.15&&h(F[1]['an_'+s])<.15&&planted){
       ct['an_'+s]=V.mid(F[0]['an_'+s],F[1]['an_'+s]);
       ct['toe_'+s]=V.add(ct['an_'+s],V.mid(V.sub(F[0]['toe_'+s],F[0]['an_'+s]),V.sub(F[1]['toe_'+s],F[1]['an_'+s])));
       ct['heel_'+s]=V.add(ct['an_'+s],V.mid(V.sub(F[0]['heel_'+s],F[0]['an_'+s]),V.sub(F[1]['heel_'+s],F[1]['an_'+s])));}

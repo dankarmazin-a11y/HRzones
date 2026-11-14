@@ -28,3 +28,6 @@ Mockup: https://claude.ai/artifact/GNPyueDWW1a8yTupNqxtUf (owner: style B in lig
   in the template): back (squat, good morning, barbell lunge/split squat/step-up/calf raise),
   front (front squat), hips (hip thrust, glute bridge), hands (everything else); bar along the
   body's left-right axis. Working muscles: main = bright, secondary = light (`PIECES` split).
+- Round 7 rules: level the left-right body line (roll < 25° removed), align the two photos on
+  the body parts touching the floor/pad in both (`touching`), no foot pinning when hanging,
+  idle hanging legs follow the spine with soft knees.
