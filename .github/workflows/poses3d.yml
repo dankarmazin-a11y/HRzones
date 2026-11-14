@@ -22,6 +22,12 @@ jobs:
           python-version: '3.11'
       - name: Get SAM 3D Body (Meta, SAM License)
         run: git clone --depth 1 https://github.com/facebookresearch/sam-3d-body /tmp/sam-3d-body
+      - name: Run on the CPU (the code assumes a graphics card in a few places)
+        run: |
+          cd /tmp/sam-3d-body
+          sed -i 's/recursive_to(\([^,]*\), "cuda")/recursive_to(\1, "cpu")/; s/\.cuda()/.cpu()/g' \
+            sam_3d_body/sam_3d_body_estimator.py sam_3d_body/models/meta_arch/sam3d_body.py
+          ! grep -n '"cuda")\|\.cuda()' sam_3d_body/sam_3d_body_estimator.py sam_3d_body/models/meta_arch/sam3d_body.py
       - name: Install (CPU)
         run: |
           pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
