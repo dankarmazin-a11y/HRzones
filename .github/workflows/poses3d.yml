@@ -25,7 +25,7 @@ jobs:
       - name: Install (CPU)
         run: |
           pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-          pip install pytorch-lightning opencv-python-headless yacs scikit-image einops timm dill roma loguru optree huggingface_hub braceexpand webdataset pyrootutils hydra-core omegaconf
+          pip install pytorch-lightning opencv-python-headless yacs scikit-image einops timm dill roma loguru optree huggingface_hub braceexpand webdataset pyrootutils hydra-core omegaconf termcolor
       - name: Fit 3D bodies
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
