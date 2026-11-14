@@ -14,6 +14,8 @@ on:
 jobs:
   fit:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4
@@ -42,3 +44,15 @@ jobs:
           path: |
             out/poses3d.json
             out/meshes.npz
+      # Also saved on the branch `poses3d-results` (the session that reads them can't reach the
+      # artifact storage). Tool output only – never merged into main.
+      - name: Save results on a branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan poses3d-results
+          git rm -rq --cached .
+          mkdir -p results && cp out/poses3d.json out/meshes.npz results/
+          git add results
+          git commit -qm "SAM 3D Body results for ${{ inputs.group }}"
+          git push -f origin poses3d-results
