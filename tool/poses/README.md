@@ -22,3 +22,12 @@ Mockup: https://claude.ai/artifact/GNPyueDWW1a8yTupNqxtUf (owner: style B in lig
   mockup data (skeleton joints in metres + same-scale mesh stills); `mockup3d_template.html` is the
   round-3 mockup (3D joints, bone directions slerped so limbs keep their length, every body turned to
   the same three-quarter side view, bars drawn in 3D through both hands).
+- Round 5 (2026-11-14): every pose is redrawn with one standard body – shape component 0 at −2
+  (`c0m`, lean/athletic; owner wanted a slim, fit body), scale = mean. `prep3d.py … c0m`.
+  `shapesheet.py` renders the shape candidates side by side. Barbell placement rules (`barPlace`
+  in the template): back (squat, good morning, barbell lunge/split squat/step-up/calf raise),
+  front (front squat), hips (hip thrust, glute bridge), hands (everything else); bar along the
+  body's left-right axis. Working muscles: main = bright, secondary = light (`PIECES` split).
+- Round 7 rules: level the left-right body line (roll < 25° removed), align the two photos on
+  the body parts touching the floor/pad in both (`touching`), no foot pinning when hanging,
+  idle hanging legs follow the spine with soft knees.

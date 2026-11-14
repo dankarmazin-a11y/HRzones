@@ -4,8 +4,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap">
 <style>
 /* Layout: header with light/dark switch, one row per exercise comparing four versions, notes. */
-:root{--bg:#F1F2F4;--card:#FFFFFF;--ink:#141B2B;--bright:#FF7A2D;--muted:#6B7280;--line:#E3E5EA;--figbg:#F5F6F8;--fig:#141B2B;--floor:#D4D8DF;--skin:#3A4356;--skinfar:#8A93A6;--font:'Inter',system-ui,-apple-system,sans-serif}
-:root[data-look="dark"]{--bg:#0C111C;--card:#1A2131;--ink:#F3F4F6;--muted:#9AA3B2;--line:#2A3344;--figbg:#141B2B;--fig:#FFFFFF;--floor:#2E3749;--skin:#E9ECF2;--skinfar:#7C8598;color-scheme:dark}
+:root{--bg:#F1F2F4;--card:#FFFFFF;--ink:#141B2B;--bright:#FF7A2D;--muted:#6B7280;--line:#E3E5EA;--figbg:#F5F6F8;--fig:#141B2B;--floor:#D4D8DF;--skin:#3A4356;--skinfar:#8A93A6;--sec:#FFC09A;--font:'Inter',system-ui,-apple-system,sans-serif}
+:root[data-look="dark"]{--bg:#0C111C;--card:#1A2131;--ink:#F3F4F6;--muted:#9AA3B2;--line:#2A3344;--figbg:#141B2B;--fig:#FFFFFF;--floor:#2E3749;--skin:#E9ECF2;--skinfar:#7C8598;--sec:#A65A2E;color-scheme:dark}
 body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.45}
 .wrap{max-width:1120px;margin:0 auto;padding-block:28px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:22px}
 h1{font-size:30px;font-weight:900;letter-spacing:-.035em;margin:0;text-wrap:balance}
@@ -15,7 +15,7 @@ p{margin:0;max-width:72ch}
 .seg button{font:600 14px var(--font);border:0;background:transparent;color:var(--ink);border-radius:7px;padding:8px 16px;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--card)}
 .seg button:focus-visible{outline:3px solid var(--bright);outline-offset:2px}
-.heads,.row{display:grid;grid-template-columns:150px repeat(4,minmax(0,1fr));gap:12px;align-items:center}
+.heads,.row{display:grid;grid-template-columns:150px repeat(3,minmax(0,1fr));gap:12px;align-items:center}
 .heads{font-size:12px;font-weight:700;color:var(--muted);text-transform:none;letter-spacing:.02em}
 .heads b{color:var(--ink)}
 .row{background:var(--card);border-radius:10px;padding:12px;box-shadow:0 2px 10px rgba(20,27,43,.07)}
@@ -38,19 +38,20 @@ p{margin:0;max-width:72ch}
 </style>
 <div class="wrap">
   <header style="display:flex;flex-direction:column;gap:12px">
-    <h1>Line figures, round 3: real 3D bodies</h1>
-    <p class="muted">Meta's SAM 3D Body model fitted a full 3D body to each exercise photo. Every figure is turned to the same three-quarter side view, with the same body size and floor. Limbs now bend at the joints and keep their length while moving. Light mode is style B, dark mode style C.</p>
+    <h1>Line figures, round 7</h1>
+    <p class="muted">The camera is fixed for each exercise; only the body moves. Feet that stand stay planted, hands stay on the bar, the floor or the pull-up bar, and parts that do not work in the exercise hold still. Main muscle in orange, secondary in light orange. Light mode is style B, dark mode style C.</p>
     <div class="seg" role="group" aria-label="Phone look">
       <button id="lk-light" data-look="light" aria-pressed="true">Light (B)</button>
       <button id="lk-dark" data-look="dark" aria-pressed="false">Dark (C)</button>
     </div>
   </header>
-  <div class="heads" aria-hidden="true"><span>Exercise</span><span>Round 2 (before)</span><span><b>New line figure</b></span><span><b>New mannequin</b></span><span>3D body as photographed</span></div>
+  <div class="legend" style="display:flex;gap:18px;align-items:center;font-size:13px;color:var(--muted)"><span style="display:inline-flex;gap:6px;align-items:center"><i style="width:22px;height:5px;border-radius:3px;background:var(--bright);display:inline-block"></i>Main muscle</span><span style="display:inline-flex;gap:6px;align-items:center"><i style="width:22px;height:5px;border-radius:3px;background:var(--sec);display:inline-block"></i>Secondary muscle</span></div>
+  <div class="heads" aria-hidden="true"><span>Exercise</span><span>Round 2 (before)</span><span><b>New line figure</b></span><span>Fit standard body (3D)</span></div>
   <div id="rows" style="display:flex;flex-direction:column;gap:10px"></div>
   <section class="notes">
-    <div class="card"><h3>What's new</h3><p>Real proportions from a 3D body, not from a flat photo. Bars are drawn in 3D through both hands, so they tilt and turn correctly and never disappear. The Lying Leg Curl now works.</p></div>
-    <div class="card"><h3>Line or mannequin?</h3><p>Pick one for the app. Both use the same data and the same size. The mannequin looks more human; the line figure is cleaner when small.</p></div>
-    <div class="card"><h3>Next</h3><p>If you like it, I run all 873 exercises (about 10 hours on GitHub, done once) and check them in batches before anything goes into the app.</p></div>
+    <div class="card"><h3>Planted and holding</h3><p>A foot on the floor in both photos is pinned and the leg bends to reach it. Hands on the floor or on a pull-up bar are pinned the same way. Nothing goes through the floor.</p></div>
+    <div class="card"><h3>Barbell</h3><p>One grip width for the whole movement, both hands exactly on the bar, and the bar stays level. It sits on the upper back, the front of the shoulders, the hips or in the hands, by exercise.</p></div>
+    <div class="card"><h3>No tilting, no extra movement</h3><p>The shoulders and hips are levelled left-to-right (small tilts under 25° are photo or model errors). The two photos are lined up on what touches the floor or pad in both, so the body doesn't drift. Parts that turn less than 6° stay still; idle legs hold one pose, and on hanging exercises they hang in line with the body with soft knees.</p></div>
   </section>
 </div>
 <script>
@@ -66,58 +67,251 @@ const V={add:(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]],sub:(a,b)=>[a[0]-b[0],a[1]-b
 function slerp(a,b,t){const d=Math.max(-1,Math.min(1,V.dot(a,b)));const th=Math.acos(d);if(th<1e-4)return V.norm(V.add(V.mul(a,1-t),V.mul(b,t)));const s=Math.sin(th);return V.add(V.mul(a,Math.sin((1-t)*th)/s),V.mul(b,Math.sin(t*th)/s));}
 // skeleton: [child, parent]; root = pelvis
 const BONES=[['hip_l','pelvis'],['hip_r','pelvis'],['neck','pelvis'],['sh_l','neck'],['sh_r','neck'],['head','neck'],['el_l','sh_l'],['wr_l','el_l'],['el_r','sh_r'],['wr_r','el_r'],['kn_l','hip_l'],['an_l','kn_l'],['toe_l','an_l'],['heel_l','an_l'],['kn_r','hip_r'],['an_r','kn_r'],['toe_r','an_r'],['heel_r','an_r']];
-// One camera for everyone: turn each body so it faces screen-right, 30° toward the viewer.
-const VIEW=30*Math.PI/180;
+// ── Camera per exercise ────────────────────────────────────────────
+// Try a few angles around the vertical axis and keep the one where the movement shows best
+// (most visible joint travel between start and end). Side-on wins ties.
 function rotY(p,th){const c=Math.cos(th),s=Math.sin(th);return [p[0]*c-p[2]*s,p[1],p[0]*s+p[2]*c];}
-function facingAngle(ex){
-  let ax=0,az=0,nx=0,nz=0;
-  for(const f of ex.j){ax+=f.hip_l[0]-f.hip_r[0]+f.sh_l[0]-f.sh_r[0];az+=f.hip_l[2]-f.hip_r[2]+f.sh_l[2]-f.sh_r[2];
-    const ear=[(f.ear_l[0]+f.ear_r[0])/2,(f.ear_l[2]+f.ear_r[2])/2];nx+=f.nose[0]-ear[0];nz+=f.nose[2]-ear[2];}
-  // forward is perpendicular to the left-right line, on the side the nose points to
-  let fx=-az,fz=ax; if(fx*nx+fz*nz<0){fx=-fx;fz=-fz;}
-  return Math.atan2(fz,fx);
-}
 function full0(f){const o={...f};o.pelvis=V.mid(f.hip_l,f.hip_r);o.head=V.add(V.mid(f.ear_l,f.ear_r),V.mul(V.sub(V.mid(f.ear_l,f.ear_r),f.neck),0.15));return o;}
-function full(f,ex){const o=full0(f);if(ex.th===undefined){ex.th=Math.atan2(-Math.sin(VIEW),Math.cos(VIEW))-facingAngle(ex);}for(const k in o)o[k]=rotY(o[k],ex.th);return o;}
-function pose(ex,t){const [a,b]=ex.j.map(f=>full(f,ex));const o={pelvis:V.add(V.mul(a.pelvis,1-t),V.mul(b.pelvis,t))};
-  for(const [c,p] of BONES){const da=V.sub(a[c],a[p]),db=V.sub(b[c],b[p]);const L=(V.len(da)+V.len(db))/2;o[c]=V.add(o[p],V.mul(slerp(V.norm(da),V.norm(db),t),L));}return o;}
-function frameBox(ex){let lo=1e9,x0=1e9,x1=-1e9;for(const f of ex.j.map(f=>full(f,ex))){for(const k in f){lo=Math.min(lo,-f[k][1]);x0=Math.min(x0,f[k][0]);x1=Math.max(x1,f[k][0]);}}return {low:-lo,cx:(x0+x1)/2};}
+// Each photo's body comes with its own origin: line the two frames up on what stays put –
+// the feet (lowest point / ankles), or the hands when hanging.
+function rotAbout(p,c,k,ang){const q=V.sub(p,c),co=Math.cos(ang),sn=Math.sin(ang),kq=V.dot(k,q),cr=[k[1]*q[2]-k[2]*q[1],k[2]*q[0]-k[0]*q[2],k[0]*q[1]-k[1]*q[0]];
+  return V.add(c,V.add(V.add(V.mul(q,co),V.mul(cr,sn)),V.mul(k,kq*(1-co))));}
+function isHanging(ex,F){return /pull-?up|chin-?up|hang/i.test(META[ex.id].name)||F.every(f=>Math.min(f.wr_l[1],f.wr_r[1])<f.neck[1]-.15);}
+function aligned(ex){
+  if(ex.al)return ex.al;let F=ex.j.map(full0);
+  // Lying exercises are often photographed from above: tilt the camera (around its left-right
+  // axis) so the torso lies flat on the pad.
+  ex.lying=/lying|prone|supine/i.test(META[ex.id].name);
+  if(ex.lying){
+    let sy=0,sz=0;for(const f of F){const sp=V.sub(f.neck,f.pelvis);sy+=sp[1];sz+=sp[2];}
+    let ang=Math.atan2(sy,sz);if(ang>Math.PI/2)ang-=Math.PI;if(ang<-Math.PI/2)ang+=Math.PI;
+    const c=Math.cos(ang),sn=Math.sin(ang);
+    F=F.map(f=>{const o={};for(const k in f){const p=f[k];o[k]=[p[0],p[1]*c-p[2]*sn,p[1]*sn+p[2]*c];}return o;});
+  }
+  // Level the body left-to-right: a small sideways tilt is the photo angle or the model's guess,
+  // not the exercise (bigger tilts, like a side plank, are kept)
+  {let lr=[0,0,0];for(const f of F)lr=V.add(lr,V.add(V.sub(f.hip_l,f.hip_r),V.sub(f.sh_l,f.sh_r)));
+   const lh=[lr[0],0,lr[2]];const ang=Math.acos(Math.max(-1,Math.min(1,V.dot(V.norm(lr),V.norm(lh)))));
+   if(ang>.01&&ang<25*Math.PI/180){const ax=V.norm([lr[1]*lh[2]-lr[2]*lh[1],lr[2]*lh[0]-lr[0]*lh[2],lr[0]*lh[1]-lr[1]*lh[0]]);
+     F=F.map(f=>{const c=f.pelvis,o={};for(const k in f)o[k]=rotAbout(f[k],c,ax,ang);return o;});}}
+  const hang=isHanging(ex,F);
+  // Line the two photos up on what doesn't move: the body parts touching the floor/pad in both
+  // (feet, hands, forearms…), or the hands when hanging
+  const lowOf=f=>{let l=-1e9;for(const k in f)l=Math.max(l,f[k][1]);return l;};
+  const touching=f=>{const l=lowOf(f);return new Set(Object.keys(f).filter(k=>l-f[k][1]<.15));};
+  const T0=touching(F[0]),T1=touching(F[1]);const common=[...T0].filter(k=>T1.has(k));
+  ex.al=F.map(f=>{let a;
+    if(hang)a=V.mid(f.wr_l,f.wr_r);
+    else{const keys=common.length?common:['an_l','an_r'];let c=[0,0,0];for(const k of keys)c=V.add(c,f[k]);c=V.mul(c,1/keys.length);a=[c[0],lowOf(f),c[2]];}
+    const o={};for(const k in f)o[k]=V.sub(f[k],a);return o;});
+  ex.hang=hang;
+  // hands and feet both on the floor (push-up, plank…): the photo often shows the body a little
+  // tilted – turn it around the feet until the hands rest on the floor too
+  const A=ex.al,hgt=p=>-p[1];
+  const onFloor=!hang&&A.every(f=>hgt(V.mid(f.wr_l,f.wr_r))<.35&&hgt(V.mid(f.an_l,f.an_r))<.2);
+  const span=V.sub(V.mid(A[0].wr_l,A[0].wr_r),V.mid(A[0].an_l,A[0].an_r));
+  if(onFloor&&Math.hypot(span[0],span[2])>.8){
+    const am=V.mid(V.mid(A[0].an_l,A[0].an_r),V.mid(A[1].an_l,A[1].an_r)),wm=V.mid(V.mid(A[0].wr_l,A[0].wr_r),V.mid(A[1].wr_l,A[1].wr_r));
+    const v=V.sub(wm,am),hz=Math.hypot(v[0],v[2]);const ang=Math.atan2(-v[1],hz); // how far the hands are above the feet
+    const k=V.norm([-v[2],0,v[0]]); // turn around the horizontal axis across the body, through the feet
+    const rot=p=>{const q=V.sub(p,am),c=Math.cos(ang),sn=Math.sin(ang),kq=V.dot(k,q),cr=[k[1]*q[2]-k[2]*q[1],k[2]*q[0]-k[0]*q[2],k[0]*q[1]-k[1]*q[0]];
+      return V.add(am,V.add(V.add(V.mul(q,c),V.mul(cr,sn)),V.mul(k,kq*(1-c))));};
+    let R=A.map(f=>{const o={};for(const kk in f)o[kk]=rot(f[kk]);return o;});
+    // if that lifted the hands instead, turn the other way
+    if(Math.abs(hgt(V.mid(R[0].wr_l,R[0].wr_r))-hgt(V.mid(R[0].an_l,R[0].an_r)))>Math.abs(v[1])){const ang2=-ang;
+      const rot2=p=>{const q=V.sub(p,am),c=Math.cos(ang2),sn=Math.sin(ang2),kq=V.dot(k,q),cr=[k[1]*q[2]-k[2]*q[1],k[2]*q[0]-k[0]*q[2],k[0]*q[1]-k[1]*q[0]];
+        return V.add(am,V.add(V.add(V.mul(q,c),V.mul(cr,sn)),V.mul(k,kq*(1-c))));};
+      R=A.map(f=>{const o={};for(const kk in f)o[kk]=rot2(f[kk]);return o;});}
+    // floor again at the lowest hand/foot point
+    ex.al=R.map(f=>{let low=-1e9;for(const kk of ['wr_l','wr_r','an_l','an_r','toe_l','toe_r','heel_l','heel_r'])low=Math.max(low,f[kk][1]);const o={};for(const kk in f)o[kk]=V.sub(f[kk],[0,low,0]);return o;});
+  }
+  return ex.al;
+}
+const MOVERS=['wr_l','wr_r','el_l','el_r','kn_l','kn_r','an_l','an_r','pelvis','neck'];
+function chooseView(ex){
+  const F=aligned(ex);
+  let ax=0,az=0;for(const f of F){ax+=f.hip_l[0]-f.hip_r[0]+f.sh_l[0]-f.sh_r[0];az+=f.hip_l[2]-f.hip_r[2]+f.sh_l[2]-f.sh_r[2];}
+  const alpha=Math.atan2(az,ax);
+  // Side view for front-back movements; a front three-quarter view when arms or legs move
+  // mainly out to the sides (lateral raise, jumping jacks…). Measured relative to the pelvis.
+  const lr=V.norm([ax,0,az]), fw=[-lr[2],0,lr[0]];let side=0,front=0;
+  for(const k of ['wr_l','wr_r','el_l','el_r','kn_l','kn_r','an_l','an_r']){
+    const d=V.sub(V.sub(F[1][k],F[1].pelvis),V.sub(F[0][k],F[0].pelvis));
+    // out-to-the-side = along the left-right axis, away from the middle
+    front+=Math.abs(V.dot(d,lr));side+=Math.abs(V.dot(d,fw));}
+  const phi=front>side*1.2?75:25;let best=null;
+  for(const sgn of [1,-1]){
+    const ph=phi*Math.PI/180, beta=Math.atan2(sgn*Math.cos(ph),Math.sin(ph)), th=beta-alpha;
+    const R=F.map(f=>{const o={};for(const k in f)o[k]=rotY(f[k],th);return o;});
+    const f0=R[0], sp=V.sub(f0.neck,f0.pelvis), horizontal=Math.abs(sp[1])<Math.hypot(sp[0],sp[2]);
+    const face=horizontal?(f0.pelvis[0]-f0.head[0]):(f0.nose[0]-(f0.ear_l[0]+f0.ear_r[0])/2);
+    if(!best||face>best.face)best={face,th,phi};
+  }
+  ex.th=best.th;ex.phi=best.phi;
+}
+function full(f,ex){if(ex.th===undefined)chooseView(ex);const src=aligned(ex)[ex.j.indexOf(f)];const o={};for(const k in src)o[k]=rotY(src[k],ex.th);return o;}
+// ── Pose at time t: joints turn (limbs keep their length); tiny wobbles are removed ──
+const STILL=6*Math.PI/180; // a bone that turns less than this between the photos stays still
+function pose0(ex,t){const [a,b]=ex.j.map(f=>full(f,ex));const o={pelvis:V.add(V.mul(a.pelvis,1-t),V.mul(b.pelvis,t))};
+  if(V.len(V.sub(a.pelvis,b.pelvis))<.04)o.pelvis=V.mid(a.pelvis,b.pelvis);
+  // legs that don't work in this exercise hold one steady pose (the straighter one) instead of swinging
+  const m=META[ex.id],all=[...m.mus,...(m.sec||[])];
+  const legsIdle=!all.some(x=>LEGS.includes(x));
+  const knee=f=>V.dot(V.norm(V.sub(f.hip_l,f.kn_l)),V.norm(V.sub(f.an_l,f.kn_l)))+V.dot(V.norm(V.sub(f.hip_r,f.kn_r)),V.norm(V.sub(f.an_r,f.kn_r)));
+  const legFrame=knee(a)<knee(b)?a:b; // more open knees = straighter legs
+  const LEGBONES=new Set(['kn_l','an_l','toe_l','heel_l','kn_r','an_r','toe_r','heel_r']);
+  for(const [c,p] of BONES){const da=V.sub(a[c],a[p]),db=V.sub(b[c],b[p]);const L=(V.len(da)+V.len(db))/2;
+    const na=V.norm(da),nb=V.norm(db);const still=Math.acos(Math.max(-1,Math.min(1,V.dot(na,nb))))<STILL;
+    let dir=still?V.norm(V.add(na,nb)):slerp(na,nb,t);
+    if(legsIdle&&!ex.lying&&LEGBONES.has(c)){
+      dir=V.norm(V.sub(legFrame[c],legFrame[p]));
+      // hanging: idle legs hang straight down, knees a touch forward
+      if(ex.hang&&(c[0]==='k'||c[0]==='a')){
+        // hang in line with the body (the spine direction, pulled a bit toward straight down),
+        // thighs slightly forward, shins slightly back = soft knees
+        const spine=V.norm(V.add(V.norm(V.sub(o.pelvis,V.add(V.mul(a.neck,1-t),V.mul(b.neck,t)))),[0,1,0]));
+        const fw=bodyAxes(t<.5?a:b).fwd,f2=V.norm([fw[0],0,fw[2]]);
+        dir=V.norm(V.add(spine,V.mul(f2,c[0]==='k'?.18:-.12)));}
+    }
+    o[c]=V.add(o[p],V.mul(dir,L));}
+  return o;}
+// two-bone reach (shoulder→elbow→wrist, hip→knee→ankle): put the end on target, bend the middle
+// joint the way it bends in the photos
+function reach(A,M0,T,L1,L2){let dv=V.sub(T,A);let d=V.len(dv);const dir=V.norm(dv);d=Math.max(Math.abs(L1-L2)+1e-3,Math.min(L1+L2-1e-3,d));
+  const ca=(L1*L1+d*d-L2*L2)/(2*L1*d),sa=Math.sqrt(Math.max(0,1-ca*ca));
+  let h=V.sub(M0,A);h=V.sub(h,V.mul(dir,V.dot(h,dir)));const n=V.len(h)>1e-4?V.norm(h):V.norm([dir[1],-dir[0],0]);
+  return {mid:V.add(A,V.add(V.mul(dir,L1*ca),V.mul(n,L1*sa))),end:V.add(A,V.mul(dir,d))};}
+function boneLen(ex,a,b){const F=ex.j.map(f=>full(f,ex));return (V.len(V.sub(F[0][a],F[0][b]))+V.len(V.sub(F[1][a],F[1][b])))/2;}
+// things that must stay put: planted feet, hands on the floor / on a fixed bar
+function contacts(ex){
+  if(ex.ct)return ex.ct;const F=ex.j.map(f=>full(f,ex));const ct={};
+  const h=p=>-p[1];const hd=(p,q)=>Math.hypot(p[0]-q[0],p[2]-q[2]);
+  const mv={l:hd(F[0].an_l,F[1].an_l),r:hd(F[0].an_r,F[1].an_r)};
+  for(const s of ['l','r']){
+    const other=s==='l'?'r':'l';const planted=mv[s]<.3||(mv[s]<.45&&mv[s]<mv[other]);
+    if(!ex.hang&&h(F[0]['an_'+s])<.15&&h(F[1]['an_'+s])<.15&&planted){
+      ct['an_'+s]=V.mid(F[0]['an_'+s],F[1]['an_'+s]);
+      ct['toe_'+s]=V.add(ct['an_'+s],V.mid(V.sub(F[0]['toe_'+s],F[0]['an_'+s]),V.sub(F[1]['toe_'+s],F[1]['an_'+s])));
+      ct['heel_'+s]=V.add(ct['an_'+s],V.mid(V.sub(F[0]['heel_'+s],F[0]['an_'+s]),V.sub(F[1]['heel_'+s],F[1]['an_'+s])));}
+    const handFixed=ex.hang||(h(F[0]['wr_'+s])<.15&&h(F[1]['wr_'+s])<.15);
+    if(handFixed&&V.len(V.sub(F[0]['wr_'+s],F[1]['wr_'+s]))<.3)ct['wr_'+s]=V.mid(F[0]['wr_'+s],F[1]['wr_'+s]);
+  }
+  ex.L={arm:[boneLen(ex,'sh_l','el_l'),boneLen(ex,'el_l','wr_l')],leg:[boneLen(ex,'hip_l','kn_l'),boneLen(ex,'kn_l','an_l')]};
+  // barbell grip: one fixed width for the whole movement
+  const W=F.map(f=>V.len(V.sub(f.wr_l,f.wr_r))/2),sh=F.map(f=>V.len(V.sub(f.sh_l,f.sh_r))/2);
+  ex.grip=Math.max(.2,(W[0]+W[1])/2);ex.shw=(sh[0]+sh[1])/2;
+  return ex.ct=ct;}
+function setArm(P,ex,s,T){const r=reach(P['sh_'+s],P['el_'+s],T,ex.L.arm[0],ex.L.arm[1]);P['el_'+s]=r.mid;P['wr_'+s]=r.end;}
+function pose(ex,t){const P=pose0(ex,t);const ct=contacts(ex);
+  for(const s of ['l','r']){
+    if(ct['an_'+s]){const r=reach(P['hip_'+s],P['kn_'+s],ct['an_'+s],ex.L.leg[0],ex.L.leg[1]);P['kn_'+s]=r.mid;
+      const off=V.sub(r.end,ct['an_'+s]);P['an_'+s]=r.end;P['toe_'+s]=V.add(ct['toe_'+s],off);P['heel_'+s]=V.add(ct['heel_'+s],off);}
+    if(ct['wr_'+s])setArm(P,ex,s,ct['wr_'+s]);}
+  // nothing goes through the floor
+  if(!ex.hang)for(const k in P)if(P[k][1]>0)P[k]=[P[k][0],0,P[k][2]];
+  return P;}
+// ── Props: bench / seat under a body resting on one, bar above hanging hands ──
+function props(ex){
+  if(ex.props)return ex.props;const F=ex.j.map(f=>full(f,ex));let floor=-1e9;for(const f of F)for(const k in f)floor=Math.max(floor,f[k][1]);
+  const P=[];const h=p=>floor-p[1];
+  const hanging=ex.hang;
+  if(hanging){const y=(F[0].wr_l[1]+F[0].wr_r[1]+F[1].wr_l[1]+F[1].wr_r[1])/4-.03,x=(F[0].wr_l[0]+F[0].wr_r[0]+F[1].wr_l[0]+F[1].wr_r[0])/4;P.push({type:'pullbar',x,y,c:V.mid(F[0].wr_l,F[0].wr_r)});}
+  else{
+    // shoulders resting (torso part high off the floor in both frames while the body is low/lying): bench under the shoulders
+    const shoulderRest=F.every(f=>{const sm=V.mid(f.sh_l,f.sh_r);return h(sm)>.3&&h(sm)<.75&&Math.abs(sm[1]-f.pelvis[1])<.35;})&&F.some(f=>Math.abs(f.neck[1]-f.pelvis[1])<.3);
+    const seated=F.every(f=>{const th=V.sub(f.kn_l,f.hip_l),sh=V.sub(f.an_l,f.kn_l);return h(f.pelvis)>.3&&h(f.pelvis)<.8&&Math.abs(th[1])<.6*Math.hypot(th[0],th[2])+.05&&Math.abs(sh[1])>.7*V.len(sh);});
+    if(shoulderRest){const top=Math.max(...F.map(f=>V.mid(f.sh_l,f.sh_r)[1]))+.07;const x=F.reduce((s,f)=>s+V.mid(f.sh_l,f.sh_r)[0],0)/2;P.push({type:'bench',x,top,w:.42,floor});}
+    else if(seated){const top=Math.max(...F.map(f=>f.pelvis[1]))+.09;const x=F.reduce((s,f)=>s+f.pelvis[0],0)/2-.05;P.push({type:'bench',x,top,w:.4,floor});}
+  }
+  return ex.props=P;
+}
+// frame each exercise from the figure as drawn (sampled over the whole movement); the view then
+// stays fixed – only the body moves
+function frameBox(ex){let lo=1e9,hi=-1e9,x0=1e9,x1=-1e9;ex.box={cx:0,low:0};
+  for(let i=0;i<=8;i++){const P=pose(ex,i/8);for(const k in P){lo=Math.min(lo,P[k][1]);hi=Math.max(hi,P[k][1]);x0=Math.min(x0,P[k][0]);x1=Math.max(x1,P[k][0]);}}
+  // standing exercises keep the floor at the bottom; hanging ones are centred
+  return ex.hang?{low:hi+(2.4*.94-(hi-lo))/2-.1,cx:(x0+x1)/2}:{low:0,cx:(x0+x1)/2};}
+// a weight plate: a real disc (thickness, darker edge, lighter face, centre hole)
+function disc(ctx,S,pxm,c,n,r,thick,base,face){
+  const nn=V.norm(n), ang=Math.atan2(nn[1],nn[0]), squash=Math.max(Math.abs(nn[2]),.08);
+  const steps=7;
+  for(let i=0;i<=steps;i++){const p=V.add(c,V.mul(nn,(i/steps-.5)*thick*(nn[2]<0?-1:1)));const s=S(p);
+    ctx.fillStyle=i===steps?face:base;ctx.beginPath();ctx.ellipse(s[0],s[1],r*pxm*squash,r*pxm,ang,0,Math.PI*2);ctx.fill();}
+  const front=S(V.add(c,V.mul(nn,.5*thick*(nn[2]<0?-1:1))));
+  ctx.strokeStyle=base;ctx.lineWidth=Math.max(1,r*pxm*.12);ctx.beginPath();ctx.ellipse(front[0],front[1],r*pxm*squash*.72,r*pxm*.72,ang,0,Math.PI*2);ctx.stroke();
+  ctx.fillStyle=base;ctx.beginPath();ctx.ellipse(front[0],front[1],r*pxm*squash*.16,r*pxm*.16,ang,0,Math.PI*2);ctx.fill();
+}
+// ── Where the barbell sits (coaching rules) ─────────────────────────
+// back: on the upper back, top of the traps behind the neck (back squat, good morning, barbell
+//       lunge / split squat / step-up / calf raise)
+// front: on the front of the shoulders (front squat)
+// hips: across the hips (hip thrust, glute bridge)
+// hands: across the palms (everything else)
+function barPlace(name){
+  const n=name.toLowerCase();
+  if(/hip thrust|glute bridge|hip bridge/.test(n))return 'hips';
+  if(/front squat|front rack|zercher/.test(n))return 'front';
+  if(/overhead squat|snatch|clean|jerk|press|curl|row|deadlift|shrug|bench|raise(?!.*calf)/.test(n)&&!/calf/.test(n))return 'hands';
+  if(/squat|good morning|lunge|split squat|step-?up|calf raise|box jump/.test(n))return 'back';
+  return 'hands';
+}
+function bodyAxes(P){const lr=V.norm(V.sub(P.sh_l,P.sh_r)),up=V.norm(V.sub(P.neck,P.pelvis));
+  let fwd=V.norm([lr[1]*up[2]-lr[2]*up[1],lr[2]*up[0]-lr[0]*up[2],lr[0]*up[1]-lr[1]*up[0]]);
+  if(V.dot(fwd,V.sub(P.head,P.neck))<0&&Math.abs(V.dot(fwd,V.sub(P.head,P.neck)))>.01)fwd=V.mul(fwd,-1);
+  return {lr,up,fwd};}
+function barbell(P,name,ex){const {lr,up,fwd}=bodyAxes(P),place=barPlace(name);let c,d,hw;
+  if(place==='back'){const top=V.add(V.mid(P.sh_l,P.sh_r),V.mul(V.sub(P.neck,V.mid(P.sh_l,P.sh_r)),.5));c=V.sub(top,V.mul(fwd,.08));d=lr;hw=Math.max(ex.shw*1.6,.3);}
+  else if(place==='front'){c=V.add(V.add(V.mid(P.sh_l,P.sh_r),V.mul(fwd,.09)),V.mul(up,.02));d=lr;hw=ex.shw*1.05;}
+  else if(place==='hips'){c=V.add(V.mid(P.hip_l,P.hip_r),[0,-.13,0]);d=V.norm(V.sub(P.hip_l,P.hip_r));hw=Math.max(ex.shw*1.2,.25);}
+  else{c=V.mid(P.wr_l,P.wr_r);const w=V.sub(P.wr_l,P.wr_r);d=V.len(w)>.25?V.norm(w):lr;hw=ex.grip;}
+  // keep the bar level left-to-right (no tilting in the hands)
+  d=V.norm([d[0],0,d[2]]);
+  // both hands on the bar, the same width apart all the time
+  setArm(P,ex,'l',V.add(c,V.mul(d,hw)));setArm(P,ex,'r',V.sub(c,V.mul(d,hw)));
+  return {c,d};}
+
+// ── Working muscles ────────────────────────────────────────────────
+// Each body line is split where muscles sit; main muscles in the bright colour, secondary
+// muscles lighter, everything else plain.
+const PIECES=[ // [from, to, start, end, muscles]
+  ['sh_l','el_l',0,.35,['shoulders']],['sh_l','el_l',.35,1,['biceps','triceps']],['el_l','wr_l',0,1,['forearms']],
+  ['sh_r','el_r',0,.35,['shoulders']],['sh_r','el_r',.35,1,['biceps','triceps']],['el_r','wr_r',0,1,['forearms']],
+  ['hip_l','kn_l',0,.25,['glutes']],['hip_l','kn_l',.25,1,['quadriceps','hamstrings','adductors','abductors']],['kn_l','an_l',0,1,['calves']],['heel_l','toe_l',0,1,[]],
+  ['hip_r','kn_r',0,.25,['glutes']],['hip_r','kn_r',.25,1,['quadriceps','hamstrings','adductors','abductors']],['kn_r','an_r',0,1,['calves']],['heel_r','toe_r',0,1,[]],
+  ['pelvis','neck',0,.45,['abdominals','lower back']],['pelvis','neck',.45,1,['chest','lats','middle back']],
+  ['sh_l','sh_r',0,1,['shoulders','traps','chest']],['hip_l','hip_r',0,1,['glutes','abductors']],['neck','head',0,.6,['neck','traps']],
+];
 function draw3d(cv,id,t,mode){
   const ex=D3[id],m=META[id],ctx=cv.getContext('2d'),W=cv.width;ctx.clearRect(0,0,W,W);
   if(!ex.box)ex.box=frameBox(ex);
   const P=pose(ex,t), pxm=W/2.4, S=p=>[(p[0]-ex.box.cx)*pxm+W/2,(p[1]-ex.box.low)*pxm+W*.94];
-  const dark=look==='dark',ink=css('--fig'),bright=css('--bright');
-  const work=m.mus.some(x=>ARMS.includes(x))?'arms':m.mus.some(x=>LEGS.includes(x))?'legs':'torso';
-  const colOf=part=>work===part?bright:(mode==='man'?css('--skin'):ink);
+  const dark=look==='dark',ink=css('--fig'),bright=css('--bright'),sec=css('--sec');
+  const colFor=ms=>ms.some(x=>m.mus.includes(x))?bright:ms.some(x=>(m.sec||[]).includes(x))?sec:ink;
   ctx.lineCap='round';ctx.lineJoin='round';
-  ctx.strokeStyle=css('--floor');ctx.lineWidth=W*.006;ctx.beginPath();ctx.moveTo(W*.08,W*.94+W*.012);ctx.lineTo(W*.92,W*.94+W*.012);ctx.stroke();
-  const segs=[];const add=(a,b,w,part,kind)=>segs.push({a,b,w,part,kind,z:(P[a][2]+P[b][2])/2});
-  const lw=mode==='man'?1:0;
-  [['l'],['r']].forEach(([s])=>{add('sh_'+s,'el_'+s,mode==='man'?.10:.05,'arms');add('el_'+s,'wr_'+s,mode==='man'?.085:.05,'arms');add('hip_'+s,'kn_'+s,mode==='man'?.16:.05,'legs');add('kn_'+s,'an_'+s,mode==='man'?.12:.05,'legs');add('heel_'+s,'toe_'+s,mode==='man'?.07:.04,'legs');});
-  segs.push({torso:true,z:(P.sh_l[2]+P.sh_r[2]+P.hip_l[2]+P.hip_r[2])/4});
-  segs.push({headSeg:true,z:P.head[2]});
-  // equipment
-  const eq=m.eq;let bars=[];
-  if(eq==='barbell'){const c=V.mid(P.wr_l,P.wr_r);const d=V.norm(V.sub(P.wr_l,P.wr_r));bars.push({c,d,half:1.1,r:.225,bar:true});}
-  if(eq==='dumbbell'||eq==='kettlebells'){const d=V.norm(V.sub(P.sh_l,P.sh_r));for(const w of ['wr_l','wr_r'])bars.push({c:P[w],d,half:.17,r:.1,bar:false,kb:eq==='kettlebells'});}
-  for(const b of bars)segs.push({equip:b,z:b.c[2]});
-  segs.sort((x,y)=>y.z-x.z);
-  const eqCol=dark?'rgba(255,255,255,.6)':css('--muted');
-  const plate=(c,n,r)=>{const s=S(c);const nl=Math.hypot(n[0],n[1])||1e-6;ctx.beginPath();ctx.ellipse(s[0],s[1],Math.max(r*pxm*Math.abs(n[2]),W*.012),r*pxm,Math.atan2(n[1],n[0]),0,Math.PI*2);ctx.fill();};
-  for(const sg of segs){
-    if(sg.equip){const b=sg.equip;ctx.fillStyle=eqCol;ctx.strokeStyle=eqCol;
-      if(b.kb){const s=S(V.add(b.c,[0,.09,0]));ctx.beginPath();ctx.arc(s[0],s[1],.09*pxm,0,Math.PI*2);ctx.fill();continue;}
-      const a=V.add(b.c,V.mul(b.d,b.half)),e=V.sub(b.c,V.mul(b.d,b.half));ctx.lineWidth=Math.max(2,W*(b.bar?.012:.014));ctx.beginPath();ctx.moveTo(...S(a));ctx.lineTo(...S(e));ctx.stroke();
-      const k=b.bar?.85:1;plate(V.add(b.c,V.mul(b.d,b.half*k)),b.d,b.r);plate(V.sub(b.c,V.mul(b.d,b.half*k)),b.d,b.r);continue;}
-    if(sg.torso){const q=[P.sh_l,P.sh_r,P.hip_r,P.hip_l].map(S);
-      if(mode==='man'){ctx.fillStyle=colOf('torso');ctx.strokeStyle=colOf('torso');ctx.lineWidth=.1*pxm;ctx.beginPath();q.forEach((p,i)=>i?ctx.lineTo(...p):ctx.moveTo(...p));ctx.closePath();ctx.fill();ctx.stroke();
-        ctx.lineWidth=.09*pxm;ctx.beginPath();ctx.moveTo(...S(P.neck));ctx.lineTo(...S(V.mid(P.sh_l,P.sh_r)));ctx.stroke();}
-      else{ctx.strokeStyle=colOf('torso');ctx.lineWidth=.05*pxm;ctx.beginPath();ctx.moveTo(...q[0]);ctx.lineTo(...q[1]);ctx.moveTo(...q[2]);ctx.lineTo(...q[3]);ctx.moveTo(...S(P.neck));ctx.lineTo(...S(P.pelvis));ctx.stroke();}
-      continue;}
-    if(sg.headSeg){const s=S(P.head);ctx.fillStyle=mode==='man'?css('--skin'):ink;ctx.beginPath();ctx.arc(s[0],s[1],.115*pxm,0,Math.PI*2);ctx.fill();continue;}
-    // limb: far side slightly lighter in mannequin mode
-    const far=sg.z>P.pelvis[2]+.02;ctx.strokeStyle=(mode==='man'&&far&&work!==sg.part)?css('--skinfar'):colOf(sg.part);
-    ctx.lineWidth=sg.w*pxm;ctx.beginPath();ctx.moveTo(...S(P[sg.a]));ctx.lineTo(...S(P[sg.b]));ctx.stroke();
+  if(!ex.hang){ctx.strokeStyle=css('--floor');ctx.lineWidth=W*.006;ctx.beginPath();ctx.moveTo(W*.06,W*.94+W*.012);ctx.lineTo(W*.94,W*.94+W*.012);ctx.stroke();}
+  const propCol=dark?'rgba(255,255,255,.22)':'rgba(20,27,43,.16)';
+  for(const pr of props(ex)){
+    if(pr.type==='bench'){const x0=S([pr.x-pr.w,pr.top,0])[0],x1=S([pr.x+pr.w,pr.top,0])[0],y=S([0,pr.top,0])[1],yf=W*.94;
+      ctx.fillStyle=propCol;ctx.beginPath();ctx.roundRect(x0,y,x1-x0,.07*pxm,4);ctx.fill();
+      ctx.fillRect(x0+(x1-x0)*.15-.02*pxm,y,.04*pxm,yf-y);ctx.fillRect(x1-(x1-x0)*.15-.02*pxm,y,.04*pxm,yf-y);}
+    if(pr.type==='pullbar'){const s=S([pr.x,pr.y,0]);ctx.strokeStyle=propCol;ctx.lineWidth=.035*pxm;ctx.beginPath();ctx.moveTo(s[0]-.5*pxm,s[1]);ctx.lineTo(s[0]+.5*pxm,s[1]);ctx.stroke();}
+  }
+  const items=[];const lw=.05*pxm;
+  if(m.eq==='barbell'){const {c,d}=barbell(P,m.name,ex);items.push({rod:[c,d],z:c[2]+.05});for(const sg of [1,-1]){const pc=V.add(c,V.mul(d,sg*.92));items.push({plate:[pc,d,.225,.06],z:pc[2]});}}
+  for(const [a,b,f0,f1,ms] of PIECES){const A=V.add(P[a],V.mul(V.sub(P[b],P[a]),f0)),B=V.add(P[a],V.mul(V.sub(P[b],P[a]),f1));
+    items.push({line:[A,B],col:colFor(ms),w:ms.length?lw:lw*.8,z:(A[2]+B[2])/2});}
+  items.push({head:true,z:P.head[2]-.01});
+  if(m.eq==='dumbbell'||m.eq==='kettlebells'){const {lr}=bodyAxes(P);for(const w of ['l','r']){const fo=V.norm(V.sub(P['wr_'+w],P['el_'+w]));const c=V.add(P['wr_'+w],V.mul(fo,.05));items.push({db:[c,lr,m.eq==='kettlebells'],z:c[2]-.02});}}
+  items.sort((x,y)=>y.z-x.z);
+  const eqBase=dark?'#9AA3B2':'#59627A', eqFace=dark?'#C7CCD6':'#7B849B';
+  for(const it of items){
+    if(it.line){ctx.strokeStyle=it.col;ctx.lineWidth=it.w;ctx.beginPath();ctx.moveTo(...S(it.line[0]));ctx.lineTo(...S(it.line[1]));ctx.stroke();}
+    else if(it.head){const s=S(P.head);ctx.fillStyle=ink;ctx.beginPath();ctx.ellipse(s[0],s[1],.1*pxm,.115*pxm,0,0,Math.PI*2);ctx.fill();}
+    else if(it.rod){const [c,d]=it.rod,a=V.add(c,V.mul(d,1.1)),e=V.sub(c,V.mul(d,1.1));ctx.strokeStyle=eqBase;ctx.lineWidth=Math.max(2,.03*pxm);ctx.beginPath();ctx.moveTo(...S(a));ctx.lineTo(...S(e));ctx.stroke();}
+    else if(it.plate){const [c,d,r,th]=it.plate;disc(ctx,S,pxm,c,d,r,th,eqBase,eqFace);}
+    else if(it.db){const [c,d,kb]=it.db;if(kb){const s=S(V.add(c,[0,.1,0]));ctx.fillStyle=eqBase;ctx.beginPath();ctx.arc(s[0],s[1],.1*pxm,0,Math.PI*2);ctx.fill();continue;}
+      const a=V.add(c,V.mul(d,.13)),e=V.sub(c,V.mul(d,.13));ctx.strokeStyle=eqBase;ctx.lineWidth=Math.max(2,.03*pxm);ctx.beginPath();ctx.moveTo(...S(a));ctx.lineTo(...S(e));ctx.stroke();
+      disc(ctx,S,pxm,a,d,.075,.07,eqBase,eqFace);disc(ctx,S,pxm,e,d,.075,.07,eqBase,eqFace);}
   }
 }
 function draw2d(cv,id,t){const ctx=cv.getContext('2d'),W=cv.width;ctx.clearRect(0,0,W,W);const d=D2[id];if(!d)return;const m=META[id];
@@ -128,10 +322,10 @@ function draw2d(cv,id,t){const ctx=cv.getContext('2d'),W=cv.width;ctx.clearRect(
   ctx.beginPath();ctx.moveTo((P[1][0]+P[2][0])/2,(P[1][1]+P[2][1])/2);ctx.lineTo((P[7][0]+P[8][0])/2,(P[7][1]+P[8][1])/2);ctx.stroke();
   ctx.beginPath();ctx.arc(P[0][0],P[0][1],.12*370*d.k*s,0,Math.PI*2);ctx.fill();}
 const rows=document.getElementById('rows');const cells=[];
-for(const id of ORDER){const m=META[id];const r=document.createElement('div');r.className='row';
+for(const id of ORDER){D3[id].id=id;const m=META[id];const r=document.createElement('div');r.className='row';
   r.innerHTML=`<div class="name"><b>${m.name}</b><span>${m.mus.join(', ')} · ${m.eq}</span></div>`;
   const mk=(kind,label,cls='')=>{const c=document.createElement('div');c.className='cell '+cls;c.dataset.label=label;if(kind==='mesh'){c.innerHTML=`<img alt="3D body, start" src="${D3[id].mesh[0]}"><img alt="3D body, end" src="${D3[id].mesh[1]}" style="opacity:0">`;}else{const cv=document.createElement('canvas');cv.width=cv.height=360;c.appendChild(cv);cells.push({cv,id,kind});}r.appendChild(c);};
-  mk('old','Round 2');mk('line','New line','new');mk('man','New mannequin','new');mk('mesh','3D body');rows.appendChild(r);}
+  mk('old','Round 2');mk('line','Line figure','new');mk('mesh','3D body');rows.appendChild(r);}
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 function frame(ms){const t=reduce?1:phase(ms);for(const c of cells){if(c.kind==='old')draw2d(c.cv,c.id,t);else draw3d(c.cv,c.id,t,c.kind==='man'?'man':'line');}
   for(const c of rows.querySelectorAll('.cell')){const im=c.querySelectorAll('img');if(im.length===2){im[0].style.opacity=t>.5?0:1;im[1].style.opacity=t>.5?1:0;}}if(!reduce)requestAnimationFrame(frame);}
