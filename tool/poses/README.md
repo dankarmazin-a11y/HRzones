@@ -17,3 +17,8 @@ Mockup: https://claude.ai/artifact/GNPyueDWW1a8yTupNqxtUf (owner: style B in lig
   (SAM License, commercial use allowed) fits a 3D body with real proportions to the photos of
   `test_group.json`; needs the GitHub secret `HF_TOKEN` (Hugging Face account with access to
   facebook/sam-3d-body-dinov3). Output artifact `poses3d` (keypoints, joints, pose parameters, meshes).
+- Results of a "Poses 3D" run are pushed to the branch `poses3d-results` (this cloud session can't
+  download Actions artifacts). `prep3d.py <poses3d.json> <meshes.npz> <mock3d.json>` turns them into
+  mockup data (skeleton joints in metres + same-scale mesh stills); `mockup3d_template.html` is the
+  round-3 mockup (3D joints, bone directions slerped so limbs keep their length, every body turned to
+  the same three-quarter side view, bars drawn in 3D through both hands).

@@ -1,0 +1,140 @@
+<meta charset="utf-8">
+<title>Line Figure Mockup</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap">
+<style>
+/* Layout: header with light/dark switch, one row per exercise comparing four versions, notes. */
+:root{--bg:#F1F2F4;--card:#FFFFFF;--ink:#141B2B;--bright:#FF7A2D;--muted:#6B7280;--line:#E3E5EA;--figbg:#F5F6F8;--fig:#141B2B;--floor:#D4D8DF;--skin:#3A4356;--skinfar:#8A93A6;--font:'Inter',system-ui,-apple-system,sans-serif}
+:root[data-look="dark"]{--bg:#0C111C;--card:#1A2131;--ink:#F3F4F6;--muted:#9AA3B2;--line:#2A3344;--figbg:#141B2B;--fig:#FFFFFF;--floor:#2E3749;--skin:#E9ECF2;--skinfar:#7C8598;color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.45}
+.wrap{max-width:1120px;margin:0 auto;padding-block:28px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:22px}
+h1{font-size:30px;font-weight:900;letter-spacing:-.035em;margin:0;text-wrap:balance}
+p{margin:0;max-width:72ch}
+.muted{color:var(--muted)}
+.seg{display:inline-flex;align-self:flex-start;background:var(--card);border-radius:9px;padding:3px;gap:3px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.seg button{font:600 14px var(--font);border:0;background:transparent;color:var(--ink);border-radius:7px;padding:8px 16px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--card)}
+.seg button:focus-visible{outline:3px solid var(--bright);outline-offset:2px}
+.heads,.row{display:grid;grid-template-columns:150px repeat(4,minmax(0,1fr));gap:12px;align-items:center}
+.heads{font-size:12px;font-weight:700;color:var(--muted);text-transform:none;letter-spacing:.02em}
+.heads b{color:var(--ink)}
+.row{background:var(--card);border-radius:10px;padding:12px;box-shadow:0 2px 10px rgba(20,27,43,.07)}
+.row .name b{display:block;font-size:14.5px}
+.row .name span{font-size:12px;color:var(--muted)}
+.cell{position:relative;aspect-ratio:1/1;border-radius:9px;background:var(--figbg);overflow:hidden}
+.cell canvas,.cell img{position:absolute;inset:0;width:100%;height:100%}
+.cell img{object-fit:contain;transition:opacity .35s}
+.tag{position:absolute;left:6px;top:6px;font-size:10.5px;font-weight:700;color:var(--muted)}
+.new{outline:2px solid var(--bright);outline-offset:-2px}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+.notes .card{background:var(--card);border-radius:10px;padding:18px;box-shadow:0 2px 10px rgba(20,27,43,.07)}
+.notes h3{margin:0 0 6px;font-size:15px}
+@media (max-width:720px){
+  .heads{display:none}
+  .row{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .row .name{grid-column:1/-1}
+  .cell::after{content:attr(data-label);position:absolute;left:6px;bottom:5px;font-size:10.5px;font-weight:700;color:var(--muted)}
+}
+</style>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:12px">
+    <h1>Line figures, round 3: real 3D bodies</h1>
+    <p class="muted">Meta's SAM 3D Body model fitted a full 3D body to each exercise photo. Every figure is turned to the same three-quarter side view, with the same body size and floor. Limbs now bend at the joints and keep their length while moving. Light mode is style B, dark mode style C.</p>
+    <div class="seg" role="group" aria-label="Phone look">
+      <button id="lk-light" data-look="light" aria-pressed="true">Light (B)</button>
+      <button id="lk-dark" data-look="dark" aria-pressed="false">Dark (C)</button>
+    </div>
+  </header>
+  <div class="heads" aria-hidden="true"><span>Exercise</span><span>Round 2 (before)</span><span><b>New line figure</b></span><span><b>New mannequin</b></span><span>3D body as photographed</span></div>
+  <div id="rows" style="display:flex;flex-direction:column;gap:10px"></div>
+  <section class="notes">
+    <div class="card"><h3>What's new</h3><p>Real proportions from a 3D body, not from a flat photo. Bars are drawn in 3D through both hands, so they tilt and turn correctly and never disappear. The Lying Leg Curl now works.</p></div>
+    <div class="card"><h3>Line or mannequin?</h3><p>Pick one for the app. Both use the same data and the same size. The mannequin looks more human; the line figure is cleaner when small.</p></div>
+    <div class="card"><h3>Next</h3><p>If you like it, I run all 873 exercises (about 10 hours on GitHub, done once) and check them in batches before anything goes into the app.</p></div>
+  </section>
+</div>
+<script>
+const D3=__D3__, D2=__D2__, META=__META__;
+const ORDER=__ORDER__;
+let look='light';
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const ARMS=['chest','shoulders','triceps','biceps','lats','middle back','forearms','traps'];
+const LEGS=['quadriceps','hamstrings','glutes','calves','adductors','abductors'];
+const ease=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+function phase(ms){const c=3400,x=ms%c;if(x<1200)return ease(x/1200);if(x<1700)return 1;if(x<2900)return 1-ease((x-1700)/1200);return 0;}
+const V={add:(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]],sub:(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]],mul:(a,k)=>[a[0]*k,a[1]*k,a[2]*k],len:a=>Math.hypot(a[0],a[1],a[2]),mid:(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2],norm:a=>{const l=Math.hypot(a[0],a[1],a[2])||1;return [a[0]/l,a[1]/l,a[2]/l];},dot:(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2]};
+function slerp(a,b,t){const d=Math.max(-1,Math.min(1,V.dot(a,b)));const th=Math.acos(d);if(th<1e-4)return V.norm(V.add(V.mul(a,1-t),V.mul(b,t)));const s=Math.sin(th);return V.add(V.mul(a,Math.sin((1-t)*th)/s),V.mul(b,Math.sin(t*th)/s));}
+// skeleton: [child, parent]; root = pelvis
+const BONES=[['hip_l','pelvis'],['hip_r','pelvis'],['neck','pelvis'],['sh_l','neck'],['sh_r','neck'],['head','neck'],['el_l','sh_l'],['wr_l','el_l'],['el_r','sh_r'],['wr_r','el_r'],['kn_l','hip_l'],['an_l','kn_l'],['toe_l','an_l'],['heel_l','an_l'],['kn_r','hip_r'],['an_r','kn_r'],['toe_r','an_r'],['heel_r','an_r']];
+// One camera for everyone: turn each body so it faces screen-right, 30° toward the viewer.
+const VIEW=30*Math.PI/180;
+function rotY(p,th){const c=Math.cos(th),s=Math.sin(th);return [p[0]*c-p[2]*s,p[1],p[0]*s+p[2]*c];}
+function facingAngle(ex){
+  let ax=0,az=0,nx=0,nz=0;
+  for(const f of ex.j){ax+=f.hip_l[0]-f.hip_r[0]+f.sh_l[0]-f.sh_r[0];az+=f.hip_l[2]-f.hip_r[2]+f.sh_l[2]-f.sh_r[2];
+    const ear=[(f.ear_l[0]+f.ear_r[0])/2,(f.ear_l[2]+f.ear_r[2])/2];nx+=f.nose[0]-ear[0];nz+=f.nose[2]-ear[2];}
+  // forward is perpendicular to the left-right line, on the side the nose points to
+  let fx=-az,fz=ax; if(fx*nx+fz*nz<0){fx=-fx;fz=-fz;}
+  return Math.atan2(fz,fx);
+}
+function full0(f){const o={...f};o.pelvis=V.mid(f.hip_l,f.hip_r);o.head=V.add(V.mid(f.ear_l,f.ear_r),V.mul(V.sub(V.mid(f.ear_l,f.ear_r),f.neck),0.15));return o;}
+function full(f,ex){const o=full0(f);if(ex.th===undefined){ex.th=Math.atan2(-Math.sin(VIEW),Math.cos(VIEW))-facingAngle(ex);}for(const k in o)o[k]=rotY(o[k],ex.th);return o;}
+function pose(ex,t){const [a,b]=ex.j.map(f=>full(f,ex));const o={pelvis:V.add(V.mul(a.pelvis,1-t),V.mul(b.pelvis,t))};
+  for(const [c,p] of BONES){const da=V.sub(a[c],a[p]),db=V.sub(b[c],b[p]);const L=(V.len(da)+V.len(db))/2;o[c]=V.add(o[p],V.mul(slerp(V.norm(da),V.norm(db),t),L));}return o;}
+function frameBox(ex){let lo=1e9,x0=1e9,x1=-1e9;for(const f of ex.j.map(f=>full(f,ex))){for(const k in f){lo=Math.min(lo,-f[k][1]);x0=Math.min(x0,f[k][0]);x1=Math.max(x1,f[k][0]);}}return {low:-lo,cx:(x0+x1)/2};}
+function draw3d(cv,id,t,mode){
+  const ex=D3[id],m=META[id],ctx=cv.getContext('2d'),W=cv.width;ctx.clearRect(0,0,W,W);
+  if(!ex.box)ex.box=frameBox(ex);
+  const P=pose(ex,t), pxm=W/2.4, S=p=>[(p[0]-ex.box.cx)*pxm+W/2,(p[1]-ex.box.low)*pxm+W*.94];
+  const dark=look==='dark',ink=css('--fig'),bright=css('--bright');
+  const work=m.mus.some(x=>ARMS.includes(x))?'arms':m.mus.some(x=>LEGS.includes(x))?'legs':'torso';
+  const colOf=part=>work===part?bright:(mode==='man'?css('--skin'):ink);
+  ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.strokeStyle=css('--floor');ctx.lineWidth=W*.006;ctx.beginPath();ctx.moveTo(W*.08,W*.94+W*.012);ctx.lineTo(W*.92,W*.94+W*.012);ctx.stroke();
+  const segs=[];const add=(a,b,w,part,kind)=>segs.push({a,b,w,part,kind,z:(P[a][2]+P[b][2])/2});
+  const lw=mode==='man'?1:0;
+  [['l'],['r']].forEach(([s])=>{add('sh_'+s,'el_'+s,mode==='man'?.10:.05,'arms');add('el_'+s,'wr_'+s,mode==='man'?.085:.05,'arms');add('hip_'+s,'kn_'+s,mode==='man'?.16:.05,'legs');add('kn_'+s,'an_'+s,mode==='man'?.12:.05,'legs');add('heel_'+s,'toe_'+s,mode==='man'?.07:.04,'legs');});
+  segs.push({torso:true,z:(P.sh_l[2]+P.sh_r[2]+P.hip_l[2]+P.hip_r[2])/4});
+  segs.push({headSeg:true,z:P.head[2]});
+  // equipment
+  const eq=m.eq;let bars=[];
+  if(eq==='barbell'){const c=V.mid(P.wr_l,P.wr_r);const d=V.norm(V.sub(P.wr_l,P.wr_r));bars.push({c,d,half:1.1,r:.225,bar:true});}
+  if(eq==='dumbbell'||eq==='kettlebells'){const d=V.norm(V.sub(P.sh_l,P.sh_r));for(const w of ['wr_l','wr_r'])bars.push({c:P[w],d,half:.17,r:.1,bar:false,kb:eq==='kettlebells'});}
+  for(const b of bars)segs.push({equip:b,z:b.c[2]});
+  segs.sort((x,y)=>y.z-x.z);
+  const eqCol=dark?'rgba(255,255,255,.6)':css('--muted');
+  const plate=(c,n,r)=>{const s=S(c);const nl=Math.hypot(n[0],n[1])||1e-6;ctx.beginPath();ctx.ellipse(s[0],s[1],Math.max(r*pxm*Math.abs(n[2]),W*.012),r*pxm,Math.atan2(n[1],n[0]),0,Math.PI*2);ctx.fill();};
+  for(const sg of segs){
+    if(sg.equip){const b=sg.equip;ctx.fillStyle=eqCol;ctx.strokeStyle=eqCol;
+      if(b.kb){const s=S(V.add(b.c,[0,.09,0]));ctx.beginPath();ctx.arc(s[0],s[1],.09*pxm,0,Math.PI*2);ctx.fill();continue;}
+      const a=V.add(b.c,V.mul(b.d,b.half)),e=V.sub(b.c,V.mul(b.d,b.half));ctx.lineWidth=Math.max(2,W*(b.bar?.012:.014));ctx.beginPath();ctx.moveTo(...S(a));ctx.lineTo(...S(e));ctx.stroke();
+      const k=b.bar?.85:1;plate(V.add(b.c,V.mul(b.d,b.half*k)),b.d,b.r);plate(V.sub(b.c,V.mul(b.d,b.half*k)),b.d,b.r);continue;}
+    if(sg.torso){const q=[P.sh_l,P.sh_r,P.hip_r,P.hip_l].map(S);
+      if(mode==='man'){ctx.fillStyle=colOf('torso');ctx.strokeStyle=colOf('torso');ctx.lineWidth=.1*pxm;ctx.beginPath();q.forEach((p,i)=>i?ctx.lineTo(...p):ctx.moveTo(...p));ctx.closePath();ctx.fill();ctx.stroke();
+        ctx.lineWidth=.09*pxm;ctx.beginPath();ctx.moveTo(...S(P.neck));ctx.lineTo(...S(V.mid(P.sh_l,P.sh_r)));ctx.stroke();}
+      else{ctx.strokeStyle=colOf('torso');ctx.lineWidth=.05*pxm;ctx.beginPath();ctx.moveTo(...q[0]);ctx.lineTo(...q[1]);ctx.moveTo(...q[2]);ctx.lineTo(...q[3]);ctx.moveTo(...S(P.neck));ctx.lineTo(...S(P.pelvis));ctx.stroke();}
+      continue;}
+    if(sg.headSeg){const s=S(P.head);ctx.fillStyle=mode==='man'?css('--skin'):ink;ctx.beginPath();ctx.arc(s[0],s[1],.115*pxm,0,Math.PI*2);ctx.fill();continue;}
+    // limb: far side slightly lighter in mannequin mode
+    const far=sg.z>P.pelvis[2]+.02;ctx.strokeStyle=(mode==='man'&&far&&work!==sg.part)?css('--skinfar'):colOf(sg.part);
+    ctx.lineWidth=sg.w*pxm;ctx.beginPath();ctx.moveTo(...S(P[sg.a]));ctx.lineTo(...S(P[sg.b]));ctx.stroke();
+  }
+}
+function draw2d(cv,id,t){const ctx=cv.getContext('2d'),W=cv.width;ctx.clearRect(0,0,W,W);const d=D2[id];if(!d)return;const m=META[id];
+  const s=W/1000,P=d.f[0].map((p,i)=>[(p[0]+(d.f[1][i][0]-p[0])*t)*s,(p[1]+(d.f[1][i][1]-p[1])*t)*s]);const ink=css('--fig');ctx.strokeStyle=ink;ctx.fillStyle=ink;ctx.lineWidth=W*.03;ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.strokeStyle=css('--floor');ctx.lineWidth=W*.006;ctx.beginPath();ctx.moveTo(W*.08,880*s+W*.02);ctx.lineTo(W*.92,880*s+W*.02);ctx.stroke();ctx.strokeStyle=ink;ctx.lineWidth=W*.03;
+  const ch=a=>{ctx.beginPath();ctx.moveTo(...P[a[0]]);a.slice(1).forEach(i=>ctx.lineTo(...P[i]));ctx.stroke();};
+  ch([1,3,5]);ch([2,4,6]);ch([7,9,11,13]);ch([8,10,12,14]);ch([1,2]);ch([7,8]);
+  ctx.beginPath();ctx.moveTo((P[1][0]+P[2][0])/2,(P[1][1]+P[2][1])/2);ctx.lineTo((P[7][0]+P[8][0])/2,(P[7][1]+P[8][1])/2);ctx.stroke();
+  ctx.beginPath();ctx.arc(P[0][0],P[0][1],.12*370*d.k*s,0,Math.PI*2);ctx.fill();}
+const rows=document.getElementById('rows');const cells=[];
+for(const id of ORDER){const m=META[id];const r=document.createElement('div');r.className='row';
+  r.innerHTML=`<div class="name"><b>${m.name}</b><span>${m.mus.join(', ')} · ${m.eq}</span></div>`;
+  const mk=(kind,label,cls='')=>{const c=document.createElement('div');c.className='cell '+cls;c.dataset.label=label;if(kind==='mesh'){c.innerHTML=`<img alt="3D body, start" src="${D3[id].mesh[0]}"><img alt="3D body, end" src="${D3[id].mesh[1]}" style="opacity:0">`;}else{const cv=document.createElement('canvas');cv.width=cv.height=360;c.appendChild(cv);cells.push({cv,id,kind});}r.appendChild(c);};
+  mk('old','Round 2');mk('line','New line','new');mk('man','New mannequin','new');mk('mesh','3D body');rows.appendChild(r);}
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function frame(ms){const t=reduce?1:phase(ms);for(const c of cells){if(c.kind==='old')draw2d(c.cv,c.id,t);else draw3d(c.cv,c.id,t,c.kind==='man'?'man':'line');}
+  for(const c of rows.querySelectorAll('.cell')){const im=c.querySelectorAll('img');if(im.length===2){im[0].style.opacity=t>.5?0:1;im[1].style.opacity=t>.5?1:0;}}if(!reduce)requestAnimationFrame(frame);}
+requestAnimationFrame(frame);
+for(const b of document.querySelectorAll('.seg button'))b.addEventListener('click',()=>{look=b.dataset.look;document.documentElement.dataset.look=look;document.querySelectorAll('.seg button').forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'));if(reduce)frame(0);});
+</script>
