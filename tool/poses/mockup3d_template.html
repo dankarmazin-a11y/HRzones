@@ -4,8 +4,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap">
 <style>
 /* Layout: header with light/dark switch, one row per exercise comparing four versions, notes. */
-:root{--bg:#F1F2F4;--card:#FFFFFF;--ink:#141B2B;--bright:#FF7A2D;--muted:#6B7280;--line:#E3E5EA;--figbg:#F5F6F8;--fig:#141B2B;--floor:#D4D8DF;--skin:#3A4356;--skinfar:#8A93A6;--font:'Inter',system-ui,-apple-system,sans-serif}
-:root[data-look="dark"]{--bg:#0C111C;--card:#1A2131;--ink:#F3F4F6;--muted:#9AA3B2;--line:#2A3344;--figbg:#141B2B;--fig:#FFFFFF;--floor:#2E3749;--skin:#E9ECF2;--skinfar:#7C8598;color-scheme:dark}
+:root{--bg:#F1F2F4;--card:#FFFFFF;--ink:#141B2B;--bright:#FF7A2D;--muted:#6B7280;--line:#E3E5EA;--figbg:#F5F6F8;--fig:#141B2B;--floor:#D4D8DF;--skin:#3A4356;--skinfar:#8A93A6;--sec:#FFC09A;--font:'Inter',system-ui,-apple-system,sans-serif}
+:root[data-look="dark"]{--bg:#0C111C;--card:#1A2131;--ink:#F3F4F6;--muted:#9AA3B2;--line:#2A3344;--figbg:#141B2B;--fig:#FFFFFF;--floor:#2E3749;--skin:#E9ECF2;--skinfar:#7C8598;--sec:#A65A2E;color-scheme:dark}
 body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.45}
 .wrap{max-width:1120px;margin:0 auto;padding-block:28px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:22px}
 h1{font-size:30px;font-weight:900;letter-spacing:-.035em;margin:0;text-wrap:balance}
@@ -38,19 +38,20 @@ p{margin:0;max-width:72ch}
 </style>
 <div class="wrap">
   <header style="display:flex;flex-direction:column;gap:12px">
-    <h1>Line figures, round 4</h1>
-    <p class="muted">Line figures from real 3D bodies (your pick). Each exercise now gets the camera angle that shows its movement best, with the same body size and floor for all. Benches, seats and pull-up bars are drawn where the body rests or hangs, and plates are real discs. Light mode is style B, dark mode style C.</p>
+    <h1>Line figures, round 5</h1>
+    <p class="muted">Every exercise now uses the same slim, fit body. The barbell sits where it belongs (upper back, front of the shoulders, hips or hands), and only the working muscles are coloured: main muscle in orange, secondary muscles in light orange. Light mode is style B, dark mode style C.</p>
     <div class="seg" role="group" aria-label="Phone look">
       <button id="lk-light" data-look="light" aria-pressed="true">Light (B)</button>
       <button id="lk-dark" data-look="dark" aria-pressed="false">Dark (C)</button>
     </div>
   </header>
-  <div class="heads" aria-hidden="true"><span>Exercise</span><span>Round 2 (before)</span><span><b>New line figure</b></span><span>3D body as photographed</span></div>
+  <div class="legend" style="display:flex;gap:18px;align-items:center;font-size:13px;color:var(--muted)"><span style="display:inline-flex;gap:6px;align-items:center"><i style="width:22px;height:5px;border-radius:3px;background:var(--bright);display:inline-block"></i>Main muscle</span><span style="display:inline-flex;gap:6px;align-items:center"><i style="width:22px;height:5px;border-radius:3px;background:var(--sec);display:inline-block"></i>Secondary muscle</span></div>
+  <div class="heads" aria-hidden="true"><span>Exercise</span><span>Round 2 (before)</span><span><b>New line figure</b></span><span>Fit standard body (3D)</span></div>
   <div id="rows" style="display:flex;flex-direction:column;gap:10px"></div>
   <section class="notes">
-    <div class="card"><h3>Camera per exercise</h3><p>Front-to-back movements (squat, curl, push-up) are shown from the side. Movements out to the sides (lateral raise) get a front three-quarter view. Everyone faces the same way.</p></div>
-    <div class="card"><h3>Benches and bars</h3><p>A bench appears under the shoulders on hip thrusts, a seat on seated presses and a bar above the hands on pull-ups. Plates have thickness, a lighter face and a centre hole.</p></div>
-    <div class="card"><h3>Next</h3><p>If you like it, I run all 873 exercises (about 10 hours on GitHub, done once) and check them in batches before anything goes into the app.</p></div>
+    <div class="card"><h3>Barbell rules</h3><p>Back squat, good morning, barbell lunge, split squat, step-up, calf raise: on the upper back, behind the neck. Front squat: front of the shoulders. Hip thrust, glute bridge: across the hips. Everything else: across the palms. The bar always runs left to right across the body.</p></div>
+    <div class="card"><h3>Working muscles</h3><p>Each line of the figure is split where the muscles sit: shoulders at the top of the arm, glutes at the top of the thigh, chest and back on the upper spine, abs and lower back on the lower spine. Only the muscles the exercise works are coloured.</p></div>
+    <div class="card"><h3>One fit body</h3><p>The photos show different people. Now every pose is redrawn with the same lean, athletic body, so all figures have the same proportions.</p></div>
   </section>
 </div>
 <script>
@@ -142,14 +143,49 @@ function disc(ctx,S,pxm,c,n,r,thick,base,face){
   ctx.strokeStyle=base;ctx.lineWidth=Math.max(1,r*pxm*.12);ctx.beginPath();ctx.ellipse(front[0],front[1],r*pxm*squash*.72,r*pxm*.72,ang,0,Math.PI*2);ctx.stroke();
   ctx.fillStyle=base;ctx.beginPath();ctx.ellipse(front[0],front[1],r*pxm*squash*.16,r*pxm*.16,ang,0,Math.PI*2);ctx.fill();
 }
+// ── Where the barbell sits (coaching rules) ─────────────────────────
+// back: on the upper back, top of the traps behind the neck (back squat, good morning, barbell
+//       lunge / split squat / step-up / calf raise)
+// front: on the front of the shoulders (front squat)
+// hips: across the hips (hip thrust, glute bridge)
+// hands: across the palms (everything else)
+function barPlace(name){
+  const n=name.toLowerCase();
+  if(/hip thrust|glute bridge|hip bridge/.test(n))return 'hips';
+  if(/front squat|front rack|zercher/.test(n))return 'front';
+  if(/overhead squat|snatch|clean|jerk|press|curl|row|deadlift|shrug|bench|raise(?!.*calf)/.test(n)&&!/calf/.test(n))return 'hands';
+  if(/squat|good morning|lunge|split squat|step-?up|calf raise|box jump/.test(n))return 'back';
+  return 'hands';
+}
+function bodyAxes(P){const lr=V.norm(V.sub(P.sh_l,P.sh_r)),up=V.norm(V.sub(P.neck,P.pelvis));
+  let fwd=V.norm([lr[1]*up[2]-lr[2]*up[1],lr[2]*up[0]-lr[0]*up[2],lr[0]*up[1]-lr[1]*up[0]]);
+  if(V.dot(fwd,V.sub(P.head,P.neck))<0&&Math.abs(V.dot(fwd,V.sub(P.head,P.neck)))>.01)fwd=V.mul(fwd,-1);
+  return {lr,up,fwd};}
+function barbell(P,name){const {lr,up,fwd}=bodyAxes(P),place=barPlace(name);
+  if(place==='back'){const top=V.add(V.mid(P.sh_l,P.sh_r),V.mul(V.sub(P.neck,V.mid(P.sh_l,P.sh_r)),.5));return {c:V.sub(top,V.mul(fwd,.08)),d:lr};}
+  if(place==='front'){return {c:V.add(V.add(V.mid(P.sh_l,P.sh_r),V.mul(fwd,.09)),V.mul(up,.02)),d:lr};}
+  if(place==='hips'){return {c:V.add(V.mid(P.hip_l,P.hip_r),[0,-.13,0]),d:V.norm(V.sub(P.hip_l,P.hip_r))};}
+  // in the hands: just past the wrists (the palms), along the line between the hands
+  const fl=V.norm(V.sub(P.wr_l,P.el_l)),fr=V.norm(V.sub(P.wr_r,P.el_r));
+  const c=V.mid(V.add(P.wr_l,V.mul(fl,.05)),V.add(P.wr_r,V.mul(fr,.05)));
+  const w=V.sub(P.wr_l,P.wr_r);return {c,d:V.len(w)>.25?V.norm(w):lr};}
+// ── Working muscles ────────────────────────────────────────────────
+// Each body line is split where muscles sit; main muscles in the bright colour, secondary
+// muscles lighter, everything else plain.
+const PIECES=[ // [from, to, start, end, muscles]
+  ['sh_l','el_l',0,.35,['shoulders']],['sh_l','el_l',.35,1,['biceps','triceps']],['el_l','wr_l',0,1,['forearms']],
+  ['sh_r','el_r',0,.35,['shoulders']],['sh_r','el_r',.35,1,['biceps','triceps']],['el_r','wr_r',0,1,['forearms']],
+  ['hip_l','kn_l',0,.25,['glutes']],['hip_l','kn_l',.25,1,['quadriceps','hamstrings','adductors','abductors']],['kn_l','an_l',0,1,['calves']],['heel_l','toe_l',0,1,[]],
+  ['hip_r','kn_r',0,.25,['glutes']],['hip_r','kn_r',.25,1,['quadriceps','hamstrings','adductors','abductors']],['kn_r','an_r',0,1,['calves']],['heel_r','toe_r',0,1,[]],
+  ['pelvis','neck',0,.45,['abdominals','lower back']],['pelvis','neck',.45,1,['chest','lats','middle back']],
+  ['sh_l','sh_r',0,1,['shoulders','traps','chest']],['hip_l','hip_r',0,1,['glutes','abductors']],['neck','head',0,.6,['neck','traps']],
+];
 function draw3d(cv,id,t,mode){
   const ex=D3[id],m=META[id],ctx=cv.getContext('2d'),W=cv.width;ctx.clearRect(0,0,W,W);
   if(!ex.box)ex.box=frameBox(ex);
   const P=pose(ex,t), pxm=W/2.4, S=p=>[(p[0]-ex.box.cx)*pxm+W/2,(p[1]-ex.box.low)*pxm+W*.94];
-  const dark=look==='dark',ink=css('--fig'),bright=css('--bright');
-  const work=m.mus.some(x=>ARMS.includes(x))?'arms':m.mus.some(x=>LEGS.includes(x))?'legs':'torso';
-  const man=mode==='man';
-  const colOf=part=>work===part?bright:(man?css('--skin'):ink);
+  const dark=look==='dark',ink=css('--fig'),bright=css('--bright'),sec=css('--sec');
+  const colFor=ms=>ms.some(x=>m.mus.includes(x))?bright:ms.some(x=>(m.sec||[]).includes(x))?sec:ink;
   ctx.lineCap='round';ctx.lineJoin='round';
   if(!ex.hang){ctx.strokeStyle=css('--floor');ctx.lineWidth=W*.006;ctx.beginPath();ctx.moveTo(W*.06,W*.94+W*.012);ctx.lineTo(W*.94,W*.94+W*.012);ctx.stroke();}
   const propCol=dark?'rgba(255,255,255,.22)':'rgba(20,27,43,.16)';
@@ -159,37 +195,22 @@ function draw3d(cv,id,t,mode){
       ctx.fillRect(x0+(x1-x0)*.15-.02*pxm,y,.04*pxm,yf-y);ctx.fillRect(x1-(x1-x0)*.15-.02*pxm,y,.04*pxm,yf-y);}
     if(pr.type==='pullbar'){const s=S([pr.x,pr.y,0]);ctx.strokeStyle=propCol;ctx.lineWidth=.035*pxm;ctx.beginPath();ctx.moveTo(s[0]-.5*pxm,s[1]);ctx.lineTo(s[0]+.5*pxm,s[1]);ctx.stroke();}
   }
-  // limbs: [from, to, width at start, width at end] (mannequin tapers like a body)
-  const segs=[];const add=(a,b,w0,w1,part)=>segs.push({a,b,w0,w1,part,z:(P[a][2]+P[b][2])/2});
-  for(const s of ['l','r']){
-    add('sh_'+s,'el_'+s,man?.105:.05,man?.085:.05,'arms');add('el_'+s,'wr_'+s,man?.085:.05,man?.06:.05,'arms');
-    add('hip_'+s,'kn_'+s,man?.175:.05,man?.12:.05,'legs');add('kn_'+s,'an_'+s,man?.12:.05,man?.075:.05,'legs');add('heel_'+s,'toe_'+s,man?.07:.04,man?.06:.04,'legs');}
-  segs.push({torso:true,z:(P.sh_l[2]+P.sh_r[2]+P.hip_l[2]+P.hip_r[2])/4});
-  segs.push({headSeg:true,z:P.head[2]-.01});
-  const eq=m.eq;
-  if(eq==='barbell'){const c=V.mid(P.wr_l,P.wr_r);const d=V.norm(V.sub(P.wr_l,P.wr_r));
-    segs.push({barRod:true,c,d,z:c[2]});for(const sg of [1,-1]){const pc=V.add(c,V.mul(d,sg*.92));segs.push({plate:true,c:pc,d,r:.225,th:.06,z:pc[2]});}}
-  if(eq==='dumbbell'||eq==='kettlebells'){const d=V.norm(V.sub(P.sh_l,P.sh_r));for(const w of ['wr_l','wr_r'])segs.push({db:true,c:P[w],d,kb:eq==='kettlebells',z:P[w][2]-.02});}
-  segs.sort((x,y)=>y.z-x.z);
+  const items=[];const lw=.05*pxm;
+  for(const [a,b,f0,f1,ms] of PIECES){const A=V.add(P[a],V.mul(V.sub(P[b],P[a]),f0)),B=V.add(P[a],V.mul(V.sub(P[b],P[a]),f1));
+    items.push({line:[A,B],col:colFor(ms),w:ms.length?lw:lw*.8,z:(A[2]+B[2])/2});}
+  items.push({head:true,z:P.head[2]-.01});
+  if(m.eq==='barbell'){const {c,d}=barbell(P,m.name);items.push({rod:[c,d],z:c[2]+.05});for(const sg of [1,-1]){const pc=V.add(c,V.mul(d,sg*.92));items.push({plate:[pc,d,.225,.06],z:pc[2]});}}
+  if(m.eq==='dumbbell'||m.eq==='kettlebells'){const {lr}=bodyAxes(P);for(const w of ['l','r']){const fo=V.norm(V.sub(P['wr_'+w],P['el_'+w]));const c=V.add(P['wr_'+w],V.mul(fo,.05));items.push({db:[c,lr,m.eq==='kettlebells'],z:c[2]-.02});}}
+  items.sort((x,y)=>y.z-x.z);
   const eqBase=dark?'#9AA3B2':'#59627A', eqFace=dark?'#C7CCD6':'#7B849B';
-  for(const sg of segs){
-    if(sg.barRod){const a=V.add(sg.c,V.mul(sg.d,1.1)),e=V.sub(sg.c,V.mul(sg.d,1.1));ctx.strokeStyle=eqBase;ctx.lineWidth=Math.max(2,.03*pxm);ctx.beginPath();ctx.moveTo(...S(a));ctx.lineTo(...S(e));ctx.stroke();continue;}
-    if(sg.plate){disc(ctx,S,pxm,sg.c,sg.d,sg.r,sg.th,eqBase,eqFace);continue;}
-    if(sg.db){if(sg.kb){const s=S(V.add(sg.c,[0,.1,0]));ctx.fillStyle=eqBase;ctx.beginPath();ctx.arc(s[0],s[1],.1*pxm,0,Math.PI*2);ctx.fill();continue;}
-      const a=V.add(sg.c,V.mul(sg.d,.13)),e=V.sub(sg.c,V.mul(sg.d,.13));ctx.strokeStyle=eqBase;ctx.lineWidth=Math.max(2,.03*pxm);ctx.beginPath();ctx.moveTo(...S(a));ctx.lineTo(...S(e));ctx.stroke();
-      disc(ctx,S,pxm,a,sg.d,.075,.07,eqBase,eqFace);disc(ctx,S,pxm,e,sg.d,.075,.07,eqBase,eqFace);continue;}
-    if(sg.torso){const q=[P.sh_l,P.sh_r,P.hip_r,P.hip_l].map(S);
-      if(man){ctx.fillStyle=colOf('torso');ctx.strokeStyle=colOf('torso');ctx.lineWidth=.12*pxm;ctx.beginPath();q.forEach((p,i)=>i?ctx.lineTo(...p):ctx.moveTo(...p));ctx.closePath();ctx.fill();ctx.stroke();
-        ctx.lineWidth=.1*pxm;ctx.beginPath();ctx.moveTo(...S(P.neck));ctx.lineTo(...S(V.mid(P.sh_l,P.sh_r)));ctx.stroke();}
-      else{ctx.strokeStyle=colOf('torso');ctx.lineWidth=.05*pxm;ctx.beginPath();ctx.moveTo(...q[0]);ctx.lineTo(...q[1]);ctx.moveTo(...q[2]);ctx.lineTo(...q[3]);ctx.moveTo(...S(P.neck));ctx.lineTo(...S(P.pelvis));ctx.stroke();}
-      continue;}
-    if(sg.headSeg){const s=S(P.head);ctx.fillStyle=man?css('--skin'):ink;ctx.beginPath();ctx.ellipse(s[0],s[1],.105*pxm,.12*pxm,0,0,Math.PI*2);ctx.fill();continue;}
-    const far=sg.z>P.pelvis[2]+.02;const col=(man&&far&&work!==sg.part)?css('--skinfar'):colOf(sg.part);
-    const a=S(P[sg.a]),b=S(P[sg.b]);
-    if(man){const dx=b[0]-a[0],dy=b[1]-a[1],l=Math.hypot(dx,dy)||1,nx=-dy/l,ny=dx/l,r0=sg.w0*pxm/2,r1=sg.w1*pxm/2;
-      ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(a[0]+nx*r0,a[1]+ny*r0);ctx.lineTo(b[0]+nx*r1,b[1]+ny*r1);ctx.lineTo(b[0]-nx*r1,b[1]-ny*r1);ctx.lineTo(a[0]-nx*r0,a[1]-ny*r0);ctx.closePath();ctx.fill();
-      ctx.beginPath();ctx.arc(a[0],a[1],r0,0,Math.PI*2);ctx.arc(b[0],b[1],r1,0,Math.PI*2);ctx.fill();}
-    else{ctx.strokeStyle=col;ctx.lineWidth=sg.w0*pxm;ctx.beginPath();ctx.moveTo(...a);ctx.lineTo(...b);ctx.stroke();}
+  for(const it of items){
+    if(it.line){ctx.strokeStyle=it.col;ctx.lineWidth=it.w;ctx.beginPath();ctx.moveTo(...S(it.line[0]));ctx.lineTo(...S(it.line[1]));ctx.stroke();}
+    else if(it.head){const s=S(P.head);ctx.fillStyle=ink;ctx.beginPath();ctx.ellipse(s[0],s[1],.1*pxm,.115*pxm,0,0,Math.PI*2);ctx.fill();}
+    else if(it.rod){const [c,d]=it.rod,a=V.add(c,V.mul(d,1.1)),e=V.sub(c,V.mul(d,1.1));ctx.strokeStyle=eqBase;ctx.lineWidth=Math.max(2,.03*pxm);ctx.beginPath();ctx.moveTo(...S(a));ctx.lineTo(...S(e));ctx.stroke();}
+    else if(it.plate){const [c,d,r,th]=it.plate;disc(ctx,S,pxm,c,d,r,th,eqBase,eqFace);}
+    else if(it.db){const [c,d,kb]=it.db;if(kb){const s=S(V.add(c,[0,.1,0]));ctx.fillStyle=eqBase;ctx.beginPath();ctx.arc(s[0],s[1],.1*pxm,0,Math.PI*2);ctx.fill();continue;}
+      const a=V.add(c,V.mul(d,.13)),e=V.sub(c,V.mul(d,.13));ctx.strokeStyle=eqBase;ctx.lineWidth=Math.max(2,.03*pxm);ctx.beginPath();ctx.moveTo(...S(a));ctx.lineTo(...S(e));ctx.stroke();
+      disc(ctx,S,pxm,a,d,.075,.07,eqBase,eqFace);disc(ctx,S,pxm,e,d,.075,.07,eqBase,eqFace);}
   }
 }
 function draw2d(cv,id,t){const ctx=cv.getContext('2d'),W=cv.width;ctx.clearRect(0,0,W,W);const d=D2[id];if(!d)return;const m=META[id];
