@@ -13,6 +13,9 @@ on:
       tag:
         description: Name for the result branches (poses3d-<tag>-<n>)
         default: all
+      chunks:
+        description: Which parts to run (JSON list) – e.g. [7, 9] to redo failed parts
+        default: '[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]'
 
 jobs:
   fit:
@@ -23,7 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        chunk: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+        chunk: ${{ fromJSON(inputs.chunks) }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -44,6 +47,8 @@ jobs:
       - name: Fit 3D bodies (part ${{ matrix.chunk }} of 20)
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          # torch.hub asks the GitHub API about the model repo; without a token it hits the rate limit
+          GITHUB_TOKEN: ${{ github.token }}
           CHUNK: ${{ matrix.chunk }}
           CHUNKS: '20'
           MESHES: '0'
