@@ -26,6 +26,32 @@ os.makedirs(out_dir, exist_ok=True)
 img_dir = os.path.join(out_dir, 'img')
 os.makedirs(img_dir, exist_ok=True)
 res, meshes = {}, {'faces': est.faces}
+head = est.model.head_pose
+
+# The same pose redrawn with a standard body shape (the photographed people differ a lot).
+# 'mean' = average shape and proportions; c<i><m|p> = shape component i at -2 / +2.
+VARIANTS = {'mean': None}
+for i in range(4):
+    VARIANTS[f'c{i}m'] = (i, -2.0)
+    VARIANTS[f'c{i}p'] = (i, 2.0)
+
+
+def redraw(o, variant):
+    t = lambda a: torch.as_tensor(np.asarray(a), dtype=torch.float32)[None]
+    shape = torch.zeros(1, 45)
+    if variant is not None:
+        shape[0, variant[0]] = variant[1]
+    with torch.no_grad():
+        verts, kp = head.mhr_forward(
+            global_trans=torch.zeros(1, 3), global_rot=t(o['global_rot']),
+            body_pose_params=t(o['body_pose_params']), hand_pose_params=t(o['hand_pose_params']),
+            scale_params=torch.zeros(1, 28), shape_params=shape,
+            expr_params=torch.zeros_like(t(o['expr_params'])), return_keypoints=True)
+    verts, kp = verts[0].numpy(), kp[0, :70].numpy()
+    verts[:, [1, 2]] *= -1  # same camera axes as the model's own output
+    kp[:, [1, 2]] *= -1
+    return verts, kp
+
 
 def r(a, n=4):
     return np.round(np.asarray(a, dtype=float), n).tolist()
@@ -50,7 +76,18 @@ for ex, boxes in group.items():
             'shape': r(o['shape_params']), 'scale': r(o['scale_params']),
             'joints': r(o['pred_joint_coords']),
         })
-        meshes[f'{ex}_{i}'] = np.asarray(o['pred_vertices'], dtype=np.float32)
+        meshes[f'{ex}_{i}'] = np.asarray(o['pred_vertices'], dtype=np.float16)
+        frames[-1]['variants'] = {}
+        for name, v in VARIANTS.items():
+            try:
+                vv, kk = redraw(o, v)
+            except Exception as e:  # keep the run going; the photo's own body is still saved
+                print('variant failed', ex, i, name, e, flush=True)
+                continue
+            # line the redrawn body up with the photographed one (same pelvis point)
+            off = np.asarray(o['pred_keypoints_3d'])[[9, 10]].mean(0) - kk[[9, 10]].mean(0)
+            meshes[f'{ex}_{i}_{name}'] = (vv + off).astype(np.float16)
+            frames[-1]['variants'][name] = r(kk + off)
         print(ex, i, 'ok', flush=True)
     res[ex] = frames
 json.dump(res, open(os.path.join(out_dir, 'poses3d.json'), 'w'))
