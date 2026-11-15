@@ -15,7 +15,10 @@ Every exercise figure is made with these rules, in this order. Code: `mockup3d_t
 ## 2. Ground and alignment
 5. **Floor** = the lowest point of the body. Nothing is drawn below it.
 6. The two photos are lined up on the body parts **touching the floor/pad in both** (feet,
-   hands, forearms, knees…). Hanging exercises are lined up on the hands.
+   hands, forearms, knees…). Hanging exercises are lined up on the hands. **Seated and lying
+   exercises** (machines, benches, preacher, incline/decline, lying/prone/supine) are lined up
+   on the **hips** – the seat holds them (lining up on the feet froze leg extensions and leg
+   curls). Rollouts / ab wheel / slides never line up on the rolling hands.
 7. **Lying exercises** are often photographed from above: the camera is tilted so the torso
    lies flat. Lying = the name has lying, prone, supine, bench press, floor press, pullover,
    skull crusher, Tate press, fly/flye, chest press or close-grip press – and not incline,
@@ -51,17 +54,27 @@ Every exercise figure is made with these rules, in this order. Code: `mockup3d_t
     One-sided exercises (the app's one-sided list, or "single/one-arm/one-leg/alternating" in the
     name) keep the photo's sides.
 15c. **Static holds** (tracked by time, or plank / wall sit / dead hang / hold / hollow /
-    superman) show one still pose.
-15d. **Carries** (farmer's walk, suitcase carry…) walk in place: legs swing, arms hang still.
+    superman) and **carries** (farmer's walk – owner: walking looked like running) show one
+    still pose.
 15e. **Calf exercises**: the toes stay on the floor and the heels rise; feet are never pinned
     flat.
 15f. **Ab exercises** (crunch, sit-up…) draw the spine as a curve that rounds forward as the
     shoulders come towards the knees.
-16. **Planted feet:** a foot on the floor in both photos (and moving < 30 cm, or the foot that
+16. **Planted feet:** a foot on the floor in both photos that does not rise (< 8 cm) (and moving < 30 cm, or the foot that
     moves least when < 45 cm – lunges) is pinned; the leg bends to reach it (two-bone reach,
     knee bending the way it bends in the photos). Never when hanging.
 17. **Fixed hands:** hands on the floor in both photos, or on a pull-up bar, are pinned the
-    same way.
+    same way. When the hands are fixed the **body moves** (pull-ups rise, dips sink) even if no
+    core muscle works. A planted foot the leg cannot reach moves the whole body to it – feet
+    never slide.
+17a. **Small movements are made visible:** when the biggest joint moves less than 8 cm between
+    the photos (stretches, wrist curls), the movement is stretched to ~12 cm (at most 3×).
+17b. **Added movements** the photos can't show: **shrugs** – the body holds still and the
+    shoulders (with the arms and weight) rise 6 cm; **calf raises** – heels rise 7 cm along the
+    shin (standing: the whole body rises, toes stay down; seated/machine: only feet and knees).
+17c. **Alternating** exercises switch sides every round (the pose is mirrored across the body).
+17d. Photo pairs that are the same picture can't be animated by rules – they keep a still
+    figure and are listed for a hand fix.
 18. **Planted feet** are found by the lowest of ankle and toe. **Idle legs:** when no leg muscle works (main or secondary), the legs hold one pose (the
     straighter photo). When hanging they hang in line with the body with soft knees.
 
@@ -72,16 +85,19 @@ Every exercise figure is made with these rules, in this order. Code: `mockup3d_t
     - front of the shoulders: front squat (and front rack / Zercher);
     - across the hips: hip thrust, glute bridge;
     - across the palms: everything else (deadlift, row, curl, press, bench, raise, shrug…).
+19a. **The bar is drawn in front of the body** when it is held in the hands, on the front of the
+    shoulders or across the hips; a back-squat bar is drawn behind the neck. The nearer plate is
+    in front of the body, the farther plate behind it.
 20. The bar runs along the body's left-right line, keeps **one direction** for the whole
     movement (it never rotates), stays **level**, is 2.2 m long with plates 0.92 m from the
-    centre (E-Z bar: 1.25 m with small plates) (Ø 45 cm, 6 cm thick: real discs – darker rim, lighter face, centre
+    centre (E-Z bar: 1.25 m with small plates and the zig-zag bend in the middle) (Ø 45 cm, 6 cm thick: real discs – darker rim, lighter face, centre
     hole, drawn as a stack so they have thickness).
 21. **One grip width** for the whole movement (average of the photos; back squat ≥ 1.6 ×
     shoulder width, front squat 1.05 ×, hip thrust ≥ 1.2 ×). Both hands are placed exactly on
     the bar – no floating, no impossible arm movement.
 22. Dumbbells: in each palm along the shoulder line; kettlebells hang below the hand.
-    **Hammer** grip = the dumbbell lies along the forearm's cross line; **goblet** = one weight
-    held upright at the chest; **one-arm** exercises = a weight only in the moving hand;
+    **Hammer** grip = the dumbbell lies along the forearm's cross line; **goblet / pullover / two-hand
+    swing** = one weight held between both hands; **one-arm** exercises = a weight only in the moving hand;
     carries = a weight in each hanging hand.
 22a. **Drawing order** (what is in front) is decided once from the middle of the movement – the
     colours never flicker as lines swap places.
@@ -91,6 +107,11 @@ Every exercise figure is made with these rules, in this order. Code: `mockup3d_t
     sitting / seat / machine / bench / chair / box. **Hanging** is decided by the name only:
     pull-up, chin-up, hanging, muscle-up, toes-to-bar, knees-to-elbows ("hang position" in a
     clean is not hanging).
+23a. More props by name: **incline/decline** = a slanted backrest under the back (hips to
+    shoulders); **seat** under the hips for seated machines/benches when the hips are off the
+    floor; **box** under the hips at the bottom of a box squat / squat to a bench; **bench**
+    under the hands for bench dips (when the hands are off the floor). Lying exercises are
+    never "reverse/bent-over/rear-delt flyes" (those are bent over, not lying).
 24. **Bench under the shoulders** when the shoulders rest 30–75 cm high in both photos and the
     torso is close to horizontal (hip thrust). **Seat** when the pelvis is 30–80 cm high with
     thighs roughly level and shins upright (seated press). **Pull-up bar** above the hands when
@@ -109,5 +130,7 @@ Every exercise figure is made with these rules, in this order. Code: `mockup3d_t
     when small next to a name in a workout or template. Show photos stays one tap away.
 
 ## 7. Checking
-28. After a full run every exercise is checked by eye in batches (review page). Fixes go in as
+28. After a full run every exercise is checked by eye in batches (review page) **and by an
+    automatic check** (`audit.js`-style: figures that don't move, planted feet that slide, a
+    figure or bar leaving the frame, drawing errors). Fixes go in as
     rules first; only true one-offs get a per-exercise override.
