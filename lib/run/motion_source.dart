@@ -13,7 +13,12 @@ abstract class MotionSource {
   Future<void> stop();
   Future<MotionReading?> read();
 
-  static MotionSource create() => kIsWeb ? NoMotionSource() : NativeMotionSource();
+  /// Steps per day for the last [days] days (oldest first, today last),
+  /// counted by the phone all day. Null when the phone can't tell (web,
+  /// tests, no permission).
+  Future<List<int>?> dailySteps(int days) async => null;
+
+  static MotionSource create() => kIsWeb ? NoMotionSource(example: true) : NativeMotionSource();
 }
 
 class NativeMotionSource extends MotionSource {
@@ -38,6 +43,16 @@ class NativeMotionSource extends MotionSource {
   }
 
   @override
+  Future<List<int>?> dailySteps(int days) async {
+    try {
+      final l = await _channel.invokeListMethod<num>('daily', {'days': days});
+      return l?.map((n) => n.toInt()).toList();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
   Future<MotionReading?> read() async {
     try {
       final m = await _channel.invokeMapMethod<String, Object?>('read');
@@ -54,6 +69,15 @@ class NativeMotionSource extends MotionSource {
 }
 
 class NoMotionSource extends MotionSource {
+  /// Web preview: an example week, so the Home card can be seen.
+  NoMotionSource({this.example = false});
+
+  final bool example;
+
+  @override
+  Future<List<int>?> dailySteps(int days) async =>
+      example ? [9120, 6480, 10240, 5310, 8800, 11020, 7420].sublist(7 - days.clamp(1, 7)) : null;
+
   @override
   Future<bool> start() async => false;
 

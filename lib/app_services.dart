@@ -316,6 +316,15 @@ class AppServices {
     await db.setSetting('weeklyTarget', '$n');
   }
 
+  /// Steps a day for the Home steps card (setting `stepGoal`, default 8000;
+  /// 0 = card hidden).
+  final stepGoal = ValueNotifier<int>(8000);
+
+  Future<void> setStepGoal(int n) async {
+    stepGoal.value = n;
+    await db.setSetting('stepGoal', '$n');
+  }
+
   late final WorkoutRepository workouts;
   late final WorkoutSession session;
   Timer? _settingsTimer;
@@ -399,6 +408,7 @@ class AppServices {
     final pace = (await db.getSetting('runPaceAlert'))?.split('-');
     final pMin = int.tryParse(pace?.firstOrNull ?? ''), pMax = int.tryParse(pace?.lastOrNull ?? '');
     run.paceAlert = pMin != null && pMax != null && pMin < pMax ? HrRange(min: pMin, max: pMax) : null;
+    stepGoal.value = await getInt('stepGoal') ?? 8000;
     run.walkPaceAlert = int.tryParse(await db.getSetting('walkPaceAlert') ?? '');
     run.walkPreset = await presets.byId(await db.getSetting('walkPresetId'));
     run.autoDetect = await db.getSetting('autoDetectWalk') != '0';
