@@ -39,6 +39,13 @@ class RunVoice {
   /// Setting `runVoice` (default on).
   bool enabled = true;
 
+  /// "Run", "Walk" or "Hike" – what was picked at the start.
+  String word = 'Run';
+
+  /// Setting `runVoiceGait` (default off): say "Walking." / "Running again."
+  /// when the app notices the change.
+  bool gaitChanges = false;
+
   /// Setting `runVoiceEvery`: metres between updates (500, 1000, 2000).
   int everyM = 1000;
 
@@ -83,6 +90,11 @@ class RunVoice {
     if (spokenAlerts) _say('Heart rate $bpm. ${high ? 'Slow down' : 'Speed up'}.', force: true);
   }
 
+  /// The app noticed walking / running again.
+  void gaitChanged({required bool walking}) {
+    if (gaitChanges) _say(walking ? 'Walking.' : 'Running again.');
+  }
+
   /// Pace out of the target range ([tooFast] = faster than the range).
   void paceAlert({required bool tooFast, required double pace}) {
     if (spokenAlerts) _say('Pace ${spokenPace(pace)}. ${tooFast ? 'Slow down' : 'Speed up'}.', force: true);
@@ -91,7 +103,7 @@ class RunVoice {
   void started() {
     _next = _every;
     _lastMarkTime = Duration.zero;
-    _say('Run started.');
+    _say('$word started.');
   }
 
   /// The app was reopened during a run: continue from where it is.
@@ -104,15 +116,15 @@ class RunVoice {
     _lastMarkTime = moving;
   }
 
-  void paused() => _say('Run paused.');
-  void resumed() => _say('Run resumed.');
+  void paused() => _say('$word paused.');
+  void resumed() => _say('$word resumed.');
 
   /// [newRecords]: record distance (m) → new fastest time (s).
   void finished(double distanceM, Duration moving, {Map<int, double> newRecords = const {}}) {
     final pace = paceSecPerKm(distanceM, moving.inMilliseconds / 1000);
     _say(
       [
-        'Run complete.',
+        '$word complete.',
         '${spokenKm(distanceM)} in ${spokenDuration(moving)}.',
         if (pace != null && distanceM >= 200) 'Average pace ${spokenPace(pace)}.',
         for (final e in newRecords.entries)
@@ -130,6 +142,7 @@ class RunVoice {
     double? currentPace,
     double? cadence,
     double? ghostDelta,
+    int? steps,
   }) {
     if (distanceM < _next) return;
     // Interpolating isn't worth it: a fix comes every second.
@@ -143,6 +156,8 @@ class RunVoice {
     _say(
       [
         '${spokenKm(mark)}.',
+        // walks: the steps so far come right after the distance
+        if (steps != null && word != 'Run') '$steps steps.',
         if (items.contains(VoiceItem.time)) 'Time ${spokenDuration(moving)}.',
         if (avg != null && items.contains(VoiceItem.avgPace)) 'Average pace ${spokenPace(avg)}.',
         if (currentPace != null && items.contains(VoiceItem.currentPace)) 'Current pace ${spokenPace(currentPace)}.',

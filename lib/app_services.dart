@@ -85,6 +85,31 @@ class AppServices {
     await db.setSetting('runPaceAlert', range == null ? '' : '${range.min}-${range.max}');
   }
 
+  /// While walking: beep when slower than [slowestS] s/km (setting
+  /// `walkPaceAlert`; null = no pace beeps while walking).
+  Future<void> setWalkPaceAlert(int? slowestS) async {
+    run.walkPaceAlert = slowestS;
+    await db.setSetting('walkPaceAlert', slowestS == null ? '' : '$slowestS');
+  }
+
+  /// While walking, use this zone's heart-rate range (setting `walkPresetId`).
+  Future<void> setWalkPreset(HrPreset? preset) async {
+    run.walkPreset = preset;
+    await db.setSetting('walkPresetId', preset?.id ?? '');
+  }
+
+  /// Notice walking / running by itself (setting `autoDetectWalk`, default on).
+  Future<void> setAutoDetectWalk(bool on) async {
+    run.autoDetect = on;
+    await db.setSetting('autoDetectWalk', on ? '1' : '0');
+  }
+
+  /// Say "Walking." / "Running again." (setting `runVoiceGait`, default off).
+  Future<void> setVoiceGait(bool on) async {
+    run.voice?.gaitChanges = on;
+    await db.setSetting('runVoiceGait', on ? '1' : '0');
+  }
+
   /// Voice updates during runs (setting `runVoice`, default on) every
   /// [RunVoice.everyM] metres (setting `runVoiceEvery`, default 1000).
   Future<void> setRunVoice({bool? on, int? everyM, Set<VoiceItem>? items, String? kind, bool? spokenAlerts}) async {
@@ -374,6 +399,10 @@ class AppServices {
     final pace = (await db.getSetting('runPaceAlert'))?.split('-');
     final pMin = int.tryParse(pace?.firstOrNull ?? ''), pMax = int.tryParse(pace?.lastOrNull ?? '');
     run.paceAlert = pMin != null && pMax != null && pMin < pMax ? HrRange(min: pMin, max: pMax) : null;
+    run.walkPaceAlert = int.tryParse(await db.getSetting('walkPaceAlert') ?? '');
+    run.walkPreset = await presets.byId(await db.getSetting('walkPresetId'));
+    run.autoDetect = await db.getSetting('autoDetectWalk') != '0';
+    run.voice!.gaitChanges = await db.getSetting('runVoiceGait') == '1';
     hr.beeper.choices.clear();
     try {
       final saved = jsonDecode(await db.getSetting('sounds') ?? '{}') as Map<String, dynamic>;
