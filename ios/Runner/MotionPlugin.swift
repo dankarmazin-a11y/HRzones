@@ -55,6 +55,31 @@ final class MotionPlugin: NSObject, FlutterPlugin {
       pedometer.stopUpdates()
       altimeter.stopRelativeAltitudeUpdates()
       result(nil)
+    case "daily":
+      // Steps per day for the last N days (oldest first, today last), counted
+      // by the iPhone all day – no workout needed. iOS keeps about 7 days.
+      let days = max(1, min(7, (call.arguments as? [String: Any])?["days"] as? Int ?? 7))
+      guard CMPedometer.isStepCountingAvailable() else {
+        result(nil)
+        return
+      }
+      let cal = Calendar.current
+      let today = cal.startOfDay(for: Date())
+      var counts = [Int](repeating: 0, count: days)
+      let group = DispatchGroup()
+      let lock = NSLock()
+      for i in 0..<days {
+        guard let from = cal.date(byAdding: .day, value: -(days - 1 - i), to: today) else { continue }
+        let to = i == days - 1 ? Date() : (cal.date(byAdding: .day, value: 1, to: from) ?? Date())
+        group.enter()
+        pedometer.queryPedometerData(from: from, to: to) { data, _ in
+          lock.lock()
+          counts[i] = data?.numberOfSteps.intValue ?? 0
+          lock.unlock()
+          group.leave()
+        }
+      }
+      group.notify(queue: .main) { result(counts) }
     case "read":
       var out: [String: Any] = ["steps": steps]
       if let c = cadence { out["cadence"] = c * 60 }
