@@ -106,16 +106,20 @@ const ABS=['abdominals','lower back'];
 function traits(ex){
   if(ex.tr)return ex.tr;const m=META[ex.id],n=m.name.toLowerCase(),all=[...m.mus,...(m.sec||[])];
   const uni=m.uni||/one[- ]arm|one[- ]leg|single|alternat|unilateral|lunge|split squat|step[- ]?up|kickback|concentration|windmill|twist|oblique|side plank|side bend|pistol|bulgarian|side[- ]lying|bird dog|dead bug|clam|crossover reverse|lateral lunge|one[- ]hand/.test(n);
-  const isStatic=m.track==='duration'||/plank|wall sit|dead hang|isometric|\bhold\b|hollow|l-sit|superman/.test(n);
-  const walk=/farmer|carry|suitcase|(^|\s)walk/.test(n)&&!/lunge/.test(n);
+  // owner: carries are shown as a still figure (walking in place looked like running)
+  const isStatic=m.track==='duration'||/plank|wall sit|dead hang|isometric|\bhold\b|hollow|l-sit|superman|farmer|suitcase carry|carry/.test(n);
+  const walk=false;
   const legsMain=all.some(x=>LEGS.includes(x)), armsMain=all.some(x=>ARMS.includes(x)), core=all.some(x=>ABS.includes(x));
   const isolationName=/seated|machine|leg extension|leg curl|leg press|preacher|lying|bench|calf press|curl|pushdown|extension|kickback|fly|raise|shrug|wrist/.test(n);
   const calves=m.mus.includes('calves');
   ex.tr={uni,isStatic,walk,legsMain,armsMain,core,calves,
     torsoIdle:!core&&(!legsMain||(isolationName&&!/squat|deadlift|lunge|step|clean|snatch|jerk|swing|thrust|bridge|good morning/.test(n))&&!calves),
     armsIdle:!armsMain&&!/press|row|pull|push|curl|raise|fly|throw|swing|clean|snatch|jerk/.test(n),
-    hammer:/hammer|neutral/.test(n),goblet:/goblet/.test(n),oneHand:/one[- ]arm|single[- ]arm|one[- ]hand|concentration/.test(n)||(!!m.uni&&/dumbbell|kettlebell/.test(m.eq)&&!/lunge|split|step|walk/.test(n)),
-    carryWeights:/farmer|suitcase|carry/.test(n)};
+    hammer:/hammer|neutral/.test(n),goblet:/goblet|pullover|two[- ]hand|dumbbell swing|plate|medicine ball|ball slam/.test(n)&&/dumbbell|kettlebell/.test(m.eq),oneHand:/one[- ]arm|single[- ]arm|one[- ]hand|concentration/.test(n)||(!!m.uni&&/dumbbell|kettlebell/.test(m.eq)&&!/lunge|split|step|walk/.test(n)),
+    carryWeights:/farmer|suitcase|carry/.test(n),
+    alternating:/alternat/.test(n), shrug:/shrug/.test(n)&&!/calf-machine/.test(n),
+    calfSeated:/seated|leg press|calf press|donkey|machine/.test(n),
+    rolling:/rollout|ab roller|wheel|fallout|slide|bodysaw/.test(n), ez:m.eq==='e-z curl bar'};
   return ex.tr;}
 // hanging is decided by the name only: arms overhead also happen lying down or pressing
 function isHanging(ex,F){return /pull-?up|chin-?up|hanging|muscle[- ]?up|toes[- ]to[- ]bar|knees[- ]to[- ]elbows/i.test(META[ex.id].name);}
@@ -125,7 +129,7 @@ function aligned(ex){
   // axis) so the torso lies flat on the pad.
   // lying on the back / front: by name (incline/decline work keeps its angle)
   const nm=META[ex.id].name;
-  ex.lying=/lying|prone|supine|bench press|floor press|pullover|skull ?crusher|tate press|\bfly|\bflye|chest press|close-grip press/i.test(nm)&&!/incline|decline|standing|seated|machine|cable/i.test(nm);
+  ex.lying=/lying|prone|supine|bench press|floor press|pullover|skull ?crusher|tate press|\bfly|\bflye|chest press|close-grip press/i.test(nm)&&!/incline|decline|standing|seated|machine|cable|reverse fl|bent[- ]over|rear delt/i.test(nm);
   if(ex.lying){
     let sy=0,sz=0;for(const f of F){const sp=V.sub(f.neck,f.pelvis);sy+=sp[1];sz+=sp[2];}
     let ang=Math.atan2(sy,sz);if(ang>Math.PI/2)ang-=Math.PI;if(ang<-Math.PI/2)ang+=Math.PI;
@@ -156,12 +160,22 @@ function aligned(ex){
   // (feet, hands, forearms…), or the hands when hanging
   const lowOf=f=>{let l=-1e9;for(const k in f)l=Math.max(l,f[k][1]);return l;};
   const touching=f=>{const l=lowOf(f);return new Set(Object.keys(f).filter(k=>l-f[k][1]<.15));};
-  const T0=touching(F[0]),T1=touching(F[1]);const common=[...T0].filter(k=>T1.has(k));
+  const T0=touching(F[0]),T1=touching(F[1]);let common=[...T0].filter(k=>T1.has(k));
+  // rollouts / ab wheel: the hands roll – line up on the knees / feet only
+  if(traits(ex).rolling)common=common.filter(k=>!/^(wr|el)_/.test(k));
   ex.al=F.map(f=>{let a;
     if(hang)a=V.mid(f.wr_l,f.wr_r);
     else{const keys=common.length?common:['an_l','an_r'];let c=[0,0,0];for(const k of keys)c=V.add(c,f[k]);c=V.mul(c,1/keys.length);a=[c[0],lowOf(f),c[2]];}
     const o={};for(const k in f)o[k]=V.sub(f[k],a);return o;});
   ex.hang=hang;
+  // seated (machines, benches) and lying exercises: the seat / bench holds the hips – line the
+  // photos up on the hips (lining up on the feet made the legs of a leg extension stand still)
+  const seatName=/seated|sitting|leg extension|leg curl|preacher|machine|leg press|bench|lying|prone|supine|incline|decline/i.test(nm)&&!/hip thrust|bridge|standing|jump|step|squat|lunge|deadlift|dip|pushup|push-up|plank/i.test(nm);
+  if(!hang&&(seatName||ex.lying)){
+    const al=F.map(f=>{const o={};for(const k in f)o[k]=V.sub(f[k],f.pelvis);return o;});
+    let low=-1e9;for(const f of al)for(const k in f)low=Math.max(low,f[k][1]);
+    ex.al=al.map(f=>{const o={};for(const k in f)o[k]=V.sub(f[k],[0,low,0]);return o;});ex.seatAnchor=true;
+    return ex.al;}
   // hands and feet both on the floor (push-up, plank…): the photo often shows the body a little
   // tilted – turn it around the feet until the hands rest on the floor too
   const A=ex.al,hgt=p=>-p[1];
@@ -223,7 +237,8 @@ function pose0(ex,t){const tr=traits(ex);if(tr.isStatic)t=1; // timed holds stan
   const legsIdle=!tr.legsMain&&!legsMove&&!ex.lying;
   const armsIdle=tr.armsIdle;
   const torsoIdle=tr.torsoIdle;
-  const o={pelvis:(torsoIdle||V.len(V.sub(a.pelvis,b.pelvis))<.04)?V.mid(a.pelvis,b.pelvis):lerp(a.pelvis,b.pelvis)};
+  const handsHold=ex.hang||!!(ex.ct&&(ex.ct.wr_l||ex.ct.wr_r));
+  const o={pelvis:((torsoIdle&&!handsHold)||V.len(V.sub(a.pelvis,b.pelvis))<.04)?V.mid(a.pelvis,b.pelvis):lerp(a.pelvis,b.pelvis)};
   const knee=f=>V.dot(V.norm(V.sub(f.hip_l,f.kn_l)),V.norm(V.sub(f.an_l,f.kn_l)))+V.dot(V.norm(V.sub(f.hip_r,f.kn_r)),V.norm(V.sub(f.an_r,f.kn_r)));
   const legFrame=knee(a)<knee(b)?a:b; // more open knees = straighter legs
   const LEG=new Set(['kn_l','an_l','toe_l','heel_l','kn_r','an_r','toe_r','heel_r']);
@@ -235,7 +250,7 @@ function pose0(ex,t){const tr=traits(ex);if(tr.isStatic)t=1; // timed holds stan
     const idle=(LEG.has(c)&&legsIdle)||(ARM.has(c)&&armsIdle)||(TORSO.has(c)&&torsoIdle);
     const working=(LEG.has(c)&&tr.legsMain)||(ARM.has(c)&&tr.armsMain)||(FOOT.has(c)&&tr.calves);
     const ang=Math.acos(Math.max(-1,Math.min(1,V.dot(na,nb))));
-    let dir=ang<(working?STILL_WORK:STILL)?V.norm(V.add(na,nb)):slerp(na,nb,t);
+    let dir=(!ex._still&&ang<(working?STILL_WORK:STILL))?V.norm(V.add(na,nb)):slerp(na,nb,t);
     if(idle)dir=V.norm(V.add(na,nb)); // holds one steady pose (between the two photos)
     if(legsIdle&&LEG.has(c)){
       dir=V.norm(V.sub(legFrame[c],legFrame[p]));
@@ -258,6 +273,7 @@ function pose0(ex,t){const tr=traits(ex);if(tr.isStatic)t=1; // timed holds stan
       o['toe_'+s]=V.add(o['an_'+s],V.mul(fo,V.len(V.sub(ref['toe_'+s],ref['an_'+s]))));o['heel_'+s]=V.add(o['an_'+s],he);}
   }
   return o;}
+function pose0Amp(ex,t,amp){ex._still=true;const P=pose0(ex,t*amp);ex._still=false;return P;}
 // two-bone reach (shoulder→elbow→wrist, hip→knee→ankle): put the end on target, bend the middle
 // joint the way it bends in the photos
 function reach(A,M0,T,L1,L2){let dv=V.sub(T,A);let d=V.len(dv);const dir=V.norm(dv);d=Math.max(Math.abs(L1-L2)+1e-3,Math.min(L1+L2-1e-3,d));
@@ -273,7 +289,8 @@ function contacts(ex){
   for(const s of ['l','r']){
     const other=s==='l'?'r':'l';const planted=mv[s]<.3||(mv[s]<.45&&mv[s]<mv[other]);
     const fh=f=>Math.min(h(f['an_'+s]),h(f['toe_'+s]));
-    if(!ex.hang&&!traits(ex).walk&&!traits(ex).calves&&fh(F[0])<.15&&fh(F[1])<.15&&planted){
+    const rise=Math.abs(h(F[0]['an_'+s])-h(F[1]['an_'+s])); // a foot that lifts (leg extension) is not planted
+    if(!ex.hang&&!traits(ex).walk&&!traits(ex).calves&&fh(F[0])<.15&&fh(F[1])<.15&&planted&&rise<.08){
       ct['an_'+s]=V.mid(F[0]['an_'+s],F[1]['an_'+s]);
       ct['toe_'+s]=V.add(ct['an_'+s],V.mid(V.sub(F[0]['toe_'+s],F[0]['an_'+s]),V.sub(F[1]['toe_'+s],F[1]['an_'+s])));
       ct['heel_'+s]=V.add(ct['an_'+s],V.mid(V.sub(F[0]['heel_'+s],F[0]['an_'+s]),V.sub(F[1]['heel_'+s],F[1]['an_'+s])));}
@@ -286,13 +303,42 @@ function contacts(ex){
   ex.grip=Math.max(.2,(W[0]+W[1])/2);ex.shw=(sh[0]+sh[1])/2;
   return ex.ct=ct;}
 function setArm(P,ex,s,T){const r=reach(P['sh_'+s],P['el_'+s],T,ex.L.arm[0],ex.L.arm[1]);P['el_'+s]=r.mid;P['wr_'+s]=r.end;}
-function pose(ex,t){const P=pose0(ex,t);const ct=contacts(ex);
+// Small movements in the photos (a stretch, a wrist curl) are made bigger so they can be seen:
+// the movement is stretched until the biggest joint moves ~12 cm (at most 3×).
+function ampOf(ex){if(ex.amp!==undefined)return ex.amp;ex.amp=1;const tr=traits(ex);if(tr.isStatic||tr.shrug||tr.calves)return 1;
+  const A=pose0(ex,0),B=pose0(ex,1);let mv=0;for(const k of MOVERS)mv=Math.max(mv,V.len(V.sub(V.sub(A[k],A.pelvis),V.sub(B[k],B.pelvis))));
+  return ex.amp=(mv>.005&&mv<.08)?Math.min(3,.12/mv):1;}
+// Full movements (Kimodo, NVIDIA text-to-motion): play the frames as they are – no rules needed
+// for in-between motion; same camera, floor and drawing as the photo figures.
+function seqPose(ex,t){if(ex.th===undefined)chooseView(ex);contacts(ex);
+  if(!ex.seqOff){const s0=ex.seq[0];let low=-1e9;for(const f of ex.seq)for(const k in f)low=Math.max(low,f[k][1]);
+    const hm=V.mid(s0.hip_l,s0.hip_r);ex.seqOff=[hm[0],low,hm[2]];}
+  const n=ex.seq.length,x=Math.max(0,Math.min(n-1,t*(n-1))),i=Math.floor(x),u=x-i,A=ex.seq[i],B=ex.seq[Math.min(n-1,i+1)];
+  const f={};for(const k in A)f[k]=V.add(V.mul(A[k],1-u),V.mul(B[k],u));const g=full0(f),o={};
+  for(const k in g)o[k]=rotY(V.sub(g[k],ex.seqOff),ex.th);for(const k in o)if(o[k][1]>0)o[k]=[o[k][0],0,o[k][2]];return o;}
+function pose(ex,t){if(ex.seq)return seqPose(ex,t);contacts(ex);const amp=ampOf(ex),tr=traits(ex);
+  // shrugs and calf raises: the photos barely show the movement – the body holds still and the
+  // movement is added: shoulders rise 6 cm; heels rise 7 cm (along the shin)
+  let P=(tr.shrug||tr.calves)?pose0(ex,0):amp>1?pose0Amp(ex,t,amp):pose0(ex,t);const ct=contacts(ex);
+  // a planted foot the leg can't reach: move the whole body to it (feet never slide)
+  {let e=[0,0,0],n=0;for(const s of ['l','r'])if(ct['an_'+s]){const d=V.len(V.sub(ct['an_'+s],P['hip_'+s])),L=ex.L.leg[0]+ex.L.leg[1]-.002;
+      if(d>L){const toward=V.mul(V.norm(V.sub(ct['an_'+s],P['hip_'+s])),d-L);e=V.add(e,toward);n++;}}
+   if(n){e=V.mul(e,1/n);for(const k in P)P[k]=V.add(P[k],e);}}
   for(const s of ['l','r']){
     if(ct['an_'+s]){const r=reach(P['hip_'+s],P['kn_'+s],ct['an_'+s],ex.L.leg[0],ex.L.leg[1]);P['kn_'+s]=r.mid;
       const off=V.sub(r.end,ct['an_'+s]);P['an_'+s]=r.end;P['toe_'+s]=V.add(ct['toe_'+s],off);P['heel_'+s]=V.add(ct['heel_'+s],off);}
     if(ct['wr_'+s])setArm(P,ex,s,ct['wr_'+s]);}
-  // calf raises: the toes stay on the floor and the body rises with the heels
-  if(traits(ex).calves&&!ex.hang){const ty=Math.max(P.toe_l[1],P.toe_r[1]);for(const k in P)P[k]=[P[k][0],P[k][1]-ty,P[k][2]];}
+  if(tr.shrug){const up=V.norm(V.sub(P.neck,P.pelvis)),lift=V.mul(up,.06*t);for(const k of ['sh_l','sh_r','el_l','el_r','wr_l','wr_r'])P[k]=V.add(P[k],lift);}
+  if(tr.calves&&!ex.hang){
+    const shin=s=>V.norm(V.sub(P['kn_'+s],P['an_'+s]));
+    if(tr.calfSeated){ // seated / machine: only the feet and knees rise (the ankle turns)
+      for(const sd of ['l','r']){const lift=V.mul(shin(sd),.07*t);for(const k of ['an_','heel_','kn_'])P[k+sd]=V.add(P[k+sd],lift);}}
+    else{ // standing: the whole body rises on the toes, the toes stay on the floor
+      const lift=V.mul(V.norm(V.add(shin('l'),shin('r'))),.07*t);for(const k in P)if(!/^toe_/.test(k))P[k]=V.add(P[k],lift);
+      const ty=Math.max(P.toe_l[1],P.toe_r[1]);for(const k in P)P[k]=[P[k][0],P[k][1]-ty,P[k][2]];}}
+  // alternating exercises: every second round the other side does it (mirror across the body)
+  if(tr.alternating&&ex.altSide){const c=P.pelvis,lr=barDir(ex),M={};
+    for(const k in P){const q=V.sub(P[k],c),m=V.sub(P[k],V.mul(lr,2*V.dot(q,lr)));const k2=k.endsWith('_l')?k.slice(0,-1)+'r':k.endsWith('_r')?k.slice(0,-1)+'l':k;M[k2]=m;}P=M;}
   // nothing goes through the floor
   if(!ex.hang)for(const k in P)if(P[k][1]>0)P[k]=[P[k][0],0,P[k][2]];
   return P;}
@@ -309,6 +355,17 @@ function props(ex){
     // a bench or seat only where the exercise name says there is one
     const nm=META[ex.id].name,benchName=/hip thrust|bench|bridge|skull ?crusher|tate press|pullover|lying triceps/i.test(nm),seatName=/seated|sitting|seat|machine|bench|chair|box/i.test(nm);
     if(shoulderRest&&benchName){const top=Math.max(...F.map(f=>V.mid(f.sh_l,f.sh_r)[1]))+.07;const x=F.reduce((s,f)=>s+V.mid(f.sh_l,f.sh_r)[0],0)/2;P.push({type:'bench',x,top,w:.42,floor});}
+    // incline / decline bench: a slanted backrest under the back (from the hips to the shoulders)
+    if(/incline|decline/i.test(nm)&&!/push-?up|push up|walk|treadmill|sit-?up|crunch|knee|leg raise/i.test(nm)){
+      const avg=k=>V.mul(V.add(F[0][k],F[1][k]),.5),pel=avg('pelvis'),nk=V.mid(avg('sh_l'),avg('sh_r'));
+      const {fwd}=bodyAxes({sh_l:avg('sh_l'),sh_r:avg('sh_r'),neck:avg('neck'),pelvis:pel,head:avg('head')});
+      const back=V.mul(fwd,-.09);P.push({type:'back',a:V.add(pel,V.add(back,[0,.04,0])),b:V.add(nk,back),floor});}
+    // box squat / squat to a bench: a box just under the hips at the bottom
+    if(/box squat|squat to a bench|bench squat/i.test(nm)){const fb=F.reduce((x,f)=>f.pelvis[1]>x.pelvis[1]?f:x);P.push({type:'bench',x:fb.pelvis[0]-.05,top:fb.pelvis[1]+.1,w:.22,floor});}
+    // bench dips: the hands rest on a bench behind the body
+    else if(/bench dip|dips? - bench|tricep dip/i.test(nm)&&F.every(f=>h(V.mid(f.wr_l,f.wr_r))>.2)){const y=Math.max(...F.map(f=>Math.max(f.wr_l[1],f.wr_r[1])))+.02,x=F.reduce((s,f)=>s+V.mid(f.wr_l,f.wr_r)[0],0)/2;P.push({type:'bench',x,top:y,w:.25,floor});}
+    // seated machines / benches lined up on the hips: a seat under them when they are off the floor
+    else if(ex.seatAnchor&&!ex.lying&&seatName&&F.every(f=>h(f.pelvis)>.25)){const top=Math.max(...F.map(f=>f.pelvis[1]))+.09;const x=F.reduce((s,f)=>s+f.pelvis[0],0)/2-.03;P.push({type:'bench',x,top,w:.22,floor});}
     else if(seated&&seatName){const top=Math.max(...F.map(f=>f.pelvis[1]))+.09;const x=F.reduce((s,f)=>s+f.pelvis[0],0)/2-.05;P.push({type:'bench',x,top,w:.4,floor});}
   }
   return ex.props=P;
@@ -381,7 +438,8 @@ const PIECES=[ // [from, to, start, end, muscles]
 function draw3d(cv,id,t,mode){
   const ex=D3[id],m=META[id],ctx=cv.getContext('2d'),W=cv.width;ctx.clearRect(0,0,W,W);
   if(!ex.box)ex.box=frameBox(ex,m);
-  const P=pose(ex,t), pxm=W/2.4, S=p=>[(p[0]-ex.box.cx)*pxm+W/2,(camY(ex,p)-ex.box.low)*pxm+W*.94];
+  const tr0=traits(ex),alt=tr0.alternating&&Math.floor((typeof window.__ms==='number'?window.__ms:performance.now())/3400)%2===1;
+  ex.altSide=alt;const P=pose(ex,t);ex.altSide=false;const pxm=W/2.4, S=p=>[(p[0]-ex.box.cx)*pxm+W/2,(camY(ex,p)-ex.box.low)*pxm+W*.94];
   const tr=traits(ex);
   const dark=look==='dark',ink=css('--fig'),bright=css('--bright'),sec=css('--sec');
   const colFor=ms=>ms.some(x=>m.mus.includes(x))?bright:ms.some(x=>(m.sec||[]).includes(x))?sec:ink;
@@ -393,15 +451,21 @@ function draw3d(cv,id,t,mode){
       const yfl=S([0,0,ex.zc||0])[1];
       ctx.fillStyle=propCol;ctx.beginPath();ctx.roundRect(x0,y,x1-x0,.07*pxm,4);ctx.fill();
       ctx.fillRect(x0+(x1-x0)*.15-.02*pxm,y,.04*pxm,yfl-y);ctx.fillRect(x1-(x1-x0)*.15-.02*pxm,y,.04*pxm,yfl-y);}
+    if(pr.type==='back'){const a=S(pr.a),b=S(pr.b),yfl=S([0,0,ex.zc||0])[1];ctx.strokeStyle=propCol;ctx.lineCap='butt';ctx.lineWidth=.07*pxm;ctx.beginPath();ctx.moveTo(...a);ctx.lineTo(...b);ctx.stroke();
+      ctx.lineWidth=.04*pxm;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(a[0],yfl);ctx.stroke();ctx.lineCap='round';}
     if(pr.type==='pullbar'){const s=S([pr.x,pr.y,0]);ctx.strokeStyle=propCol;ctx.lineWidth=.035*pxm;ctx.beginPath();ctx.moveTo(s[0]-.5*pxm,s[1]);ctx.lineTo(s[0]+.5*pxm,s[1]);ctx.stroke();}
   }
   const items=[];const lw=.05*pxm;
   // depth order is decided once (middle of the movement) – re-sorting every frame made colours flicker
-  if(!ex.zref)ex.zref=pose(ex,.5);const Z=ex.zref,zOf=(a,b,f0,f1)=>{const A=Z[a][2]+(Z[b][2]-Z[a][2])*f0,B=Z[a][2]+(Z[b][2]-Z[a][2])*f1;return (A+B)/2;};
+  // alternating exercises switch sides every round (each side has its own fixed depth order)
+  if(!ex.zrefs)ex.zrefs={};const zk=alt?1:0;if(!ex.zrefs[zk]){ex.altSide=alt;ex.zrefs[zk]=pose(ex,.5);ex.altSide=false;}ex.zref=ex.zrefs[zk];const Z=ex.zref,zOf=(a,b,f0,f1)=>{const A=Z[a][2]+(Z[b][2]-Z[a][2])*f0,B=Z[a][2]+(Z[b][2]-Z[a][2])*f1;return (A+B)/2;};
   if(m.eq==='barbell'||m.eq==='e-z curl bar'){const {c,d}=barbell(P,m.name,ex);const zc=Z.neck[2]+.3;
     // EZ bar: 1.25 m with small plates; barbell: 2.2 m with 45 cm plates
     const ez=m.eq==='e-z curl bar',half=ez?.62:1.1,po=ez?.5:.92,pr=ez?.15:.225;
-    items.push({rod:[c,d,half],z:zc});for(const sg of [1,-1]){const pc=V.add(c,V.mul(d,sg*po));items.push({plate:[pc,d,pr,.05],z:zc+sg*V.dot(d,[0,0,1])*po});}}
+    // the bar is held in front of the body (hands / front rack / hips) – drawn over it; a back-squat
+    // bar sits behind the neck – drawn behind it. The nearer plate is in front, the farther behind.
+    const behind=barPlace(m.name)==='back';
+    items.push({rod:[c,d,half,ez],z:behind?1e9:-1e9});for(const sg of [1,-1]){const pc=V.add(c,V.mul(d,sg*po));items.push({plate:[pc,d,pr,.05],z:sg*V.dot(d,[0,0,1])>0?1e9+1:-1e9-1});}}
   for(const [a,b,f0,f1,ms] of PIECES){const A=V.add(P[a],V.mul(V.sub(P[b],P[a]),f0)),B=V.add(P[a],V.mul(V.sub(P[b],P[a]),f1));
     const spine=a==='pelvis'&&b==='neck';
     items.push({line:[A,B],col:colFor(ms),w:ms.length?lw:lw*.8,z:zOf(a,b,f0,f1),spine,f0,f1});}
@@ -409,7 +473,7 @@ function draw3d(cv,id,t,mode){
   if(m.eq==='dumbbell'||m.eq==='kettlebells'||tr.carryWeights){const {lr}=bodyAxes(P);
     // which hands hold one: goblet = one weight held at the chest; one-arm = the hand that moves
     let hands=['l','r'];
-    if(tr.oneHand){const A=pose(ex,0),B=pose(ex,1);hands=[V.len(V.sub(A.wr_l,B.wr_l))>=V.len(V.sub(A.wr_r,B.wr_r))?'l':'r'];}
+    if(tr.oneHand&&!tr.alternating){const A=pose(ex,0),B=pose(ex,1);hands=[V.len(V.sub(A.wr_l,B.wr_l))>=V.len(V.sub(A.wr_r,B.wr_r))?'l':'r'];}
     if(tr.goblet){const c=V.mid(P.wr_l,P.wr_r);items.push({db:[c,[0,1,0],m.eq==='kettlebells'],z:Math.min(Z.wr_l[2],Z.wr_r[2])-.03});}
     else for(const w of hands){const fo=V.norm(V.sub(P['wr_'+w],P['el_'+w]));const c=V.add(P['wr_'+w],V.mul(fo,.05));
       // hammer / neutral grip: the dumbbell stands upright in the hand (across the forearm)
@@ -420,14 +484,17 @@ function draw3d(cv,id,t,mode){
   let curl=0;if(tr.core&&m.mus.includes('abdominals')){if(ex.crunch===undefined){const A=pose(ex,0),B=pose(ex,1),kn=Q=>V.mid(Q.kn_l,Q.kn_r);
       const da=V.len(V.sub(A.neck,kn(A))),db=V.len(V.sub(B.neck,kn(B)));ex.crunch={near:Math.min(da,db),far:Math.max(da,db)};}
     const d=V.len(V.sub(P.neck,V.mid(P.kn_l,P.kn_r)));curl=ex.crunch.far-ex.crunch.near>.05?Math.max(0,Math.min(1,(ex.crunch.far-d)/(ex.crunch.far-ex.crunch.near))):0;}
-  const spinePt=u=>{const {fwd}=bodyAxes(P);const a=P.pelvis,b=P.neck,c=V.sub(V.mid(a,b),V.mul(fwd,.13*curl));
+  const spinePt=u=>{const {fwd}=bodyAxes(P);const a=P.pelvis,b=P.neck,c=V.sub(V.mid(a,b),V.mul(fwd,.24*curl));
     return V.add(V.add(V.mul(a,(1-u)*(1-u)),V.mul(c,2*u*(1-u))),V.mul(b,u*u));};
   const eqBase=dark?'#9AA3B2':'#59627A', eqFace=dark?'#C7CCD6':'#7B849B';
   for(const it of items){
     if(it.line&&it.spine&&curl>0){ctx.strokeStyle=it.col;ctx.lineWidth=it.w;ctx.beginPath();for(let i=0;i<=8;i++){const u=it.f0+(it.f1-it.f0)*i/8;const q=S(spinePt(u));i?ctx.lineTo(...q):ctx.moveTo(...q);}ctx.stroke();}
     else if(it.line){ctx.strokeStyle=it.col;ctx.lineWidth=it.w;ctx.beginPath();ctx.moveTo(...S(it.line[0]));ctx.lineTo(...S(it.line[1]));ctx.stroke();}
     else if(it.head){const s=S(P.head);ctx.fillStyle=ink;ctx.beginPath();ctx.ellipse(s[0],s[1],.1*pxm,.115*pxm,0,0,Math.PI*2);ctx.fill();}
-    else if(it.rod){const [c,d,half]=it.rod,a=V.add(c,V.mul(d,half)),e=V.sub(c,V.mul(d,half));ctx.strokeStyle=eqBase;ctx.lineWidth=Math.max(2,.03*pxm);ctx.beginPath();ctx.moveTo(...S(a));ctx.lineTo(...S(e));ctx.stroke();}
+    else if(it.rod){const [c,d,half,ez]=it.rod,a=V.add(c,V.mul(d,half)),e=V.sub(c,V.mul(d,half));ctx.strokeStyle=eqBase;ctx.lineWidth=Math.max(2,.03*pxm);ctx.beginPath();ctx.moveTo(...S(a));
+      // E-Z bar: the zig-zag in the middle (two bends each side of the centre)
+      if(ez){const up=V.norm(V.sub(P.neck,P.pelvis));for(const u of [.32,.2,.08,-.08,-.2,-.32]){const k=Math.abs(u)===.2?.035:0;ctx.lineTo(...S(V.add(V.add(c,V.mul(d,u)),V.mul(up,k))));}}
+      ctx.lineTo(...S(e));ctx.stroke();}
     else if(it.plate){const [c,d,r,th]=it.plate;disc(ctx,S,pxm,c,d,r,th,eqBase,eqFace);}
     else if(it.db){const [c,d,kb]=it.db;if(kb){const s=S(V.add(c,[0,.1,0]));ctx.fillStyle=eqBase;ctx.beginPath();ctx.arc(s[0],s[1],.1*pxm,0,Math.PI*2);ctx.fill();continue;}
       const a=V.add(c,V.mul(d,.13)),e=V.sub(c,V.mul(d,.13));ctx.strokeStyle=eqBase;ctx.lineWidth=Math.max(2,.03*pxm);ctx.beginPath();ctx.moveTo(...S(a));ctx.lineTo(...S(e));ctx.stroke();
@@ -487,7 +554,9 @@ function show(p){page=Math.min(p,batches.length-1);try{localStorage.setItem('rev
   io.disconnect();cells.forEach(c=>io.observe(c.cv));}
 const io=new IntersectionObserver(es=>es.forEach(e=>{const c=cells.find(x=>x.cv===e.target);if(c)c.vis=e.isIntersecting;}));
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
-function frame(ms){const t=reduce?1:phase(ms);for(const c of cells){if(!c.vis)continue;try{draw3d(c.cv,c.id,t,'line');}catch(e){}}
+function frame(ms){const t=reduce?1:phase(ms);for(const c of cells){if(!c.vis)continue;const e3=D3[c.id];
+    // full movements play straight through (4 s); photo figures go start → end → start
+    const tt=e3&&e3.seq?(reduce?.5:(ms%(e3.seq.length/15*1000))/(e3.seq.length/15*1000)):t;try{draw3d(c.cv,c.id,tt,'line');}catch(e){}}
   if(!reduce)requestAnimationFrame(frame);}
 for(const b of document.querySelectorAll('.filter button'))b.onclick=()=>{filter=b.dataset.f;document.querySelectorAll('.filter button').forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'));show(page);};
 show(page);requestAnimationFrame(frame);
