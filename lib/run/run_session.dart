@@ -223,13 +223,20 @@ class RunSession extends ChangeNotifier {
     }
     final bpm = hr.running ? hr.bpm : null;
     final cp = currentPace, ap = avgPace;
+    final st = steps;
     final metrics = <(String, String)>[
-      if (!_treadmill) ('Pace', paused || cp == null ? '–' : formatPace(cp)),
+      // walks and hikes: steps / climb instead of the current pace
+      if (_chosen == RunActivity.walk && st != null) ('Steps', '$st'),
+      if (_chosen == RunActivity.hike && climbM != null) ('Climbed', '${climbM!.round()} m'),
+      if (!_treadmill && _chosen == RunActivity.run) ('Pace', paused || cp == null ? '–' : formatPace(cp)),
       if (!_treadmill) ('Avg pace', ap == null ? '–' : formatPace(ap)),
       ('Heart rate', bpm == null ? '–' : '$bpm'),
     ];
+    if (_chosen == RunActivity.run && _liveGait == Gait.walk && autoDetect && !paused && detail.isEmpty) {
+      detail = 'Walking';
+    }
     return LiveCard(
-      title: _treadmill ? 'Treadmill run' : '${formatKm(distanceM)} ${Units.d}',
+      title: _treadmill ? 'Treadmill ${_word(_chosen).toLowerCase()}' : '${formatKm(distanceM)} ${Units.d}',
       detail: paused ? 'Paused' : detail,
       heartRate: hr.running ? hr.bpm : null,
       clockStart: clockStart,
@@ -281,6 +288,44 @@ class RunSession extends ChangeNotifier {
   /// Target pace range for beeps (setting `runPaceAlert`); null = off.
   /// [HrRange] holds seconds per km: min = fastest, max = slowest.
   HrRange? paceAlert;
+
+  /// While walking: beep when slower than this (s/km, setting `walkPaceAlert`;
+  /// null = no pace beeps while walking – a walk break never beeps "speed up").
+  int? walkPaceAlert;
+
+  /// While walking, the heart-rate range of this zone is used instead of the
+  /// run's (setting `walkPresetId`; null = keep the run's).
+  HrPreset? walkPreset;
+
+  /// Notice walking / running by itself (setting `autoDetectWalk`, default on):
+  /// live label, alerts, and the run / walk label at the end.
+  bool autoDetect = true;
+
+  /// Metres climbed so far (barometer; null without one).
+  double? get climbM => _hasBaro ? _gainM : null;
+
+  /// What the owner picked at the start (Run · Walk · Hike).
+  RunActivity get chosen => _chosen;
+  RunActivity _chosen = RunActivity.run;
+
+  /// Walking or running right now (changes after [gaitSwitchAfter] of the other).
+  Gait get liveGait => _liveGait;
+  Gait _liveGait = Gait.run;
+  Gait? _gaitCandidate;
+  DateTime? _gaitCandidateSince;
+  HrRange? _runRange;
+
+  /// After the outing: a note when the label differs from what was picked
+  /// ("You picked Walk but mostly ran – saved as a run."). Read once.
+  String? takeLabelNote() {
+    final n = _labelNote;
+    _labelNote = null;
+    return n;
+  }
+
+  String? _labelNote;
+
+  static const gaitSwitchAfter = Duration(seconds: 15);
 
   /// The same alert logic as for heart rate (grace, cooldown), fed with
   /// the current pace. GPS pace is jumpy: a longer grace.
@@ -424,6 +469,7 @@ class RunSession extends ChangeNotifier {
     String? shoeId,
     GhostRun? ghost,
     RunPlan? plan,
+    RunActivity activity = RunActivity.run,
   }) async {
     if (active) return LocationAccess.granted;
     final access = treadmill ? LocationAccess.granted : await location.ensureAccess();
@@ -440,9 +486,14 @@ class RunSession extends ChangeNotifier {
     this.plan = plan == null ? null : PlanRunner(PlanSpec.fromJson(plan.specJson));
     _lastMoveAt = _startedAt;
     _presetId = preset?.id;
+    _chosen = activity;
+    voice?.word = _word(activity);
+    _liveGait = activity == RunActivity.run ? Gait.run : Gait.walk;
+    _runRange = preset == null ? null : HrRange(min: preset.minBpm, max: preset.maxBpm);
     hr.resetSession();
-    if (preset != null) {
-      hr.setRange(HrRange(min: preset.minBpm, max: preset.maxBpm));
+    final startRange = _rangeFor(_liveGait);
+    if (startRange != null) {
+      hr.setRange(startRange);
       if (!hr.running) {
         await hr.start();
         _hrStartedByRun = true;
@@ -519,12 +570,21 @@ class RunSession extends ChangeNotifier {
       // Run or walk: from the route (pace + steps), or the averages on a treadmill.
       final gait = _treadmill ? GaitSummary.empty : analyzeGait(gaitPoints(_route));
       _walkedM = _treadmill ? null : gait.walkedM;
-      _activity =
+      final detected =
           (_treadmill
               ? isWalkByAverages(distanceM: this.distanceM, durationS: moving.inSeconds, avgCadence: _avgCadence())
               : gait.isWalk)
           ? RunActivity.walk
           : RunActivity.run;
+      // A hike stays a hike; otherwise what was done wins over what was picked
+      // (when detection is on) – too short to tell keeps the pick – and the owner is told.
+      final enough = _treadmill ? this.distanceM >= 200 : gait.totalM >= 200;
+      _activity = _chosen == RunActivity.hike || !autoDetect || !enough ? _chosen : detected;
+      _labelNote = _activity == _chosen
+          ? null
+          : _activity == RunActivity.run
+          ? 'You picked Walk, but you mostly ran – saved as a run.'
+          : 'You mostly walked – saved as a walk.';
       // Faster than every earlier outing of the same kind (the first one at a distance isn't a record).
       final before = await runs.records(before: _startedAt, excludeId: id, activity: _activity);
       final newRecords = <int, double>{
@@ -577,6 +637,9 @@ class RunSession extends ChangeNotifier {
     _pausedAt = row.pausedAt;
     _pausedMs = row.pausedS * 1000;
     _presetId = row.hrPresetId;
+    _chosen = row.activity;
+    voice?.word = _word(_chosen);
+    _liveGait = _chosen == RunActivity.run ? Gait.run : Gait.walk;
     _treadmill = row.kind == RunKind.treadmill;
     _shoeId = row.shoeId;
     _stepsBefore = row.steps ?? 0;
@@ -660,14 +723,79 @@ class RunSession extends ChangeNotifier {
     hr.onAlert = (alert, bpm) => voice?.heartRateAlert(high: alert == ZoneAlert.high, bpm: bpm);
   }
 
+  static String _word(RunActivity a) => switch (a) {
+    RunActivity.run => 'Run',
+    RunActivity.walk => 'Walk',
+    RunActivity.hike => 'Hike',
+  };
+
+  /// The heart-rate range for walking or running (null = none).
+  HrRange? _rangeFor(Gait g) {
+    final w = walkPreset;
+    if (g == Gait.walk && w != null) return HrRange(min: w.minBpm, max: w.maxBpm);
+    return _runRange;
+  }
+
+  /// Walking or running now, from the pace over the last 30 s and the steps
+  /// per minute; switches after [gaitSwitchAfter] of the other.
+  void _updateGait(double? pace) {
+    if (!autoDetect || paused) return;
+    final g = classifyGait(paceS: pace, cadence: cadence);
+    if (g == Gait.still || g == _liveGait) {
+      if (g == _liveGait) _gaitCandidate = null;
+      return;
+    }
+    if (_gaitCandidate != g) {
+      _gaitCandidate = g;
+      _gaitCandidateSince = now();
+      return;
+    }
+    if (now().difference(_gaitCandidateSince!) < gaitSwitchAfter) return;
+    _gaitCandidate = null;
+    _liveGait = g;
+    _paceEngine.reset();
+    final range = _rangeFor(g);
+    if (range != null && walkPreset != null) hr.setRange(range);
+    voice?.gaitChanged(walking: g == Gait.walk);
+    notifyListeners();
+  }
+
   void _checkPace(double? pace) {
-    final range = paceAlert;
+    if (_liveGait == Gait.walk) {
+      final slowest = walkPaceAlert;
+      // walking: only "too slow" (slower than the walk pace), never "speed up" to a running pace
+      _checkPaceRange(slowest == null ? null : HrRange(min: 1, max: slowest), pace);
+      return;
+    }
+    _checkPaceRange(paceAlert, pace, running: true);
+  }
+
+  /// Pace over the last 10 s (s/km; null if unknown) – reacts faster than
+  /// the 30 s pace, so slowing down to a walk shows at once.
+  double? get _shortPace {
+    if (_recent.length < 2) return null;
+    final last = _recent.last;
+    final from = _recent.lastWhere(
+      (r) => last.$1.difference(r.$1) >= const Duration(seconds: 10),
+      orElse: () => _recent.first,
+    );
+    final secs = last.$1.difference(from.$1).inMilliseconds / 1000;
+    final m = last.$2 - from.$2;
+    if (secs < 5) return null;
+    return m < 1 ? double.infinity : secs / m * 1000;
+  }
+
+  void _checkPaceRange(HrRange? range, double? pace, {bool running = false}) {
     if (range == null || pace == null || paused) return;
     _paceEngine.range = range;
     final alert = _paceEngine.onReading(pace.round(), now());
     if (alert == null) return;
     // More seconds per km = slower.
     final tooSlow = alert == ZoneAlert.high;
+    final short = _shortPace;
+    if (tooSlow && running && autoDetect && (_gaitCandidate == Gait.walk || (short != null && short > runPaceS))) {
+      return; // slowing down to a walk – no "speed up"
+    }
     hr.beeper.play(tooSlow ? SoundEvent.paceSlow : SoundEvent.paceFast);
     voice?.paceAlert(tooFast: !tooSlow, pace: pace);
   }
@@ -724,6 +852,7 @@ class RunSession extends ChangeNotifier {
       ticks.value++;
       _paceEngine.tick(now());
       _advancePlan(); // time-based steps (and treadmill runs)
+      if (_treadmill && ticks.value % 5 == 0) _updateGait(null); // steps only, no GPS pace
       if (ticks.value % 5 == 0) _readSteps();
       _pushLive();
       if (++_sinceSave >= saveEvery) flush();
@@ -775,7 +904,9 @@ class RunSession extends ChangeNotifier {
       currentPace: pace,
       cadence: cadence,
       ghostDelta: ghostDelta,
+      steps: steps,
     );
+    _updateGait(pace);
     _checkPace(pace);
     _advancePlan();
     if (!wasGood) notifyListeners();
@@ -829,7 +960,8 @@ class RunSession extends ChangeNotifier {
         avgCadence: Value(_avgCadence()),
         elevGainM: Value(_hasBaro ? _gainM : null),
         elevLossM: Value(_hasBaro ? _lossM : null),
-        activity: Value(_activity),
+        // while recording: what was picked (so a restart keeps it); at the end: the decision
+        activity: Value(endedAt == null ? _chosen : _activity),
         walkedM: Value(_walkedM),
         updatedAt: Value(now()),
       ),
@@ -875,6 +1007,10 @@ class RunSession extends ChangeNotifier {
     _hrStartedByRun = false;
     _sinceSave = 0;
     _treadmill = false;
+    _chosen = RunActivity.run;
+    _liveGait = Gait.run;
+    _gaitCandidate = null;
+    _runRange = null;
     _activity = RunActivity.run;
     _walkedM = null;
     _lastMoveAt = null;

@@ -29,9 +29,12 @@ import '../../units/units.dart';
 
 /// A finished run: distance, time, pace, heart rate.
 class RunSummaryScreen extends StatelessWidget {
-  const RunSummaryScreen({super.key, required this.runId});
+  const RunSummaryScreen({super.key, required this.runId, this.note});
 
   final String runId;
+
+  /// Shown once at the top (e.g. "You mostly walked – saved as a walk.").
+  final String? note;
 
   Future<void> _delete(BuildContext context) async {
     final ok = await showDialog<bool>(
@@ -86,7 +89,19 @@ class RunSummaryScreen extends StatelessWidget {
               ),
             ],
           ),
-          body: run == null ? const SizedBox.shrink() : _Body(run: run),
+          body: run == null
+              ? const SizedBox.shrink()
+              : Column(
+                  children: [
+                    if (note != null)
+                      MaterialBanner(
+                        key: const Key('labelNote'),
+                        content: Text(note!),
+                        actions: const [SizedBox.shrink()],
+                      ),
+                    Expanded(child: _Body(run: run)),
+                  ],
+                ),
         );
       },
     );

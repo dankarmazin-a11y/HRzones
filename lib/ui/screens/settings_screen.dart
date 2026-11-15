@@ -373,6 +373,29 @@ class _RunVoiceSettingsState extends State<RunVoiceSettings> {
             },
           ),
           const PaceAlertRow(),
+          SwitchListTile(
+            key: const Key('settingsAutoDetectWalk'),
+            contentPadding: EdgeInsets.zero,
+            secondary: const Icon(Icons.directions_walk),
+            title: const Text('Notice walking by itself'),
+            subtitle: const Text('Marks walk breaks, switches to walk alerts, labels the outing run or walk'),
+            value: s.run.autoDetect,
+            onChanged: (on) async {
+              await s.setAutoDetectWalk(on);
+              setState(() {});
+            },
+          ),
+          SwitchListTile(
+            key: const Key('settingsVoiceGait'),
+            contentPadding: EdgeInsets.zero,
+            secondary: const Icon(Icons.record_voice_over_outlined),
+            title: const Text('Say "Walking" / "Running again"'),
+            value: v.gaitChanges,
+            onChanged: (on) async {
+              await s.setVoiceGait(on);
+              setState(() {});
+            },
+          ),
         ],
       ],
     );

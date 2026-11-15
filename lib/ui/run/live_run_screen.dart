@@ -5,6 +5,8 @@ import 'package:latlong2/latlong.dart';
 import '../theme/app_theme.dart';
 import '../../app_services.dart';
 import '../../hr/hr_monitor.dart';
+import '../../data/database.dart' show RunActivity;
+import '../../run/gait.dart';
 import '../../run/geo.dart';
 import '../../run/location_source.dart';
 import '../../run/route_zones.dart';
@@ -16,7 +18,9 @@ import '../zone_colors.dart';
 import 'run_map.dart';
 import 'run_plans.dart';
 import 'run_start.dart';
+import 'run_records.dart' show formatThousands;
 import 'run_summary_screen.dart';
+import '../theme/emblems.dart';
 import '../../units/units.dart';
 
 /// The run being recorded: distance, time, pace, heart rate; pause / finish.
@@ -52,7 +56,15 @@ class _LiveRunScreenState extends State<LiveRunScreen> {
               icon: const Icon(Icons.keyboard_arrow_down),
               onPressed: () => Navigator.pop(context),
             ),
-            title: Text(run.paused ? 'Paused' : (run.treadmill ? 'Treadmill run' : 'Run')),
+            title: Text(
+              run.paused
+                  ? 'Paused'
+                  : switch (run.chosen) {
+                      RunActivity.walk => run.treadmill ? 'Treadmill walk' : 'Walk',
+                      RunActivity.hike => 'Hike',
+                      RunActivity.run => run.treadmill ? 'Treadmill run' : 'Run',
+                    },
+            ),
             actions: [
               if (!run.treadmill) _GpsChip(status: run.gps),
               if (!run.treadmill)
@@ -142,7 +154,67 @@ class _Numbers extends StatelessWidget {
     );
   }
 
-  Widget _column(RunSession run, TextStyle label, Widget Function(String, String, {Key? key}) stat) => run.treadmill
+  Widget _column(RunSession run, TextStyle label, Widget Function(String, String, {Key? key}) stat) =>
+      switch (run.chosen) {
+        RunActivity.walk when run.steps != null => _walkColumn(run, label, stat),
+        RunActivity.hike when !run.treadmill => _hikeColumn(run, label, stat),
+        _ => _runColumn(run, label, stat),
+      };
+
+  /// Walk: steps are the big number, then distance, time and heart rate.
+  Widget _walkColumn(RunSession run, TextStyle label, Widget Function(String, String, {Key? key}) stat) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      FittedBox(
+        child: Text(
+          formatThousands(run.steps ?? 0),
+          key: const Key('walkSteps'),
+          style: TimerStyle.digits.copyWith(fontSize: 110),
+        ),
+      ),
+      Text('Steps', style: label),
+      const SizedBox(height: 28),
+      Row(
+        children: [
+          if (!run.treadmill)
+            stat(formatKm(run.distanceM), Units.mi ? 'Miles' : 'Kilometres', key: const Key('runDistance')),
+          stat(formatDuration(run.moving), 'Time', key: const Key('runTime')),
+          if (!run.treadmill) stat(formatPace(run.avgPace), 'Pace ${Units.pace}', key: const Key('runAvgPace')),
+        ],
+      ),
+      const SizedBox(height: 24),
+      const _HeartRate(),
+      _Cadence(run: run),
+    ],
+  );
+
+  /// Hike: the climb is the big number, then distance, time and steps.
+  Widget _hikeColumn(RunSession run, TextStyle label, Widget Function(String, String, {Key? key}) stat) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      FittedBox(
+        child: Text(
+          run.climbM == null ? '–' : '${run.climbM!.round()} m',
+          key: const Key('hikeClimb'),
+          style: TimerStyle.digits.copyWith(fontSize: 110),
+        ),
+      ),
+      Text('Climbed', style: label),
+      const SizedBox(height: 28),
+      Row(
+        children: [
+          stat(formatKm(run.distanceM), Units.mi ? 'Miles' : 'Kilometres', key: const Key('runDistance')),
+          stat(formatDuration(run.moving), 'Time', key: const Key('runTime')),
+          if (run.steps != null) stat(formatThousands(run.steps!), 'Steps', key: const Key('hikeSteps')),
+        ],
+      ),
+      const SizedBox(height: 24),
+      const _HeartRate(),
+      _Cadence(run: run),
+    ],
+  );
+
+  Widget _runColumn(RunSession run, TextStyle label, Widget Function(String, String, {Key? key}) stat) => run.treadmill
       ? Column(
           // Treadmill: no GPS – the time is the big number.
           mainAxisSize: MainAxisSize.min,
@@ -171,6 +243,7 @@ class _Numbers extends StatelessWidget {
               ),
             ),
             Text(Units.mi ? 'Miles' : 'Kilometres', style: label),
+            _WalkingPill(run: run),
             const SizedBox(height: 32),
             Row(
               children: [
@@ -339,7 +412,14 @@ class _Controls extends StatelessWidget {
       }
       final id = await run.finish();
       if (id != null) runVibration(times: 2);
-      if (id != null) await nav.pushReplacement(MaterialPageRoute(builder: (_) => RunSummaryScreen(runId: id)));
+      final note = run.takeLabelNote();
+      if (id != null) {
+        await nav.pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => RunSummaryScreen(runId: id, note: note),
+          ),
+        );
+      }
     }
   }
 
@@ -359,7 +439,12 @@ class _Controls extends StatelessWidget {
     final id = await run.finish(distanceM: Units.fromD(km.toDouble()));
     if (id == null) return;
     runVibration(times: 2);
-    await nav.pushReplacement(MaterialPageRoute(builder: (_) => RunSummaryScreen(runId: id)));
+    final note = run.takeLabelNote();
+    await nav.pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => RunSummaryScreen(runId: id, note: note),
+      ),
+    );
   }
 
   @override
@@ -647,6 +732,37 @@ class _GhostChip extends StatelessWidget {
               ? 'Level with last time'
               : '${ahead ? 'Ahead' : 'Behind'} ${formatDuration(Duration(seconds: secs))}',
           style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w800),
+        ),
+      ),
+    );
+  }
+}
+
+/// During a run: a small "Walking" label while the app notices walking.
+class _WalkingPill extends StatelessWidget {
+  const _WalkingPill({required this.run});
+
+  final RunSession run;
+
+  @override
+  Widget build(BuildContext context) {
+    if (run.paused || !run.autoDetect || run.liveGait != Gait.walk) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Container(
+        key: const Key('walkingPill'),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(color: const Color(0xFF2A3242), borderRadius: BorderRadius.circular(20)),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            EmblemIcon(EmblemKind.walk, size: 18, color: Color(0xFFD5D9E2)),
+            SizedBox(width: 6),
+            Text(
+              'Walking',
+              style: TextStyle(color: Color(0xFFD5D9E2), fontSize: 16, fontWeight: FontWeight.w800),
+            ),
+          ],
         ),
       ),
     );

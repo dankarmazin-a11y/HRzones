@@ -585,6 +585,9 @@ void main() {
     await settle(tester);
     await tapStartTile(tester, 'startRunHome');
     await settle(tester);
+    // the Ready sheet scrolls: the voice switch sits below Run · Walk · Hike and the walking options
+    await tester.ensureVisible(find.byKey(const Key('runVoiceSwitch')));
+    await settle(tester);
     await tester.tap(find.byKey(const Key('runVoiceSwitch')));
     await settle(tester);
     expect(s.run.voice!.enabled, isFalse);
