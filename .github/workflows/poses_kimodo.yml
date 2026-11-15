@@ -1,13 +1,10 @@
-# Offline tool (not part of the app build): makes exercise movements with NVIDIA Kimodo
+# Offline tool (not part of the app build), PARKED 2026-11-15 – owner marked all 20 test movements bad.
+# Makes exercise movements with NVIDIA Kimodo
 # (text-to-motion). Manual runs only. Needs HF_TOKEN with access to meta-llama/Meta-Llama-3-8B-Instruct
 # (Kimodo's text reader). Results are saved on the branch poses-kimodo-<tag>.
 name: Poses (Kimodo test)
 
 on:
-  # also runs when the prompts file changes on the figures branch (manual runs need the file on main)
-  push:
-    branches: [claude/figures-review]
-    paths: [tool/poses/kimodo_test.json]
   workflow_dispatch:
     inputs:
       prompts:

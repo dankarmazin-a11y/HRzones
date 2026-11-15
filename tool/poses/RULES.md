@@ -134,3 +134,16 @@ Every exercise figure is made with these rules, in this order. Code: `mockup3d_t
     automatic check** (`audit.js`-style: figures that don't move, planted feet that slide, a
     figure or bar leaving the frame, drawing errors). Fixes go in as
     rules first; only true one-offs get a per-exercise override.
+29. **Every round, before showing the owner:** run the automatic check on all exercises; re-check
+    the **golden set** (every exercise the owner marked Good) – none may get worse; look at every
+    exercise the owner marked Bad. The report says what was fixed and checked, what was changed
+    but not checked, and what a rule can't fix.
+
+## 8. Tried and parked
+- **NVIDIA Kimodo** (text-to-motion, Hugging Face, 2026-11-15): 10-exercise test, two versions
+  each. Owner: all 20 bad ("look nothing like the exercises"); the current figures were 10/10
+  good. Kimodo is trained on walking, everyday actions, combat and dance, not gym exercises.
+  Tools kept (`kimodo_gen.py`, `kimodo_build.py`, workflow `poses_kimodo.yml`, full-movement
+  playback in the figure page) – re-test when a gym-trained motion model appears.
+- **HyperFrames** (HeyGen, HTML → video): renders existing animation, makes no body movement.
+  Noted for App Store preview / launch videos (Phase 6–7).
