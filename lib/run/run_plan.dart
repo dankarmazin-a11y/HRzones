@@ -7,9 +7,12 @@ import '../units/units.dart';
 enum StepKind { warmup, work, recover, cooldown, goal }
 
 class PlanStep {
-  const PlanStep(this.kind, {required this.byDistance, required this.value});
+  const PlanStep(this.kind, {required this.byDistance, required this.value, this.walking = false});
 
   final StepKind kind;
+
+  /// A recover step done walking (run/walk intervals): called "Walk".
+  final bool walking;
 
   /// True: [value] is metres; false: seconds.
   final bool byDistance;
@@ -18,7 +21,7 @@ class PlanStep {
   String get label => switch (kind) {
     StepKind.warmup => 'Warm-up',
     StepKind.work => 'Run',
-    StepKind.recover => 'Recover',
+    StepKind.recover => walking ? 'Walk' : 'Recover',
     StepKind.cooldown => 'Cool-down',
     StepKind.goal => 'Goal',
   };
@@ -26,13 +29,13 @@ class PlanStep {
   /// "400 m", "1.5 km", "10 min", "90 s".
   String get amount => byDistance ? metresText(value) : secondsText(value);
 
-  Map<String, Object> toJson() => {byDistance ? 'd' : 's': value};
+  Map<String, Object> toJson() => {byDistance ? 'd' : 's': value, if (walking) 'w': 1};
 
   static PlanStep? fromJson(StepKind kind, Object? json) {
     if (json is! Map) return null;
-    final d = json['d'], s = json['s'];
-    if (d is num) return PlanStep(kind, byDistance: true, value: d.toInt());
-    if (s is num) return PlanStep(kind, byDistance: false, value: s.toInt());
+    final d = json['d'], s = json['s'], w = json['w'] == 1;
+    if (d is num) return PlanStep(kind, byDistance: true, value: d.toInt(), walking: w);
+    if (s is num) return PlanStep(kind, byDistance: false, value: s.toInt(), walking: w);
     return null;
   }
 }
@@ -65,6 +68,9 @@ class PlanSpec {
 
   bool get isIntervals => work != null;
 
+  /// Run/walk intervals: the breaks are walked.
+  bool get walkBreaks => recover?.walking ?? false;
+
   /// Every step in order.
   List<PlanStep> get steps => [
     ?goal,
@@ -80,7 +86,9 @@ class PlanSpec {
     if (g != null) return g.amount;
     return [
       if (warmup != null) 'Warm-up ${warmup!.amount}',
-      if (work != null) '$repeats × ${work!.amount}${recover == null ? '' : ' / ${recover!.amount} easy'}',
+      if (work != null && walkBreaks) '$repeats × run ${work!.amount} / walk ${recover!.amount}',
+      if (work != null && !walkBreaks)
+        '$repeats × ${work!.amount}${recover == null ? '' : ' / ${recover!.amount} easy'}',
       if (cooldown != null) 'Cool-down ${cooldown!.amount}',
     ].join(' · ');
   }
@@ -125,6 +133,7 @@ final defaultPlans = <(String, PlanSpec)>[
       cooldown: PlanStep(StepKind.cooldown, byDistance: false, value: 300),
     ),
   ),
+  ('Run/walk 4 + 1 min', runWalkPlan),
   (
     'Tempo 3 × 1 km',
     const PlanSpec(
@@ -136,6 +145,13 @@ final defaultPlans = <(String, PlanSpec)>[
     ),
   ),
 ];
+
+/// Run 4 min · walk 1 min × 8 (owner's idea 3, 2026-11-15).
+const runWalkPlan = PlanSpec(
+  repeats: 8,
+  work: PlanStep(StepKind.work, byDistance: false, value: 240),
+  recover: PlanStep(StepKind.recover, byDistance: false, value: 60, walking: true),
+);
 
 /// A finished part of a planned run (for the laps table).
 class Lap {
@@ -149,6 +165,7 @@ class Lap {
     'k': step.kind.name,
     'by': step.byDistance ? 'd' : 's',
     'v': step.value,
+    if (step.walking) 'w': 1,
     'm': distanceM,
     't': seconds,
   };
@@ -157,7 +174,7 @@ class Lap {
     final kind = StepKind.values.where((k) => k.name == m['k']).firstOrNull;
     if (kind == null) return null;
     return Lap(
-      step: PlanStep(kind, byDistance: m['by'] == 'd', value: (m['v'] as num).toInt()),
+      step: PlanStep(kind, byDistance: m['by'] == 'd', value: (m['v'] as num).toInt(), walking: m['w'] == 1),
       distanceM: (m['m'] as num).toDouble(),
       seconds: (m['t'] as num).toDouble(),
     );

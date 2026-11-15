@@ -14,6 +14,7 @@ import '../live/live_activity.dart';
 import '../notify/rest_notifier.dart';
 import '../workout/stats.dart' show formatDuration;
 import 'best_efforts.dart';
+import 'elevation.dart';
 import 'gait.dart';
 import 'geo.dart';
 import 'location_source.dart';
@@ -580,11 +581,18 @@ class RunSession extends ChangeNotifier {
       // (when detection is on) – too short to tell keeps the pick – and the owner is told.
       final enough = _treadmill ? this.distanceM >= 200 : gait.totalM >= 200;
       _activity = _chosen == RunActivity.hike || !autoDetect || !enough ? _chosen : detected;
+      // Mostly walking and steep (over 30 m climbed per km): a hike.
+      if (_activity == RunActivity.walk && autoDetect && !_treadmill && this.distanceM >= 1000) {
+        final climb = _hasBaro ? _gainM : elevationGainLoss([for (final p in _route) ?p.altitude]).climb;
+        if (climb / (this.distanceM / 1000) > hikeClimbPerKm) _activity = RunActivity.hike;
+      }
       _labelNote = _activity == _chosen
           ? null
-          : _activity == RunActivity.run
-          ? 'You picked Walk, but you mostly ran – saved as a run.'
-          : 'You mostly walked – saved as a walk.';
+          : switch (_activity) {
+              RunActivity.run => 'You picked ${_word(_chosen)}, but you mostly ran – saved as a run.',
+              RunActivity.hike => 'You walked and climbed a lot – saved as a hike.',
+              RunActivity.walk => 'You mostly walked – saved as a walk.',
+            };
       // Faster than every earlier outing of the same kind (the first one at a distance isn't a record).
       final before = await runs.records(before: _startedAt, excludeId: id, activity: _activity);
       final newRecords = <int, double>{

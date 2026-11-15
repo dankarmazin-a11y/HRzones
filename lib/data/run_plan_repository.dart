@@ -42,4 +42,12 @@ class RunPlanRepository {
     }
     await db.setSetting('runPlansSeeded', '1');
   }
+
+  /// Run/walk was added to the built-ins later: earlier installs get it once
+  /// (setting `runWalkSeeded`).
+  Future<void> seedRunWalk() async {
+    if (await db.getSetting('runWalkSeeded') == '1') return;
+    if (await db.getSetting('runPlansSeeded') == '1') await save(name: 'Run/walk 4 + 1 min', spec: runWalkPlan);
+    await db.setSetting('runWalkSeeded', '1');
+  }
 }

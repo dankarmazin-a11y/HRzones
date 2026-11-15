@@ -50,12 +50,38 @@ class GaitPiece {
 }
 
 class GaitSummary {
-  const GaitSummary(this.pieces, this.walkedM, this.ranM, this.walkedS, this.ranS, [this.cum = const []]);
+  const GaitSummary(
+    this.pieces,
+    this.walkedM,
+    this.ranM,
+    this.walkedS,
+    this.ranS, [
+    this.cum = const [],
+    this.cumS = const [],
+  ]);
   final List<GaitPiece> pieces;
   final double walkedM, ranM, walkedS, ranS;
 
   /// Distance at each point (same filter as the live run).
   final List<double> cum;
+
+  /// Moving seconds at each point (pauses don't count).
+  final List<double> cumS;
+
+  /// Share of the moving time between [fromS] and [toS] seconds that was walked.
+  double walkedShareBetween(double fromS, double toS) {
+    if (cumS.length < 2 || toS <= fromS) return 0;
+    final gaits = perPoint(cumS.length);
+    var walk = 0.0, all = 0.0;
+    for (var i = 1; i < cumS.length; i++) {
+      final a = cumS[i - 1], b = cumS[i];
+      final lo = a < fromS ? fromS : a, hi = b > toS ? toS : b;
+      if (hi <= lo) continue;
+      all += hi - lo;
+      if (gaits[i] == Gait.walk) walk += hi - lo;
+    }
+    return all <= 0 ? 0 : walk / all;
+  }
 
   /// Seconds per km while running / walking (null if none).
   double? get runPaceS => ranM < 50 ? null : ranS / ranM * 1000;
@@ -185,7 +211,37 @@ GaitSummary analyzeGait(List<GaitPoint> pts) {
     sum(Gait.walk, (p) => p.seconds),
     sum(Gait.run, (p) => p.seconds),
     cum,
+    _movingSeconds(pts),
   );
+}
+
+List<double> _movingSeconds(List<GaitPoint> pts) {
+  final out = <double>[];
+  var t = 0.0;
+  for (var i = 0; i < pts.length; i++) {
+    if (i > 0 && pts[i].segment == pts[i - 1].segment) {
+      t += pts[i].time.difference(pts[i - 1].time).inMilliseconds / 1000;
+    }
+    out.add(t);
+  }
+  return out;
+}
+
+/// Run/walk plans: how many walk breaks were walked, and extra walking during
+/// the run parts. [laps] in order (moving seconds of each).
+({int walked, int breaks, int extra}) keptToPlan(GaitSummary g, List<({bool walkStep, double seconds})> laps) {
+  var t = 0.0, walked = 0, breaks = 0, extra = 0;
+  for (final l in laps) {
+    final share = g.walkedShareBetween(t, t + l.seconds);
+    if (l.walkStep) {
+      breaks++;
+      if (share >= 0.5) walked++;
+    } else if (share > 0.2) {
+      extra++;
+    }
+    t += l.seconds;
+  }
+  return (walked: walked, breaks: breaks, extra: extra);
 }
 
 /// Run or walk for an outing without a route (treadmill, logged by hand):

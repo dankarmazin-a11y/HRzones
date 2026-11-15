@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 
+import '../steps/steps_card.dart';
 import '../../app_services.dart';
 import '../../app_shell.dart';
 import '../../data/database.dart';
@@ -42,6 +43,7 @@ class HomeScreen extends StatelessWidget {
         children: [
           const BackupReminder(),
           const WeekHeroCard(),
+          const StepsTodayCard(),
           const SizedBox(height: 6),
           const NextWorkoutCard(),
           const TodayRunCard(),

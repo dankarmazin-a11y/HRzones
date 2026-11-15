@@ -323,7 +323,7 @@ Future<void> editGoal(BuildContext context, GoalProgress g) async {
 
 /// Asks what kind of goal, then the details.
 Future<void> addGoal(BuildContext context) async {
-  final type = await showModalBottomSheet<GoalType>(
+  final picked = await showModalBottomSheet<Object>(
     context: context,
     builder: (c) => SafeArea(
       child: Column(
@@ -363,12 +363,32 @@ Future<void> addGoal(BuildContext context) async {
             subtitle: const Text('e.g. 5 km under 25 minutes'),
             onTap: () => Navigator.pop(c, GoalType.runTime),
           ),
+          ListTile(
+            key: const Key('goalSteps'),
+            leading: const Icon(Icons.directions_walk),
+            title: const Text('Steps a day'),
+            subtitle: const Text('e.g. 8,000 – shown on Home, counted by your iPhone'),
+            onTap: () => Navigator.pop(c, 'steps'),
+          ),
         ],
       ),
     ),
   );
-  if (type == null || !context.mounted) return;
+  if (picked == null || !context.mounted) return;
   final s = Services.of(context);
+  if (picked == 'steps') {
+    final n = await promptNumber(
+      context,
+      title: 'Steps a day',
+      initial: s.stepGoal.value,
+      min: 1000,
+      max: 50000,
+      suffix: 'steps',
+    );
+    if (n != null) await s.setStepGoal(n.round());
+    return;
+  }
+  final type = picked as GoalType;
   switch (type) {
     case GoalType.liftWeight:
       final picked = await ExerciseLibraryScreen.pick(context);
