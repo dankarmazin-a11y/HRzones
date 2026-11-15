@@ -1,0 +1,72 @@
+# Offline tool (not part of the app build): makes exercise movements with NVIDIA Kimodo
+# (text-to-motion). Manual runs only. Needs HF_TOKEN with access to meta-llama/Meta-Llama-3-8B-Instruct
+# (Kimodo's text reader). Results are saved on the branch poses-kimodo-<tag>.
+name: Poses (Kimodo test)
+
+on:
+  workflow_dispatch:
+    inputs:
+      prompts:
+        description: Exercise prompts file
+        default: tool/poses/kimodo_test.json
+      tag:
+        description: Name for the result branch (poses-kimodo-<tag>)
+        default: test
+
+jobs:
+  gen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Check access to the text reader (Llama 3, gated)
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          pip install -q huggingface_hub
+          python - <<'PY'
+          import os, sys
+          from huggingface_hub import HfApi
+          api = HfApi(token=os.environ['HF_TOKEN'])
+          for repo in ['meta-llama/Meta-Llama-3-8B-Instruct', 'McGill-NLP/LLM2Vec-Meta-Llama-3-8B-Instruct-mntp']:
+              try:
+                  api.hf_hub_download(repo, 'config.json'); print('OK', repo)
+              except Exception as e:
+                  print('NO ACCESS', repo, type(e).__name__, str(e)[:200]); sys.exit(1)
+          PY
+      - name: More memory (the 8B text reader needs ~16 GB)
+        run: |
+          sudo swapoff -a || true
+          sudo fallocate -l 28G /mnt/swapfile && sudo chmod 600 /mnt/swapfile
+          sudo mkswap /mnt/swapfile && sudo swapon /mnt/swapfile
+          free -g; df -h /mnt
+      - name: Install Kimodo (CPU)
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install "kimodo[soma] @ git+https://github.com/nv-tlabs/kimodo.git"
+      - name: Generate movements
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_HOME: /mnt/hf
+          TEXT_ENCODER_MODE: local
+        run: |
+          sudo mkdir -p /mnt/hf && sudo chown $USER /mnt/hf
+          mkdir -p out
+          python tool/poses/kimodo_gen.py "${{ inputs.prompts }}" out/kimodo.json
+      - name: Save results on a branch
+        if: always()
+        run: |
+          [ -f out/kimodo.json ] || exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan poses-kimodo-${{ inputs.tag }}
+          git rm -rq --cached .
+          mkdir -p results && cp out/kimodo.json results/kimodo.json
+          git add results
+          git commit -qm "Kimodo results"
+          git push -f origin poses-kimodo-${{ inputs.tag }}
