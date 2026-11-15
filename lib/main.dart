@@ -1,9 +1,9 @@
 import 'dart:ui' show PlatformDispatcher;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'app_services.dart';
+import 'data/exercise_asset.dart';
 import 'feedback/problem_log.dart';
 import 'startup.dart';
 
@@ -25,10 +25,7 @@ void main() {
   runApp(
     StartupApp(
       open: (onStep) async {
-        final services = await AppServices.open(
-          loadExercises: () => rootBundle.loadString('assets/exercises.json'),
-          onStep: onStep,
-        );
+        final services = await AppServices.open(loadExercises: loadExerciseAsset, onStep: onStep);
         // Write the running workout right away when the app goes to the
         // background (iOS may close it later without warning). Lives as long
         // as the app.

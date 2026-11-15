@@ -35,7 +35,8 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/exercises.json
+    # packed copy of assets/exercises.json (tool/pack_exercises.py) – ~700 KB smaller on the phone
+    - assets/exercises.json.gz
   # Inter (SIL Open Font License, assets/fonts/Inter-LICENSE.txt) – the app font.
   fonts:
     - family: Inter
