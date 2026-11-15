@@ -5479,6 +5479,24 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
     requiredDuringInsert: false,
   );
   @override
+  late final GeneratedColumnWithTypeConverter<RunActivity, int> activity = GeneratedColumn<int>(
+    'activity',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  ).withConverter<RunActivity>($RunsTable.$converteractivity);
+  static const VerificationMeta _walkedMMeta = const VerificationMeta('walkedM');
+  @override
+  late final GeneratedColumn<double> walkedM = GeneratedColumn<double>(
+    'walked_m',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  @override
   List<GeneratedColumn> get $columns => [
     id,
     updatedAt,
@@ -5504,6 +5522,8 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
     elevLossM,
     planId,
     lapsJson,
+    activity,
+    walkedM,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -5585,6 +5605,9 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
     if (data.containsKey('laps_json')) {
       context.handle(_lapsJsonMeta, lapsJson.isAcceptableOrUnknown(data['laps_json']!, _lapsJsonMeta));
     }
+    if (data.containsKey('walked_m')) {
+      context.handle(_walkedMMeta, walkedM.isAcceptableOrUnknown(data['walked_m']!, _walkedMMeta));
+    }
     return context;
   }
 
@@ -5620,6 +5643,10 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
       elevLossM: attachedDatabase.typeMapping.read(DriftSqlType.double, data['${effectivePrefix}elev_loss_m']),
       planId: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}plan_id']),
       lapsJson: attachedDatabase.typeMapping.read(DriftSqlType.string, data['${effectivePrefix}laps_json']),
+      activity: $RunsTable.$converteractivity.fromSql(
+        attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}activity'])!,
+      ),
+      walkedM: attachedDatabase.typeMapping.read(DriftSqlType.double, data['${effectivePrefix}walked_m']),
     );
   }
 
@@ -5629,6 +5656,9 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
   }
 
   static JsonTypeConverter2<RunKind, int, int> $converterkind = const EnumIndexConverter<RunKind>(RunKind.values);
+  static JsonTypeConverter2<RunActivity, int, int> $converteractivity = const EnumIndexConverter<RunActivity>(
+    RunActivity.values,
+  );
 }
 
 class Run extends DataClass implements Insertable<Run> {
@@ -5684,6 +5714,13 @@ class Run extends DataClass implements Insertable<Run> {
   /// The planned run followed (null = free run) and its laps (JSON).
   final String? planId;
   final String? lapsJson;
+
+  /// Run, walk or hike (decided at the end from how much was walked; the
+  /// owner can change it).
+  final RunActivity activity;
+
+  /// Metres walked (null = not worked out, e.g. older runs).
+  final double? walkedM;
   const Run({
     required this.id,
     required this.updatedAt,
@@ -5709,6 +5746,8 @@ class Run extends DataClass implements Insertable<Run> {
     this.elevLossM,
     this.planId,
     this.lapsJson,
+    required this.activity,
+    this.walkedM,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -5769,6 +5808,12 @@ class Run extends DataClass implements Insertable<Run> {
     if (!nullToAbsent || lapsJson != null) {
       map['laps_json'] = Variable<String>(lapsJson);
     }
+    {
+      map['activity'] = Variable<int>($RunsTable.$converteractivity.toSql(activity));
+    }
+    if (!nullToAbsent || walkedM != null) {
+      map['walked_m'] = Variable<double>(walkedM);
+    }
     return map;
   }
 
@@ -5798,6 +5843,8 @@ class Run extends DataClass implements Insertable<Run> {
       elevLossM: elevLossM == null && nullToAbsent ? const Value.absent() : Value(elevLossM),
       planId: planId == null && nullToAbsent ? const Value.absent() : Value(planId),
       lapsJson: lapsJson == null && nullToAbsent ? const Value.absent() : Value(lapsJson),
+      activity: Value(activity),
+      walkedM: walkedM == null && nullToAbsent ? const Value.absent() : Value(walkedM),
     );
   }
 
@@ -5828,6 +5875,8 @@ class Run extends DataClass implements Insertable<Run> {
       elevLossM: serializer.fromJson<double?>(json['elevLossM']),
       planId: serializer.fromJson<String?>(json['planId']),
       lapsJson: serializer.fromJson<String?>(json['lapsJson']),
+      activity: $RunsTable.$converteractivity.fromJson(serializer.fromJson<int>(json['activity'])),
+      walkedM: serializer.fromJson<double?>(json['walkedM']),
     );
   }
   @override
@@ -5858,6 +5907,8 @@ class Run extends DataClass implements Insertable<Run> {
       'elevLossM': serializer.toJson<double?>(elevLossM),
       'planId': serializer.toJson<String?>(planId),
       'lapsJson': serializer.toJson<String?>(lapsJson),
+      'activity': serializer.toJson<int>($RunsTable.$converteractivity.toJson(activity)),
+      'walkedM': serializer.toJson<double?>(walkedM),
     };
   }
 
@@ -5886,6 +5937,8 @@ class Run extends DataClass implements Insertable<Run> {
     Value<double?> elevLossM = const Value.absent(),
     Value<String?> planId = const Value.absent(),
     Value<String?> lapsJson = const Value.absent(),
+    RunActivity? activity,
+    Value<double?> walkedM = const Value.absent(),
   }) => Run(
     id: id ?? this.id,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -5911,6 +5964,8 @@ class Run extends DataClass implements Insertable<Run> {
     elevLossM: elevLossM.present ? elevLossM.value : this.elevLossM,
     planId: planId.present ? planId.value : this.planId,
     lapsJson: lapsJson.present ? lapsJson.value : this.lapsJson,
+    activity: activity ?? this.activity,
+    walkedM: walkedM.present ? walkedM.value : this.walkedM,
   );
   Run copyWithCompanion(RunsCompanion data) {
     return Run(
@@ -5938,6 +5993,8 @@ class Run extends DataClass implements Insertable<Run> {
       elevLossM: data.elevLossM.present ? data.elevLossM.value : this.elevLossM,
       planId: data.planId.present ? data.planId.value : this.planId,
       lapsJson: data.lapsJson.present ? data.lapsJson.value : this.lapsJson,
+      activity: data.activity.present ? data.activity.value : this.activity,
+      walkedM: data.walkedM.present ? data.walkedM.value : this.walkedM,
     );
   }
 
@@ -5967,7 +6024,9 @@ class Run extends DataClass implements Insertable<Run> {
           ..write('elevGainM: $elevGainM, ')
           ..write('elevLossM: $elevLossM, ')
           ..write('planId: $planId, ')
-          ..write('lapsJson: $lapsJson')
+          ..write('lapsJson: $lapsJson, ')
+          ..write('activity: $activity, ')
+          ..write('walkedM: $walkedM')
           ..write(')'))
         .toString();
   }
@@ -5998,6 +6057,8 @@ class Run extends DataClass implements Insertable<Run> {
     elevLossM,
     planId,
     lapsJson,
+    activity,
+    walkedM,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -6026,7 +6087,9 @@ class Run extends DataClass implements Insertable<Run> {
           other.elevGainM == this.elevGainM &&
           other.elevLossM == this.elevLossM &&
           other.planId == this.planId &&
-          other.lapsJson == this.lapsJson);
+          other.lapsJson == this.lapsJson &&
+          other.activity == this.activity &&
+          other.walkedM == this.walkedM);
 }
 
 class RunsCompanion extends UpdateCompanion<Run> {
@@ -6054,6 +6117,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
   final Value<double?> elevLossM;
   final Value<String?> planId;
   final Value<String?> lapsJson;
+  final Value<RunActivity> activity;
+  final Value<double?> walkedM;
   final Value<int> rowid;
   const RunsCompanion({
     this.id = const Value.absent(),
@@ -6080,6 +6145,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
     this.elevLossM = const Value.absent(),
     this.planId = const Value.absent(),
     this.lapsJson = const Value.absent(),
+    this.activity = const Value.absent(),
+    this.walkedM = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RunsCompanion.insert({
@@ -6107,6 +6174,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
     this.elevLossM = const Value.absent(),
     this.planId = const Value.absent(),
     this.lapsJson = const Value.absent(),
+    this.activity = const Value.absent(),
+    this.walkedM = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : startedAt = Value(startedAt);
   static Insertable<Run> custom({
@@ -6134,6 +6203,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
     Expression<double>? elevLossM,
     Expression<String>? planId,
     Expression<String>? lapsJson,
+    Expression<int>? activity,
+    Expression<double>? walkedM,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -6161,6 +6232,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
       if (elevLossM != null) 'elev_loss_m': elevLossM,
       if (planId != null) 'plan_id': planId,
       if (lapsJson != null) 'laps_json': lapsJson,
+      if (activity != null) 'activity': activity,
+      if (walkedM != null) 'walked_m': walkedM,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -6190,6 +6263,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
     Value<double?>? elevLossM,
     Value<String?>? planId,
     Value<String?>? lapsJson,
+    Value<RunActivity>? activity,
+    Value<double?>? walkedM,
     Value<int>? rowid,
   }) {
     return RunsCompanion(
@@ -6217,6 +6292,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
       elevLossM: elevLossM ?? this.elevLossM,
       planId: planId ?? this.planId,
       lapsJson: lapsJson ?? this.lapsJson,
+      activity: activity ?? this.activity,
+      walkedM: walkedM ?? this.walkedM,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -6296,6 +6373,12 @@ class RunsCompanion extends UpdateCompanion<Run> {
     if (lapsJson.present) {
       map['laps_json'] = Variable<String>(lapsJson.value);
     }
+    if (activity.present) {
+      map['activity'] = Variable<int>($RunsTable.$converteractivity.toSql(activity.value));
+    }
+    if (walkedM.present) {
+      map['walked_m'] = Variable<double>(walkedM.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -6329,6 +6412,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
           ..write('elevLossM: $elevLossM, ')
           ..write('planId: $planId, ')
           ..write('lapsJson: $lapsJson, ')
+          ..write('activity: $activity, ')
+          ..write('walkedM: $walkedM, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6434,8 +6519,29 @@ class $RunPointsTable extends RunPoints with TableInfo<$RunPointsTable, RunPoint
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _cadenceMeta = const VerificationMeta('cadence');
   @override
-  List<GeneratedColumn> get $columns => [id, updatedAt, runId, time, lat, lon, accuracy, altitude, segment, hr];
+  late final GeneratedColumn<int> cadence = GeneratedColumn<int>(
+    'cadence',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    updatedAt,
+    runId,
+    time,
+    lat,
+    lon,
+    accuracy,
+    altitude,
+    segment,
+    hr,
+    cadence,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -6483,6 +6589,9 @@ class $RunPointsTable extends RunPoints with TableInfo<$RunPointsTable, RunPoint
     if (data.containsKey('hr')) {
       context.handle(_hrMeta, hr.isAcceptableOrUnknown(data['hr']!, _hrMeta));
     }
+    if (data.containsKey('cadence')) {
+      context.handle(_cadenceMeta, cadence.isAcceptableOrUnknown(data['cadence']!, _cadenceMeta));
+    }
     return context;
   }
 
@@ -6502,6 +6611,7 @@ class $RunPointsTable extends RunPoints with TableInfo<$RunPointsTable, RunPoint
       altitude: attachedDatabase.typeMapping.read(DriftSqlType.double, data['${effectivePrefix}altitude']),
       segment: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}segment'])!,
       hr: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}hr']),
+      cadence: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}cadence']),
     );
   }
 
@@ -6528,6 +6638,9 @@ class RunPoint extends DataClass implements Insertable<RunPoint> {
 
   /// Heart rate at this point (null without a signal).
   final int? hr;
+
+  /// Steps per minute at this point (null = unknown) – tells walking from running.
+  final int? cadence;
   const RunPoint({
     required this.id,
     required this.updatedAt,
@@ -6539,6 +6652,7 @@ class RunPoint extends DataClass implements Insertable<RunPoint> {
     this.altitude,
     required this.segment,
     this.hr,
+    this.cadence,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -6559,6 +6673,9 @@ class RunPoint extends DataClass implements Insertable<RunPoint> {
     if (!nullToAbsent || hr != null) {
       map['hr'] = Variable<int>(hr);
     }
+    if (!nullToAbsent || cadence != null) {
+      map['cadence'] = Variable<int>(cadence);
+    }
     return map;
   }
 
@@ -6574,6 +6691,7 @@ class RunPoint extends DataClass implements Insertable<RunPoint> {
       altitude: altitude == null && nullToAbsent ? const Value.absent() : Value(altitude),
       segment: Value(segment),
       hr: hr == null && nullToAbsent ? const Value.absent() : Value(hr),
+      cadence: cadence == null && nullToAbsent ? const Value.absent() : Value(cadence),
     );
   }
 
@@ -6590,6 +6708,7 @@ class RunPoint extends DataClass implements Insertable<RunPoint> {
       altitude: serializer.fromJson<double?>(json['altitude']),
       segment: serializer.fromJson<int>(json['segment']),
       hr: serializer.fromJson<int?>(json['hr']),
+      cadence: serializer.fromJson<int?>(json['cadence']),
     );
   }
   @override
@@ -6606,6 +6725,7 @@ class RunPoint extends DataClass implements Insertable<RunPoint> {
       'altitude': serializer.toJson<double?>(altitude),
       'segment': serializer.toJson<int>(segment),
       'hr': serializer.toJson<int?>(hr),
+      'cadence': serializer.toJson<int?>(cadence),
     };
   }
 
@@ -6620,6 +6740,7 @@ class RunPoint extends DataClass implements Insertable<RunPoint> {
     Value<double?> altitude = const Value.absent(),
     int? segment,
     Value<int?> hr = const Value.absent(),
+    Value<int?> cadence = const Value.absent(),
   }) => RunPoint(
     id: id ?? this.id,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -6631,6 +6752,7 @@ class RunPoint extends DataClass implements Insertable<RunPoint> {
     altitude: altitude.present ? altitude.value : this.altitude,
     segment: segment ?? this.segment,
     hr: hr.present ? hr.value : this.hr,
+    cadence: cadence.present ? cadence.value : this.cadence,
   );
   RunPoint copyWithCompanion(RunPointsCompanion data) {
     return RunPoint(
@@ -6644,6 +6766,7 @@ class RunPoint extends DataClass implements Insertable<RunPoint> {
       altitude: data.altitude.present ? data.altitude.value : this.altitude,
       segment: data.segment.present ? data.segment.value : this.segment,
       hr: data.hr.present ? data.hr.value : this.hr,
+      cadence: data.cadence.present ? data.cadence.value : this.cadence,
     );
   }
 
@@ -6659,13 +6782,14 @@ class RunPoint extends DataClass implements Insertable<RunPoint> {
           ..write('accuracy: $accuracy, ')
           ..write('altitude: $altitude, ')
           ..write('segment: $segment, ')
-          ..write('hr: $hr')
+          ..write('hr: $hr, ')
+          ..write('cadence: $cadence')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, updatedAt, runId, time, lat, lon, accuracy, altitude, segment, hr);
+  int get hashCode => Object.hash(id, updatedAt, runId, time, lat, lon, accuracy, altitude, segment, hr, cadence);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -6679,7 +6803,8 @@ class RunPoint extends DataClass implements Insertable<RunPoint> {
           other.accuracy == this.accuracy &&
           other.altitude == this.altitude &&
           other.segment == this.segment &&
-          other.hr == this.hr);
+          other.hr == this.hr &&
+          other.cadence == this.cadence);
 }
 
 class RunPointsCompanion extends UpdateCompanion<RunPoint> {
@@ -6693,6 +6818,7 @@ class RunPointsCompanion extends UpdateCompanion<RunPoint> {
   final Value<double?> altitude;
   final Value<int> segment;
   final Value<int?> hr;
+  final Value<int?> cadence;
   final Value<int> rowid;
   const RunPointsCompanion({
     this.id = const Value.absent(),
@@ -6705,6 +6831,7 @@ class RunPointsCompanion extends UpdateCompanion<RunPoint> {
     this.altitude = const Value.absent(),
     this.segment = const Value.absent(),
     this.hr = const Value.absent(),
+    this.cadence = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RunPointsCompanion.insert({
@@ -6718,6 +6845,7 @@ class RunPointsCompanion extends UpdateCompanion<RunPoint> {
     this.altitude = const Value.absent(),
     this.segment = const Value.absent(),
     this.hr = const Value.absent(),
+    this.cadence = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : runId = Value(runId),
        time = Value(time),
@@ -6734,6 +6862,7 @@ class RunPointsCompanion extends UpdateCompanion<RunPoint> {
     Expression<double>? altitude,
     Expression<int>? segment,
     Expression<int>? hr,
+    Expression<int>? cadence,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -6747,6 +6876,7 @@ class RunPointsCompanion extends UpdateCompanion<RunPoint> {
       if (altitude != null) 'altitude': altitude,
       if (segment != null) 'segment': segment,
       if (hr != null) 'hr': hr,
+      if (cadence != null) 'cadence': cadence,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -6762,6 +6892,7 @@ class RunPointsCompanion extends UpdateCompanion<RunPoint> {
     Value<double?>? altitude,
     Value<int>? segment,
     Value<int?>? hr,
+    Value<int?>? cadence,
     Value<int>? rowid,
   }) {
     return RunPointsCompanion(
@@ -6775,6 +6906,7 @@ class RunPointsCompanion extends UpdateCompanion<RunPoint> {
       altitude: altitude ?? this.altitude,
       segment: segment ?? this.segment,
       hr: hr ?? this.hr,
+      cadence: cadence ?? this.cadence,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -6812,6 +6944,9 @@ class RunPointsCompanion extends UpdateCompanion<RunPoint> {
     if (hr.present) {
       map['hr'] = Variable<int>(hr.value);
     }
+    if (cadence.present) {
+      map['cadence'] = Variable<int>(cadence.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -6831,6 +6966,7 @@ class RunPointsCompanion extends UpdateCompanion<RunPoint> {
           ..write('altitude: $altitude, ')
           ..write('segment: $segment, ')
           ..write('hr: $hr, ')
+          ..write('cadence: $cadence, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -11475,6 +11611,8 @@ typedef $$RunsTableCreateCompanionBuilder = RunsCompanion Function({
   Value<double?> elevLossM,
   Value<String?> planId,
   Value<String?> lapsJson,
+  Value<RunActivity> activity,
+  Value<double?> walkedM,
   Value<int> rowid,
 });
 typedef $$RunsTableUpdateCompanionBuilder = RunsCompanion Function({
@@ -11502,6 +11640,8 @@ typedef $$RunsTableUpdateCompanionBuilder = RunsCompanion Function({
   Value<double?> elevLossM,
   Value<String?> planId,
   Value<String?> lapsJson,
+  Value<RunActivity> activity,
+  Value<double?> walkedM,
   Value<int> rowid,
 });
 
@@ -11596,6 +11736,12 @@ class $$RunsTableFilterComposer extends Composer<_$AppDatabase, $RunsTable> {
 
   ColumnFilters<String> get lapsJson =>
       $composableBuilder(column: $table.lapsJson, builder: (column) => ColumnFilters(column));
+
+  ColumnWithTypeConverterFilters<RunActivity, RunActivity, int> get activity =>
+      $composableBuilder(column: $table.activity, builder: (column) => ColumnWithTypeConverterFilters(column));
+
+  ColumnFilters<double> get walkedM =>
+      $composableBuilder(column: $table.walkedM, builder: (column) => ColumnFilters(column));
 
   Expression<bool> runPointsRefs(Expression<bool> Function($$RunPointsTableFilterComposer f) f) {
     final $$RunPointsTableFilterComposer composer = $composerBuilder(
@@ -11694,6 +11840,12 @@ class $$RunsTableOrderingComposer extends Composer<_$AppDatabase, $RunsTable> {
 
   ColumnOrderings<String> get lapsJson =>
       $composableBuilder(column: $table.lapsJson, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get activity =>
+      $composableBuilder(column: $table.activity, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get walkedM =>
+      $composableBuilder(column: $table.walkedM, builder: (column) => ColumnOrderings(column));
 }
 
 class $$RunsTableAnnotationComposer extends Composer<_$AppDatabase, $RunsTable> {
@@ -11752,6 +11904,11 @@ class $$RunsTableAnnotationComposer extends Composer<_$AppDatabase, $RunsTable> 
   GeneratedColumn<String> get planId => $composableBuilder(column: $table.planId, builder: (column) => column);
 
   GeneratedColumn<String> get lapsJson => $composableBuilder(column: $table.lapsJson, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<RunActivity, int> get activity =>
+      $composableBuilder(column: $table.activity, builder: (column) => column);
+
+  GeneratedColumn<double> get walkedM => $composableBuilder(column: $table.walkedM, builder: (column) => column);
 
   Expression<T> runPointsRefs<T extends Object>(Expression<T> Function($$RunPointsTableAnnotationComposer a) f) {
     final $$RunPointsTableAnnotationComposer composer = $composerBuilder(
@@ -11821,6 +11978,8 @@ class $$RunsTableTableManager
                 Value<double?> elevLossM = const Value.absent(),
                 Value<String?> planId = const Value.absent(),
                 Value<String?> lapsJson = const Value.absent(),
+                Value<RunActivity> activity = const Value.absent(),
+                Value<double?> walkedM = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RunsCompanion(
                 id: id,
@@ -11847,6 +12006,8 @@ class $$RunsTableTableManager
                 elevLossM: elevLossM,
                 planId: planId,
                 lapsJson: lapsJson,
+                activity: activity,
+                walkedM: walkedM,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -11875,6 +12036,8 @@ class $$RunsTableTableManager
                 Value<double?> elevLossM = const Value.absent(),
                 Value<String?> planId = const Value.absent(),
                 Value<String?> lapsJson = const Value.absent(),
+                Value<RunActivity> activity = const Value.absent(),
+                Value<double?> walkedM = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RunsCompanion.insert(
                 id: id,
@@ -11901,6 +12064,8 @@ class $$RunsTableTableManager
                 elevLossM: elevLossM,
                 planId: planId,
                 lapsJson: lapsJson,
+                activity: activity,
+                walkedM: walkedM,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) =>
@@ -11954,6 +12119,7 @@ typedef $$RunPointsTableCreateCompanionBuilder = RunPointsCompanion Function({
   Value<double?> altitude,
   Value<int> segment,
   Value<int?> hr,
+  Value<int?> cadence,
   Value<int> rowid,
 });
 typedef $$RunPointsTableUpdateCompanionBuilder = RunPointsCompanion Function({
@@ -11967,6 +12133,7 @@ typedef $$RunPointsTableUpdateCompanionBuilder = RunPointsCompanion Function({
   Value<double?> altitude,
   Value<int> segment,
   Value<int?> hr,
+  Value<int?> cadence,
   Value<int> rowid,
 });
 
@@ -12015,6 +12182,9 @@ class $$RunPointsTableFilterComposer extends Composer<_$AppDatabase, $RunPointsT
       $composableBuilder(column: $table.segment, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get hr => $composableBuilder(column: $table.hr, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get cadence =>
+      $composableBuilder(column: $table.cadence, builder: (column) => ColumnFilters(column));
 
   $$RunsTableFilterComposer get runId {
     final $$RunsTableFilterComposer composer = $composerBuilder(
@@ -12068,6 +12238,9 @@ class $$RunPointsTableOrderingComposer extends Composer<_$AppDatabase, $RunPoint
 
   ColumnOrderings<int> get hr => $composableBuilder(column: $table.hr, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<int> get cadence =>
+      $composableBuilder(column: $table.cadence, builder: (column) => ColumnOrderings(column));
+
   $$RunsTableOrderingComposer get runId {
     final $$RunsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -12112,6 +12285,8 @@ class $$RunPointsTableAnnotationComposer extends Composer<_$AppDatabase, $RunPoi
   GeneratedColumn<int> get segment => $composableBuilder(column: $table.segment, builder: (column) => column);
 
   GeneratedColumn<int> get hr => $composableBuilder(column: $table.hr, builder: (column) => column);
+
+  GeneratedColumn<int> get cadence => $composableBuilder(column: $table.cadence, builder: (column) => column);
 
   $$RunsTableAnnotationComposer get runId {
     final $$RunsTableAnnotationComposer composer = $composerBuilder(
@@ -12167,6 +12342,7 @@ class $$RunPointsTableTableManager
                 Value<double?> altitude = const Value.absent(),
                 Value<int> segment = const Value.absent(),
                 Value<int?> hr = const Value.absent(),
+                Value<int?> cadence = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RunPointsCompanion(
                 id: id,
@@ -12179,6 +12355,7 @@ class $$RunPointsTableTableManager
                 altitude: altitude,
                 segment: segment,
                 hr: hr,
+                cadence: cadence,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -12193,6 +12370,7 @@ class $$RunPointsTableTableManager
                 Value<double?> altitude = const Value.absent(),
                 Value<int> segment = const Value.absent(),
                 Value<int?> hr = const Value.absent(),
+                Value<int?> cadence = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RunPointsCompanion.insert(
                 id: id,
@@ -12205,6 +12383,7 @@ class $$RunPointsTableTableManager
                 altitude: altitude,
                 segment: segment,
                 hr: hr,
+                cadence: cadence,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

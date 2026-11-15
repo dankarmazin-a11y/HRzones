@@ -11,7 +11,7 @@ import '../workout/workout_editor.dart';
 import '../workout/workout_summary_screen.dart';
 import '../theme/emblems.dart';
 
-enum _Show { all, strength, run }
+enum _Show { all, strength, run, walk }
 
 /// Every finished workout – strength and runs – newest first.
 class HistoryScreen extends StatefulWidget {
@@ -70,10 +70,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
             final runs = runSnap.data;
             if (list == null || runs == null) return const Center(child: CircularProgressIndicator());
             final items = <(DateTime, Widget)>[
-              if (_show != _Show.run)
+              if (_show == _Show.all || _show == _Show.strength)
                 for (final w in list) (w.workout.startedAt, WorkoutTile(item: w)),
               if (_show != _Show.strength)
-                for (final r in runs)
+                // Run = runs; Walk = walks and hikes
+                for (final r in runs.where(
+                  (r) => _show == _Show.all || (_show == _Show.run) == (r.activity == RunActivity.run),
+                ))
                   (
                     r.startedAt,
                     Card(
@@ -93,8 +96,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     key: const Key('historyFilter'),
                     segments: const [
                       ButtonSegment(value: _Show.all, label: Text('All')),
-                      ButtonSegment(value: _Show.strength, label: Text('Strength'), icon: Icon(Icons.fitness_center)),
-                      ButtonSegment(value: _Show.run, label: Text('Run'), icon: Icon(Icons.directions_run)),
+                      ButtonSegment(value: _Show.strength, label: Text('Strength')),
+                      ButtonSegment(value: _Show.run, label: Text('Run')),
+                      ButtonSegment(
+                        value: _Show.walk,
+                        label: Text('Walk', key: Key('historyWalk')),
+                      ),
                     ],
                     selected: {_show},
                     onSelectionChanged: (v) => setState(() => _show = v.first),

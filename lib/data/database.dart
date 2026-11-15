@@ -251,6 +251,16 @@ class IntervalPresets extends Table with SyncColumns {
 /// Stored by index – only add at the end.
 enum RunKind { outdoor, treadmill }
 
+/// What the outing was: a run, a walk or a hike (stored by index – only add at
+/// the end). Walks and hikes count for the streak but not for running km,
+/// running goals or running records.
+enum RunActivity { run, walk, hike }
+
+extension RunActivityOf on Run {
+  /// A run (not a walk or hike): only these count as running km, goals and records.
+  bool get isRun => activity == RunActivity.run;
+}
+
 /// A GPS run. While it is being recorded `endedAt` is null; the moving time
 /// is (pausedAt ?? now) − startedAt − pausedS.
 class Runs extends Table with SyncColumns {
@@ -304,6 +314,13 @@ class Runs extends Table with SyncColumns {
   /// The planned run followed (null = free run) and its laps (JSON).
   TextColumn get planId => text().nullable()();
   TextColumn get lapsJson => text().nullable()();
+
+  /// Run, walk or hike (decided at the end from how much was walked; the
+  /// owner can change it).
+  IntColumn get activity => intEnum<RunActivity>().withDefault(const Constant(0))();
+
+  /// Metres walked (null = not worked out, e.g. older runs).
+  RealColumn get walkedM => real().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -371,6 +388,9 @@ class RunPoints extends Table with SyncColumns {
   /// Heart rate at this point (null without a signal).
   IntColumn get hr => integer().nullable()();
 
+  /// Steps per minute at this point (null = unknown) – tells walking from running.
+  IntColumn get cadence => integer().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -433,7 +453,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 15;
+  int get schemaVersion => 16;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -502,6 +522,11 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(runs, runs.elevLossM);
       }
       if (from < 15) await m.createTable(trainingPlans);
+      if (from >= 7 && from < 16) {
+        await m.addColumn(runs, runs.activity);
+        await m.addColumn(runs, runs.walkedM);
+        await m.addColumn(runPoints, runPoints.cadence);
+      }
     },
     beforeOpen: (details) async {
       await _addMissingColumns();

@@ -65,7 +65,7 @@ class _Week {
     final w = workouts.where((i) => !i.workout.startedAt.isBefore(sunday)).toList();
     final r = runs.where((x) => !x.startedAt.isBefore(sunday)).toList();
     count = w.length + r.length;
-    metres = r.fold(0.0, (v, x) => v + x.distanceM);
+    metres = r.where((x) => x.isRun).fold(0.0, (v, x) => v + x.distanceM); // running km only
     minutes =
         w.fold(0, (v, i) => v + (i.workout.endedAt ?? i.workout.startedAt).difference(i.workout.startedAt).inMinutes) +
         r.fold(0, (v, x) => v + x.durationS ~/ 60);

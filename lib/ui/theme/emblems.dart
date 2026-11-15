@@ -18,6 +18,8 @@ enum EmblemKind {
   calendar,
   plates,
   route,
+  walk,
+  hike,
 }
 
 /// One emblem, drawn in [color] (default: the current icon colour).
@@ -146,6 +148,18 @@ class _EmblemPainter extends CustomPainter {
         line([11, 13.2, 8.5, 16.6, 4.9, 17.1]);
         line([12.9, 9.4, 16.2, 10.9, 18.6, 8.9]);
         line([12.6, 9.2, 9.3, 10.6, 7.7, 12.9]);
+      case EmblemKind.walk:
+        // upright walker, one arm forward, long stride
+        circle(13, 4.4, 1.9);
+        line([12.6, 8, 11.6, 14.2]);
+        line([11.6, 14.2, 13.8, 17, 14.6, 21]);
+        line([11.6, 14.2, 9.8, 17.6, 8, 21]);
+        line([12.4, 9.4, 15.2, 11.6]);
+        line([12.4, 9.4, 9.6, 12.2]);
+      case EmblemKind.hike:
+        // mountain with a small peak
+        line([2.5, 20, 9.5, 8, 13.2, 13.8, 15.6, 10.6, 21.5, 20], close: true);
+        line([7.6, 11.2, 9.5, 12.4, 11.2, 11.2]);
       case EmblemKind.abs:
         line([8, 3.5, 16, 3.5, 17.4, 10, 16, 20.5, 8, 20.5, 6.6, 10], close: true);
         line([12, 4, 12, 20]);

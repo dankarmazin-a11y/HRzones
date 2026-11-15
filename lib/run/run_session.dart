@@ -14,6 +14,7 @@ import '../live/live_activity.dart';
 import '../notify/rest_notifier.dart';
 import '../workout/stats.dart' show formatDuration;
 import 'best_efforts.dart';
+import 'gait.dart';
 import 'geo.dart';
 import 'location_source.dart';
 import 'motion_source.dart';
@@ -44,6 +45,7 @@ class RoutePoint {
     this.altitude,
     required this.segment,
     this.hr,
+    this.cadence,
   });
 
   final DateTime time;
@@ -53,7 +55,16 @@ class RoutePoint {
   final double? altitude;
   final int segment;
   final int? hr;
+
+  /// Steps per minute (null = unknown) – tells walking from running.
+  final int? cadence;
 }
+
+/// The recorded points as the walk/run detection needs them.
+List<GaitPoint> gaitPoints(Iterable<RoutePoint> route) => [
+  for (final p in route)
+    (time: p.time, lat: p.lat, lon: p.lon, accuracy: p.accuracy, segment: p.segment, cadence: p.cadence),
+];
 
 /// Records a run: GPS route, distance, moving time, pace and heart rate.
 /// Keeps working with the screen locked (iOS background location). GPS only
@@ -290,6 +301,10 @@ class RunSession extends ChangeNotifier {
   static const paceWindow = Duration(seconds: 30);
 
   bool _treadmill = false;
+
+  /// Decided at the end (run / walk) and how far was walked.
+  RunActivity _activity = RunActivity.run;
+  double? _walkedM;
   DateTime? _lastMoveAt;
   double _moveMark = 0;
   DateTime? _idleScheduledAt;
@@ -501,8 +516,17 @@ class RunSession extends ChangeNotifier {
           : bestEfforts(
               _route.map((p) => (time: p.time, lat: p.lat, lon: p.lon, accuracy: p.accuracy, segment: p.segment)),
             );
-      // Faster than every earlier run (the first run at a distance isn't a record).
-      final before = await runs.records(before: _startedAt, excludeId: id);
+      // Run or walk: from the route (pace + steps), or the averages on a treadmill.
+      final gait = _treadmill ? GaitSummary.empty : analyzeGait(gaitPoints(_route));
+      _walkedM = _treadmill ? null : gait.walkedM;
+      _activity =
+          (_treadmill
+              ? isWalkByAverages(distanceM: this.distanceM, durationS: moving.inSeconds, avgCadence: _avgCadence())
+              : gait.isWalk)
+          ? RunActivity.walk
+          : RunActivity.run;
+      // Faster than every earlier outing of the same kind (the first one at a distance isn't a record).
+      final before = await runs.records(before: _startedAt, excludeId: id, activity: _activity);
       final newRecords = <int, double>{
         for (final e in bests.entries)
           if (before.fastest[e.key] != null && e.value < before.fastest[e.key]!.value) e.key: e.value,
@@ -573,6 +597,7 @@ class RunSession extends ChangeNotifier {
           altitude: p.altitude,
           segment: p.segment,
           hr: p.hr,
+          cadence: p.cadence,
         ),
       );
     }
@@ -730,6 +755,7 @@ class RunSession extends ChangeNotifier {
         altitude: _hasBaro ? _baroAlt : fix.altitude,
         segment: _segment,
         hr: hr.running ? hr.bpm : null,
+        cadence: cadence?.round(),
       ),
     );
     if (_tracker.distanceM - _moveMark >= 30) {
@@ -771,6 +797,7 @@ class RunSession extends ChangeNotifier {
           altitude: Value(p.altitude),
           segment: Value(p.segment),
           hr: Value(p.hr),
+          cadence: Value(p.cadence),
         ),
     ]);
   }
@@ -802,6 +829,8 @@ class RunSession extends ChangeNotifier {
         avgCadence: Value(_avgCadence()),
         elevGainM: Value(_hasBaro ? _gainM : null),
         elevLossM: Value(_hasBaro ? _lossM : null),
+        activity: Value(_activity),
+        walkedM: Value(_walkedM),
         updatedAt: Value(now()),
       ),
     );
@@ -846,6 +875,8 @@ class RunSession extends ChangeNotifier {
     _hrStartedByRun = false;
     _sinceSave = 0;
     _treadmill = false;
+    _activity = RunActivity.run;
+    _walkedM = null;
     _lastMoveAt = null;
     _moveMark = 0;
     _idleScheduledAt = null;

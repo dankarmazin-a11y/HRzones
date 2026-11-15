@@ -72,6 +72,7 @@ const _v13Changes = ['runs DROP COLUMN plan_id', 'runs DROP COLUMN laps_json', '
 const _plans = ['DROP TABLE run_plans'];
 const _v14Columns = ['runs DROP COLUMN elev_gain_m', 'runs DROP COLUMN elev_loss_m'];
 const _v15 = ['DROP TABLE training_plans'];
+const _v16Columns = ['runs DROP COLUMN activity', 'runs DROP COLUMN walked_m', 'run_points DROP COLUMN cadence'];
 const _v4Changes = [
   'exercises DROP COLUMN hidden',
   'template_exercises DROP COLUMN sets_json',
@@ -125,24 +126,39 @@ void main() {
         ..._v13Changes,
         ..._v14Columns,
         ..._v15,
+        ..._v16Columns,
       ],
     ),
     (
       'v8 database is upgraded',
       8,
-      [..._v9Columns, ..._v10Columns, ..._v11Changes, ..._v12Columns, ..._v13Changes, ..._v14Columns, ..._v15],
+      [
+        ..._v9Columns,
+        ..._v10Columns,
+        ..._v11Changes,
+        ..._v12Columns,
+        ..._v13Changes,
+        ..._v14Columns,
+        ..._v15,
+        ..._v16Columns,
+      ],
     ),
     (
       'v9 database is upgraded',
       9,
-      [..._v10Columns, ..._v11Changes, ..._v12Columns, ..._v13Changes, ..._v14Columns, ..._v15],
+      [..._v10Columns, ..._v11Changes, ..._v12Columns, ..._v13Changes, ..._v14Columns, ..._v15, ..._v16Columns],
     ),
-    ('v10 database is upgraded', 10, [..._v11Changes, ..._v12Columns, ..._v13Changes, ..._v14Columns, ..._v15]),
-    ('v11 database is upgraded', 11, [..._v12Columns, ..._v13Changes, ..._v14Columns, ..._v15]),
-    ('v12 database is upgraded', 12, [..._v13Changes, ..._v14Columns, ..._v15]),
-    ('v13 database is upgraded', 13, [..._v14Columns, ..._v15]),
-    ('v14 database is upgraded', 14, _v15),
-    ('missing column/table is repaired', 15, [..._v2Columns, 'DROP TABLE goals']),
+    (
+      'v10 database is upgraded',
+      10,
+      [..._v11Changes, ..._v12Columns, ..._v13Changes, ..._v14Columns, ..._v15, ..._v16Columns],
+    ),
+    ('v11 database is upgraded', 11, [..._v12Columns, ..._v13Changes, ..._v14Columns, ..._v15, ..._v16Columns]),
+    ('v12 database is upgraded', 12, [..._v13Changes, ..._v14Columns, ..._v15, ..._v16Columns]),
+    ('v13 database is upgraded', 13, [..._v14Columns, ..._v15, ..._v16Columns]),
+    ('v14 database is upgraded', 14, [..._v15, ..._v16Columns]),
+    ('v15 database is upgraded', 15, _v16Columns),
+    ('missing column/table is repaired', 16, [..._v2Columns, 'DROP TABLE goals']),
   ];
   for (final (label, version, drop) in cases) {
     test(label, () async {
@@ -183,12 +199,14 @@ void main() {
           'avg_cadence',
           'elev_gain_m',
           'elev_loss_m',
+          'activity',
+          'walked_m',
         ]),
       );
       expect(await cols('run_plans'), containsAll(['name', 'spec_json', 'position']));
       expect(await cols('training_plans'), containsAll(['name', 'start_date', 'weeks', 'days_json', 'active']));
       expect(await cols('shoes'), containsAll(['name', 'start_km', 'limit_km', 'retired', 'is_default']));
-      expect(await cols('run_points'), containsAll(['run_id', 'lat', 'lon', 'segment', 'hr']));
+      expect(await cols('run_points'), containsAll(['run_id', 'lat', 'lon', 'segment', 'hr', 'cadence']));
       if (version < 6) {
         // Existing installs get the common one-sided exercises marked.
         expect((await s.exercises.byId('Hamstring_Stretch'))!.unilateral, isTrue);

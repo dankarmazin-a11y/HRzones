@@ -120,7 +120,7 @@ class _Totals extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final now = DateTime.now();
     final week = runs.where((r) => !r.startedAt.isBefore(weekStart(now)));
-    final km = week.fold(0.0, (a, r) => a + r.distanceM);
+    final km = week.where((r) => r.isRun).fold(0.0, (a, r) => a + r.distanceM);
     final secs = week.fold(0, (a, r) => a + r.durationS);
     return Card(
       child: Padding(
@@ -160,7 +160,11 @@ class RunTile extends StatelessWidget {
     final pace = paceSecPerKm(run.distanceM, run.durationS.toDouble());
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Emblem(run.kind == RunKind.treadmill ? EmblemKind.stopwatch : EmblemKind.run),
+      leading: Emblem(switch (run.activity) {
+        RunActivity.walk => EmblemKind.walk,
+        RunActivity.hike => EmblemKind.hike,
+        RunActivity.run => run.kind == RunKind.treadmill ? EmblemKind.stopwatch : EmblemKind.run,
+      }),
       title: Text('${formatKm(run.distanceM)} ${Units.d}'),
       subtitle: HeartText(
         '${runTitle(run)}${run.kind == RunKind.treadmill ? ' · treadmill' : ''}\n'

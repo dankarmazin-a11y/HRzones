@@ -121,6 +121,8 @@ Future<Uint8List> exportWorkbook(AppDatabase db) async {
       'Cadence (spm)',
       'Steps',
       'Notes',
+      'Activity',
+      'Walked (km)',
     ],
   ];
   final splitRows = <List<Object?>>[
@@ -151,6 +153,8 @@ Future<Uint8List> exportWorkbook(AppDatabase db) async {
       r.avgCadence,
       r.steps,
       r.notes.isEmpty ? null : r.notes,
+      r.activity.name,
+      r.walkedM == null ? null : double.parse((r.walkedM! / 1000).toStringAsFixed(2)),
     ]);
     for (final sp in computeSplits(
       points.map((p) => (time: p.time, lat: p.lat, lon: p.lon, accuracy: p.accuracy, segment: p.segment, hr: p.hr)),

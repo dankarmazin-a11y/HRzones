@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../../app_services.dart';
 import '../../data/database.dart';
+import '../../run/gait.dart';
 import '../../run/geo.dart';
 import '../../run/elevation.dart';
 import '../../run/splits.dart';
@@ -69,12 +70,18 @@ class RunSummaryScreen extends StatelessWidget {
                   'edit' when run != null => Navigator.of(
                     context,
                   ).push(MaterialPageRoute(builder: (_) => EditRunScreen(run: run))),
+                  'walk' => s.runs.setActivity(runId, RunActivity.walk),
+                  'run' => s.runs.setActivity(runId, RunActivity.run),
                   _ => null,
                 },
-                itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'share', child: Text('Share picture')),
-                  PopupMenuItem(value: 'edit', child: Text('Edit run')),
-                  PopupMenuItem(value: 'delete', child: Text('Delete run')),
+                itemBuilder: (_) => [
+                  const PopupMenuItem(value: 'share', child: Text('Share picture')),
+                  const PopupMenuItem(value: 'edit', child: Text('Edit run')),
+                  if (run != null && run.activity != RunActivity.walk)
+                    const PopupMenuItem(value: 'walk', key: Key('markWalk'), child: Text('It was a walk')),
+                  if (run != null && run.activity != RunActivity.run)
+                    const PopupMenuItem(value: 'run', key: Key('markRun'), child: Text('It was a run')),
+                  const PopupMenuItem(value: 'delete', child: Text('Delete run')),
                 ],
               ),
             ],
@@ -143,8 +150,10 @@ class _BodyState extends State<_Body> {
               style: text.displayLarge?.copyWith(fontWeight: FontWeight.w900, color: scheme.primary),
             ),
           ),
-          Center(child: Text('Kilometres', style: text.titleMedium)),
-          const SizedBox(height: 16),
+          Center(child: Text(Units.mi ? 'Miles' : 'Kilometres', style: text.titleMedium)),
+          const SizedBox(height: 8),
+          _GaitCard(key: ValueKey('gait_${run.id}'), run: run),
+          const SizedBox(height: 8),
           FutureBuilder<double?>(
             future: _weight,
             builder: (context, snap) {
@@ -217,7 +226,39 @@ String runTitle(Run r) {
   final d = r.startedAt;
   final h = d.hour;
   final part = h < 5 ? 'Night' : (h < 12 ? 'Morning' : (h < 17 ? 'Afternoon' : (h < 21 ? 'Evening' : 'Night')));
-  return '${_weekdays[d.weekday - 1]} ${d.day} ${_months[d.month - 1]} · $part run';
+  return '${_weekdays[d.weekday - 1]} ${d.day} ${_months[d.month - 1]} · $part ${activityWord(r.activity)}';
+}
+
+/// "run", "walk" or "hike".
+String activityWord(RunActivity a) => switch (a) {
+  RunActivity.run => 'run',
+  RunActivity.walk => 'walk',
+  RunActivity.hike => 'hike',
+};
+
+/// The walking / running parts of an outing (route points from the database).
+GaitSummary gaitOf(List<RunPoint> rows) => analyzeGait([
+  for (final p in rows)
+    (time: p.time, lat: p.lat, lon: p.lon, accuracy: p.accuracy, segment: p.segment, cadence: p.cadence),
+]);
+
+/// The route points of each [gait] piece as map lines (split at pauses; each
+/// piece starts at the point before it so the lines join up).
+List<List<LatLng>> gaitLines(List<RunPoint> rows, GaitSummary g, Gait gait) {
+  final out = <List<LatLng>>[];
+  for (final pc in g.pieces.where((p) => p.gait == gait)) {
+    List<LatLng>? line;
+    int? seg;
+    for (var i = pc.from > 0 ? pc.from - 1 : 0; i <= pc.to && i < rows.length; i++) {
+      if (line == null || rows[i].segment != seg) {
+        line = [];
+        out.add(line);
+        seg = rows[i].segment;
+      }
+      line.add(LatLng(rows[i].lat, rows[i].lon));
+    }
+  }
+  return out..removeWhere((l) => l.length < 2);
 }
 
 /// The route on a small map (plain or coloured by heart-rate zone), the
@@ -236,6 +277,9 @@ class _RouteCardState extends State<_RouteCard> {
   List<HrPoint> _points = const [];
   bool _byZone = false;
 
+  /// Walking / running parts (plain route only): running solid, walking dashed grey.
+  List<List<LatLng>> _walkLines = const [], _runLines = const [];
+
   bool get _hasHr => _points.any((p) => p.hr != null);
 
   @override
@@ -250,12 +294,17 @@ class _RouteCardState extends State<_RouteCard> {
     setState(() {
       _points = [for (final p in rows) (time: p.time, lat: p.lat, lon: p.lon, segment: p.segment, hr: p.hr)];
       _segments = routeSegments(rows.map((p) => (lat: p.lat, lon: p.lon, segment: p.segment)));
+      final g = gaitOf(rows);
+      if (g.walkedM >= 20) {
+        _walkLines = gaitLines(rows, g, Gait.walk);
+        _runLines = gaitLines(rows, g, Gait.run);
+      }
       _byZone = _hasHr; // show the zones straight away when there is heart rate
     });
   }
 
   List<(List<LatLng>, Color)>? _colored(HrZones zones) => !_byZone
-      ? null
+      ? (_walkLines.isEmpty ? null : [for (final l in _runLines) (l, routeColor)])
       : [
           for (final piece in zonePieces(_points, zones))
             ([for (final p in piece.points) LatLng(p.lat, p.lon)], zoneColor(piece.zone)),
@@ -308,7 +357,13 @@ class _RouteCardState extends State<_RouteCard> {
             child: Stack(
               children: [
                 Positioned.fill(
-                  child: RunMap(key: const Key('summaryMap'), segments: segments, colored: colored, interactive: false),
+                  child: RunMap(
+                    key: const Key('summaryMap'),
+                    segments: segments,
+                    colored: colored,
+                    walked: _byZone ? null : _walkLines,
+                    interactive: false,
+                  ),
                 ),
                 Positioned.fill(
                   child: Material(
@@ -317,8 +372,12 @@ class _RouteCardState extends State<_RouteCard> {
                       key: const Key('openRunMap'),
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) =>
-                              RunMapScreen(segments: segments, colored: colored, title: runTitle(widget.run)),
+                          builder: (_) => RunMapScreen(
+                            segments: segments,
+                            colored: colored,
+                            walked: _byZone ? null : _walkLines,
+                            title: runTitle(widget.run),
+                          ),
                         ),
                       ),
                     ),
@@ -329,6 +388,23 @@ class _RouteCardState extends State<_RouteCard> {
             ),
           ),
         ),
+        if (_walkLines.isNotEmpty && !_byZone)
+          Padding(
+            padding: const EdgeInsets.only(top: 4, left: 4),
+            child: Row(
+              key: const Key('walkLegend'),
+              children: [
+                Container(width: 18, height: 4, color: routeColor),
+                const SizedBox(width: 6),
+                Text('Running', style: Theme.of(context).textTheme.bodySmall),
+                const SizedBox(width: 16),
+                for (var i = 0; i < 3; i++)
+                  Container(width: 4, height: 4, margin: const EdgeInsets.only(right: 3), color: walkColor),
+                const SizedBox(width: 3),
+                Text('Walking', style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ),
+          ),
         if (_hasHr) _ZoneTimes(points: _points, zones: zones, presetId: widget.run.hrPresetId),
       ],
     );
@@ -434,6 +510,9 @@ class _SplitsSection extends StatefulWidget {
 class _SplitsSectionState extends State<_SplitsSection> {
   List<KmSplit>? _splits;
 
+  /// Share of each split that was walked (grey end of the bar).
+  List<double> _walked = const [];
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -443,12 +522,14 @@ class _SplitsSectionState extends State<_SplitsSection> {
   Future<void> _load() async {
     final points = await Services.of(context).runs.points(widget.run.id);
     if (!mounted) return;
-    setState(
-      () => _splits = computeSplits(
+    final g = gaitOf(points);
+    setState(() {
+      _splits = computeSplits(
         points.map((p) => (time: p.time, lat: p.lat, lon: p.lon, accuracy: p.accuracy, segment: p.segment, hr: p.hr)),
         splitM: Units.metresPerUnit, // km or mile splits
-      ),
-    );
+      );
+      _walked = g.walkedM >= 20 ? g.walkedPerSplit(Units.metresPerUnit) : const [];
+    });
   }
 
   @override
@@ -487,6 +568,11 @@ class _SplitsSectionState extends State<_SplitsSection> {
                   style: muted,
                 ),
               ),
+            if (_walked.any((w) => w > 0.02))
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text('Grey end of a bar = time walked in that ${Units.mi ? 'mile' : 'km'}', style: muted),
+              ),
             const SizedBox(height: 12),
             for (final x in splits)
               Padding(
@@ -510,11 +596,25 @@ class _SplitsSectionState extends State<_SplitsSection> {
                           final span = slowest - quickest;
                           final t = span <= 0 ? 0.0 : ((p - quickest) / span).clamp(0.0, 1.0);
                           final color = Color.lerp(const Color(0xFF2E9E5B), const Color(0xFFEF8A2C), t)!;
+                          final i = x.km - 1;
+                          final walked = i < _walked.length ? _walked[i] : 0.0;
+                          final barW = box.maxWidth * (1 - t * 0.6);
                           return Align(
                             alignment: Alignment.centerLeft,
                             child: Container(
+                              key: walked > 0.02 ? Key('splitWalk_${x.km}') : null,
+                              clipBehavior: Clip.antiAlias,
+                              foregroundDecoration: walked <= 0.02
+                                  ? null
+                                  : BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      gradient: LinearGradient(
+                                        colors: const [Colors.transparent, Colors.transparent, walkColor, walkColor],
+                                        stops: [0, 1 - walked, 1 - walked, 1],
+                                      ),
+                                    ),
                               height: 28,
-                              width: box.maxWidth * (1 - t * 0.6),
+                              width: barW,
                               padding: const EdgeInsets.symmetric(horizontal: 10),
                               alignment: Alignment.centerLeft,
                               decoration: BoxDecoration(
@@ -817,6 +917,118 @@ class _RunCompareCardState extends State<RunCompareCard> {
           ),
         );
       },
+    );
+  }
+}
+
+/// How much of the outing was run and walked (and whether it was saved as a
+/// walk), with one tap to change it when the app guessed wrong.
+class _GaitCard extends StatefulWidget {
+  const _GaitCard({super.key, required this.run});
+
+  final Run run;
+
+  @override
+  State<_GaitCard> createState() => _GaitCardState();
+}
+
+class _GaitCardState extends State<_GaitCard> {
+  GaitSummary? _g;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_g == null) _load();
+  }
+
+  Future<void> _load() async {
+    final rows = await Services.of(context).runs.points(widget.run.id);
+    if (mounted) setState(() => _g = gaitOf(rows));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final g = _g, run = widget.run;
+    if (g == null) return const SizedBox.shrink();
+    final isWalk = run.activity == RunActivity.walk;
+    final walked = g.walkedM >= 50;
+    if (!walked && !isWalk) return const SizedBox.shrink();
+    final text = Theme.of(context).textTheme;
+    final muted = text.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant);
+    final total = g.totalM;
+    final share = total <= 0 ? 0.0 : g.walkedM / total;
+    final runs = Services.of(context).runs;
+    return Card(
+      key: const Key('gaitCard'),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (isWalk)
+              Text(
+                total > 0 ? 'Saved as a walk: ${(share * 100).round()} % walking' : 'Saved as a walk',
+                key: const Key('savedAsWalk'),
+                style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              )
+            else
+              Text.rich(
+                key: const Key('ranWalked'),
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: 'Ran ${formatKm(g.ranM)} ${Units.d}',
+                      style: const TextStyle(color: routeColor, fontWeight: FontWeight.w700),
+                    ),
+                    TextSpan(
+                      text: ' · walked ${formatKm(g.walkedM)} ${Units.d}',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    TextSpan(text: '  (${g.walkBreaks} walk break${g.walkBreaks == 1 ? '' : 's'})', style: muted),
+                  ],
+                ),
+              ),
+            if (total > 0) ...[
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: SizedBox(
+                  height: 8,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: ((1 - share) * 1000).round(),
+                        child: const ColoredBox(color: routeColor),
+                      ),
+                      Expanded(
+                        flex: (share * 1000).round(),
+                        child: const ColoredBox(color: walkColor),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                [
+                      if (g.runPaceS != null) 'Run pace ${formatPace(g.runPaceS)}',
+                      if (g.walkPaceS != null) 'Walk pace ${formatPace(g.walkPaceS)}',
+                    ].join(' · ') +
+                    (g.runPaceS != null || g.walkPaceS != null ? ' ${Units.pace}' : ''),
+                style: muted,
+              ),
+            ],
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                key: const Key('changeActivity'),
+                onPressed: () => runs.setActivity(run.id, isWalk ? RunActivity.run : RunActivity.walk),
+                child: Text(isWalk ? 'Change to run' : 'It was a walk'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
