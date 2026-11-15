@@ -469,6 +469,8 @@ def main():
     out = [{k: e[k] for k in keep if e.get(k) is not None} for e in sorted(data, key=lambda e: e['name'])]
     with open('assets/exercises.json', 'w') as f:
         json.dump(out, f, separators=(',', ':'), ensure_ascii=False)
+    import subprocess, sys
+    subprocess.run([sys.executable, 'tool/pack_exercises.py'], check=True)  # the packed copy the app ships
     ranked = sum(1 for e in out if 'popularity' in e)
     print(f'{len(out)} exercises ({len(ADDITIONS)} added, {ranked} ranked)')
 
