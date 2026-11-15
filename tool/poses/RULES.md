@@ -134,11 +134,14 @@ Every exercise figure is made with these rules, in this order. Code: `mockup3d_t
     automatic check** (`audit.js`-style: figures that don't move, planted feet that slide, a
     figure or bar leaving the frame, drawing errors). Fixes go in as
     rules first; only true one-offs get a per-exercise override.
-29. **Every round, before showing the owner:** run the automatic check on all exercises; re-check
-    the **golden set** (every exercise the owner marked Good) – none may get worse; look at every
-    exercise the owner marked Bad. The report says what was fixed and checked, what was changed
-    but not checked, and what a rule can't fix.
-
+29. **What the owner's marks mean (owner, 2026-11-15):** **Done** = perfect (locked, rule 30);
+    **Good** = close, small fixes in the note; **Bad** = poorly made, big fix. Notes on Good and Bad
+    are both fix requests.
+    **Every round, before showing the owner:** run the automatic check on all exercises; Done
+    exercises are locked and can't change; every Good exercise must not get worse apart from the
+    fix its note asks for (its unchanged parts are compared before/after); look at every exercise
+    that has a note. The report says what was fixed and checked, what was changed but not checked,
+    and what a rule can't fix.
 30. **Done = locked.** The owner taps Done on a perfect figure: the page saves the finished
     movement (25 frames with the camera applied, plus frame, floor, props, bar direction and
     grip) in the review database (`reviews/<id>.baked`). From then on that exercise plays the

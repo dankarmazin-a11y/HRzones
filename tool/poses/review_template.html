@@ -70,7 +70,7 @@ p{margin:0;max-width:72ch}
 <div class="wrap">
   <header style="display:flex;flex-direction:column;gap:10px">
     <h1>Exercise figures – review</h1>
-    <p class="muted">__COUNT__ exercises made with the figure rules. Check one batch at a time: tap Good or Bad on every figure and write a note when something looks wrong. Tap <b>Done</b> when a figure is perfect: it is locked exactly as you see it, later changes never touch it, and that is the version that goes into the app (Unlock undoes it). Everything is saved as you go, and Claude reads it from here. Light mode is style B, dark mode style C.</p>
+    <p class="muted">__COUNT__ exercises made with the figure rules. Check one batch at a time. <b>Done</b> = perfect: locked exactly as you see it, later changes never touch it, and that version goes into the app (Unlock undoes it). <b>Good</b> = close, small fixes in the note. <b>Bad</b> = poorly made. Everything is saved as you go, and Claude reads it from here. Light mode is style B, dark mode style C.</p>
     <div class="seg" role="group" aria-label="Phone look">
       <button id="lk-light" data-look="light" aria-pressed="true">Light (B)</button>
       <button id="lk-dark" data-look="dark" aria-pressed="false">Dark (C)</button>
@@ -562,7 +562,7 @@ function show(p){page=Math.min(p,batches.length-1);try{localStorage.setItem('rev
     else{D3[id].id=id;const cv=document.createElement('canvas');cv.width=cv.height=300;cv.setAttribute('role','img');cv.setAttribute('aria-label',m.name+' figure');t.appendChild(cv);cells.push({cv,id,vis:false});}
     t.insertAdjacentHTML('beforeend',`<b>${m.name}</b><span>${m.mus.join(', ')} · ${m.eq}</span>
       <div class="verdict"><button class="good" aria-pressed="false">Good</button><button class="bad" aria-pressed="false">Bad</button><span class="lockbadge">Locked – perfect</span><button class="done" aria-pressed="false" title="Lock this figure as perfect – later changes won't touch it">Done</button></div>
-      <textarea id="note_${rid(id)}" placeholder="Note (what looks wrong?)" aria-label="Note for ${m.name}"></textarea><span class="saved"></span>`);
+      <textarea id="note_${rid(id)}" placeholder="Note (what to fix?)" aria-label="Note for ${m.name}"></textarea><span class="saved"></span>`);
     t.querySelector('.good').onclick=()=>save(id,{v:(R[rid(id)]||{}).v==='good'?null:'good'},t);
     t.querySelector('.bad').onclick=()=>save(id,{v:(R[rid(id)]||{}).v==='bad'?null:'bad'},t);
     const dn=t.querySelector('.done');if(dn)dn.onclick=()=>{const k=rid(id);if((R[k]||{}).v==='done'){applyBaked(id,null);save(id,{v:null,baked:null},t);return;}
