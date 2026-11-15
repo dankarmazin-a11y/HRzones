@@ -52,6 +52,12 @@ p{margin:0;max-width:72ch}
 .verdict .bad[aria-pressed="true"]{background:#D93F3F;border-color:#D93F3F;color:#fff}
 .tile.is-good{box-shadow:inset 0 0 0 2px #1F9D6B}
 .tile.is-bad{box-shadow:inset 0 0 0 2px #D93F3F}
+.verdict .done{margin-left:auto}
+.verdict .done[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--card)}
+.tile.is-done{box-shadow:inset 0 0 0 3px var(--ink)}
+.tile.is-done .good,.tile.is-done .bad{display:none}
+.lockbadge{display:none;font:700 11px var(--font);letter-spacing:.04em;text-transform:uppercase;color:var(--ink)}
+.tile.is-done .lockbadge{display:inline}
 .tile textarea{width:100%;box-sizing:border-box;min-height:44px;resize:vertical;font:13px/1.35 var(--font);color:var(--ink);background:var(--figbg);border:1.5px solid var(--line);border-radius:8px;padding:6px 8px}
 .tile textarea:focus{outline:none;border-color:var(--bright)}
 .saved{font-size:10.5px;color:var(--muted);min-height:13px}
@@ -64,7 +70,7 @@ p{margin:0;max-width:72ch}
 <div class="wrap">
   <header style="display:flex;flex-direction:column;gap:10px">
     <h1>Exercise figures – review</h1>
-    <p class="muted">__COUNT__ exercises made with the figure rules. Check one batch at a time: tap Good or Bad on every figure and write a note when something looks wrong. Everything is saved as you go, and Claude reads it from here. Light mode is style B, dark mode style C.</p>
+    <p class="muted">__COUNT__ exercises made with the figure rules. Check one batch at a time: tap Good or Bad on every figure and write a note when something looks wrong. Tap <b>Done</b> when a figure is perfect: it is locked exactly as you see it, later changes never touch it, and that is the version that goes into the app (Unlock undoes it). Everything is saved as you go, and Claude reads it from here. Light mode is style B, dark mode style C.</p>
     <div class="seg" role="group" aria-label="Phone look">
       <button id="lk-light" data-look="light" aria-pressed="true">Light (B)</button>
       <button id="lk-dark" data-look="dark" aria-pressed="false">Dark (C)</button>
@@ -75,6 +81,7 @@ p{margin:0;max-width:72ch}
       <button id="f-all" data-f="all" aria-pressed="true">All</button>
       <button id="f-open" data-f="open" aria-pressed="false">Not checked</button>
       <button id="f-bad" data-f="bad" aria-pressed="false">Bad</button>
+      <button id="f-done" data-f="done" aria-pressed="false">Done</button>
       <span class="status" id="status">Connecting…</span></div>
   </header>
   <div class="grid" id="grid"></div>
@@ -316,7 +323,19 @@ function seqPose(ex,t){if(ex.th===undefined)chooseView(ex);contacts(ex);
   const n=ex.seq.length,x=Math.max(0,Math.min(n-1,t*(n-1))),i=Math.floor(x),u=x-i,A=ex.seq[i],B=ex.seq[Math.min(n-1,i+1)];
   const f={};for(const k in A)f[k]=V.add(V.mul(A[k],1-u),V.mul(B[k],u));const g=full0(f),o={};
   for(const k in g)o[k]=rotY(V.sub(g[k],ex.seqOff),ex.th);for(const k in o)if(o[k][1]>0)o[k]=[o[k][0],0,o[k][2]];return o;}
-function pose(ex,t){if(ex.seq)return seqPose(ex,t);contacts(ex);const amp=ampOf(ex),tr=traits(ex);
+// Done (locked) exercises: the movement exactly as the owner approved it – later rule changes
+// don't touch it. Frames are the finished poses (camera already applied), 25 per movement.
+function bakedPose(ex,t){const F=ex.altSide&&ex.baked.f2?ex.baked.f2:ex.baked.f,n=F.length-1,x=Math.max(0,Math.min(n,t*n)),i=Math.floor(x),u=x-i,A=F[i],B=F[Math.min(n,i+1)],o={};
+  for(const k in A)o[k]=V.add(V.mul(A[k],1-u),V.mul(B[k],u));return o;}
+function bake(id){const ex=D3[id],m=META[id];ex.id=id;if(!ex.box)ex.box=frameBox(ex,m);const tr=traits(ex),N=24;
+  const fr=side=>{const out=[];for(let i=0;i<=N;i++){ex.altSide=side;const P=pose(ex,i/N);ex.altSide=false;const o={};for(const k in P)o[k]=P[k].map(x=>Math.round(x*1000)/1000);out.push(o);}return out;};
+  const b={ver:1,f:fr(false),box:ex.box,zc:ex.zc||0,elev:ex.elev||0,props:props(ex),grip:ex.grip||.25,shw:ex.shw||.2,bd:barDir(ex),hang:!!ex.hang,lying:!!ex.lying};
+  if(tr.alternating)b.f2=fr(true);return b;}
+function applyBaked(id,b){const ex=D3[id];if(!ex)return;
+  for(const k of ['zrefs','zref','crunch'])delete ex[k];
+  if(!b){if(ex.baked){delete ex.baked;for(const k of ['box','props','bd'])delete ex[k];}return;}
+  ex.baked=b;ex.box=b.box;ex.zc=b.zc;ex.elev=b.elev;ex.props=b.props;ex.grip=b.grip;ex.shw=b.shw;ex.bd=b.bd;ex.hang=b.hang;ex.lying=b.lying;ex.th=0;}
+function pose(ex,t){if(ex.baked)return bakedPose(ex,t);if(ex.seq)return seqPose(ex,t);contacts(ex);const amp=ampOf(ex),tr=traits(ex);
   // shrugs and calf raises: the photos barely show the movement – the body holds still and the
   // movement is added: shoulders rise 6 cm; heels rise 7 cm (along the shin)
   let P=(tr.shrug||tr.calves)?pose0(ex,0):amp>1?pose0Amp(ex,t,amp):pose0(ex,t);const ct=contacts(ex);
@@ -517,11 +536,12 @@ const pager=document.getElementById('pager'),grid=document.getElementById('grid'
 const R={};let db=null,col=null;
 function rid(id){return id[0]==='!'?id.slice(1):id;}
 let cells=[];
-function counts(b){let g=0,bd=0;for(const id of b){const r=R[rid(id)];if(r&&r.v==='good')g++;if(r&&r.v==='bad')bd++;}return {g,bd,n:b.length};}
+function counts(b){let g=0,bd=0;for(const id of b){const r=R[rid(id)];if(r&&(r.v==='good'||r.v==='done'))g++;if(r&&r.v==='bad')bd++;}return {g,bd,n:b.length};}
 function renderPager(){pager.innerHTML='';batches.forEach((b,i)=>{const bt=document.createElement('button');const failedB=b[0]&&b[0][0]==='!';const c=counts(b);
   bt.innerHTML=(failedB?'No figure':'B'+(i+1))+`<small>${c.g+c.bd}/${c.n}${c.bd?' · '+c.bd+' bad':''}</small>`;
   bt.setAttribute('aria-pressed',i===page?'true':'false');bt.onclick=()=>show(i);pager.appendChild(bt);});}
-function setTileState(t,id){const r=R[rid(id)]||{};t.classList.toggle('is-good',r.v==='good');t.classList.toggle('is-bad',r.v==='bad');
+function setTileState(t,id){const r=R[rid(id)]||{};t.classList.toggle('is-good',r.v==='good');t.classList.toggle('is-bad',r.v==='bad');t.classList.toggle('is-done',r.v==='done');
+  const dn=t.querySelector('.done');if(dn){dn.setAttribute('aria-pressed',r.v==='done'?'true':'false');dn.textContent=r.v==='done'?'Unlock':'Done';}
   t.querySelector('.good').setAttribute('aria-pressed',r.v==='good'?'true':'false');t.querySelector('.bad').setAttribute('aria-pressed',r.v==='bad'?'true':'false');
   const ta=t.querySelector('textarea');if(document.activeElement!==ta)ta.value=r.n||'';}
 async function save(id,patch,t){const key=rid(id);const cur=R[key]||{v:null,n:''};const next={...cur,...patch,at:new Date().toISOString()};R[key]=next;
@@ -529,21 +549,24 @@ async function save(id,patch,t){const key=rid(id);const cur=R[key]||{v:null,n:''
   const lab=t&&t.querySelector('.saved');
   if(!col){if(lab)lab.textContent='Not saved – open this page on claude.ai';try{localStorage.setItem('rv_'+key,JSON.stringify(next))}catch(e){}return;}
   if(lab)lab.textContent='Saving…';
-  try{await col.doc(key).set({v:next.v||null,n:next.n||'',at:next.at});if(lab)lab.textContent='Saved';}
+  try{const doc={v:next.v||null,n:next.n||'',at:next.at};if(next.v==='done'&&next.baked)doc.baked=next.baked;
+    await col.doc(key).set(doc);if(lab)lab.textContent=next.v==='done'?'Done – locked':'Saved';}
   catch(e){if(lab)lab.textContent=e&&e.code==='permission_denied'?'Only the owner can save':'Not saved – try again';}}
 function show(p){page=Math.min(p,batches.length-1);try{localStorage.setItem('reviewPage',page)}catch(e){}
   renderPager();grid.innerHTML='';cells=[];
   batches[page].forEach((id,k)=>{const r=R[rid(id)]||{};
-    if(filter==='open'&&r.v)return;if(filter==='bad'&&r.v!=='bad')return;
+    if(filter==='open'&&r.v)return;if(filter==='bad'&&r.v!=='bad')return;if(filter==='done'&&r.v!=='done')return;
     const t=document.createElement('div');t.className='tile';const failedB=id[0]==='!';const m=META[rid(id)];
     t.innerHTML=`<span class="num">${failedB?'no figure':'B'+(page+1)+' · '+(k+1)}</span>`;
     if(failedB){t.insertAdjacentHTML('beforeend',`<div class="icon">${m.name[0]}</div>`);}
     else{D3[id].id=id;const cv=document.createElement('canvas');cv.width=cv.height=300;cv.setAttribute('role','img');cv.setAttribute('aria-label',m.name+' figure');t.appendChild(cv);cells.push({cv,id,vis:false});}
     t.insertAdjacentHTML('beforeend',`<b>${m.name}</b><span>${m.mus.join(', ')} · ${m.eq}</span>
-      <div class="verdict"><button class="good" aria-pressed="false">Good</button><button class="bad" aria-pressed="false">Bad</button></div>
+      <div class="verdict"><button class="good" aria-pressed="false">Good</button><button class="bad" aria-pressed="false">Bad</button><span class="lockbadge">Locked – perfect</span><button class="done" aria-pressed="false" title="Lock this figure as perfect – later changes won't touch it">Done</button></div>
       <textarea id="note_${rid(id)}" placeholder="Note (what looks wrong?)" aria-label="Note for ${m.name}"></textarea><span class="saved"></span>`);
     t.querySelector('.good').onclick=()=>save(id,{v:(R[rid(id)]||{}).v==='good'?null:'good'},t);
     t.querySelector('.bad').onclick=()=>save(id,{v:(R[rid(id)]||{}).v==='bad'?null:'bad'},t);
+    const dn=t.querySelector('.done');if(dn)dn.onclick=()=>{const k=rid(id);if((R[k]||{}).v==='done'){applyBaked(id,null);save(id,{v:null,baked:null},t);return;}
+      const b=bake(id);applyBaked(id,b);save(id,{v:'done',baked:b},t);};
     const ta=t.querySelector('textarea');let timer=null;
     const commit=()=>{clearTimeout(timer);const v=ta.value.trim();if(v!==((R[rid(id)]||{}).n||''))save(id,{n:v},t);};
     ta.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(commit,900);});ta.addEventListener('blur',commit);
@@ -565,13 +588,14 @@ for(const b of document.querySelectorAll('.seg button'))b.addEventListener('clic
 (async()=>{
   try{db=window.claude&&await window.claude.use('db');}catch(e){db=null;}
   if(!db){statusEl.textContent='Answers can\'t be saved here – open the page on claude.ai.';
-    for(const id of [...ALL,...FAILED]){try{const v=localStorage.getItem('rv_'+id);if(v)R[id]=JSON.parse(v);}catch(e){}}show(page);return;}
+    for(const id of [...ALL,...FAILED]){try{const v=localStorage.getItem('rv_'+id);if(v){R[id]=JSON.parse(v);if(R[id].v==='done'&&R[id].baked)applyBaked(id,R[id].baked);}}catch(e){}}show(page);return;}
   col=db.collection('reviews');
   const t=setTimeout(()=>{statusEl.textContent='Can\'t reach the saved answers yet…';},10000);
   col.onSnapshot(snap=>{clearTimeout(t);
-    for(const d of snap.docs){const x=d.data()||{};R[d.id]={v:x.v||null,n:x.n||'',at:x.at};}
-    const all=[...ALL,...FAILED],done=all.filter(id=>R[id]&&R[id].v).length,bad=all.filter(id=>R[id]&&R[id].v==='bad').length;
-    statusEl.textContent=`${done} of ${all.length} checked · ${bad} bad`;
+    for(const d of snap.docs){const x=d.data()||{};const was=R[d.id]&&R[d.id].baked;R[d.id]={v:x.v||null,n:x.n||'',at:x.at,baked:x.v==='done'?x.baked||null:null};
+      if(D3[d.id]&&(!!was!==!!R[d.id].baked||(R[d.id].baked&&!D3[d.id].baked)))applyBaked(d.id,R[d.id].baked);}
+    const all=[...ALL,...FAILED],done=all.filter(id=>R[id]&&R[id].v).length,bad=all.filter(id=>R[id]&&R[id].v==='bad').length,lk=all.filter(id=>R[id]&&R[id].v==='done').length;
+    statusEl.textContent=`${done} of ${all.length} checked · ${bad} bad · ${lk} done`;
     renderPager();for(const tl of grid.querySelectorAll('.tile')){const ta=tl.querySelector('textarea');if(!ta)continue;setTileState(tl,ta.id.slice(5));}
   },e=>{clearTimeout(t);statusEl.textContent='Saved answers unavailable ('+(e&&e.code||'error')+').';});
 })();

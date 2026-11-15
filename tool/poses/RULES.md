@@ -139,6 +139,12 @@ Every exercise figure is made with these rules, in this order. Code: `mockup3d_t
     exercise the owner marked Bad. The report says what was fixed and checked, what was changed
     but not checked, and what a rule can't fix.
 
+30. **Done = locked.** The owner taps Done on a perfect figure: the page saves the finished
+    movement (25 frames with the camera applied, plus frame, floor, props, bar direction and
+    grip) in the review database (`reviews/<id>.baked`). From then on that exercise plays the
+    saved frames – rule changes never touch it – and the saved frames are what goes into the
+    app. Only colours and line style still follow the theme. Unlock removes the saved copy.
+
 ## 8. Tried and parked
 - **NVIDIA Kimodo** (text-to-motion, Hugging Face, 2026-11-15): 10-exercise test, two versions
   each. Owner: all 20 bad ("look nothing like the exercises"); the current figures were 10/10
