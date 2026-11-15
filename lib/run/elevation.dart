@@ -34,3 +34,28 @@ List<double> smoothAltitudes(List<double> a, {int window = 5}) {
       }(),
   ];
 }
+
+/// An outing that is mostly walking and climbs more than this per km is a hike.
+const hikeClimbPerKm = 30.0;
+
+/// Hike numbers from the route: the steepest stretch (% over at least
+/// [windowM] metres) and the highest point above the start. [points] =
+/// (distance along the route in metres, altitude in metres), in order.
+({double steepestPct, double highestAboveStart}) hikeStats(List<(double, double)> points, {double windowM = 100}) {
+  if (points.length < 2) return (steepestPct: 0, highestAboveStart: 0);
+  final alt = smoothAltitudes([for (final p in points) p.$2]);
+  var steepest = 0.0, highest = 0.0;
+  var j = 0;
+  for (var i = 0; i < points.length; i++) {
+    highest = highest > alt[i] - alt.first ? highest : alt[i] - alt.first;
+    while (j < i && points[i].$1 - points[j + 1].$1 >= windowM) {
+      j++;
+    }
+    final run = points[i].$1 - points[j].$1;
+    if (run >= windowM) {
+      final pct = (alt[i] - alt[j]).abs() / run * 100;
+      if (pct > steepest) steepest = pct;
+    }
+  }
+  return (steepestPct: steepest, highestAboveStart: highest);
+}

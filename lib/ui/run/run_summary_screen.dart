@@ -168,6 +168,7 @@ class _BodyState extends State<_Body> {
           Center(child: Text(Units.mi ? 'Miles' : 'Kilometres', style: text.titleMedium)),
           const SizedBox(height: 8),
           _GaitCard(key: ValueKey('gait_${run.id}'), run: run),
+          if (run.activity == RunActivity.hike) _HikeCard(key: ValueKey('hike_${run.id}'), run: run),
           const SizedBox(height: 8),
           FutureBuilder<double?>(
             future: _weight,
@@ -1040,6 +1041,85 @@ class _GaitCardState extends State<_GaitCard> {
                 onPressed: () => runs.setActivity(run.id, isWalk ? RunActivity.run : RunActivity.walk),
                 child: Text(isWalk ? 'Change to run' : 'It was a walk'),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Hikes: the climb as the big number, the steepest stretch and the highest
+/// point above the start.
+class _HikeCard extends StatefulWidget {
+  const _HikeCard({super.key, required this.run});
+
+  final Run run;
+
+  @override
+  State<_HikeCard> createState() => _HikeCardState();
+}
+
+class _HikeCardState extends State<_HikeCard> {
+  ({double climb, double steepestPct, double highestAboveStart})? _h;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_h == null) _load();
+  }
+
+  Future<void> _load() async {
+    final rows = await Services.of(context).runs.points(widget.run.id);
+    final tracker = DistanceTracker();
+    final pts = <(double, double)>[];
+    int? seg;
+    for (final p in rows) {
+      if (p.segment != seg) {
+        tracker.newSegment();
+        seg = p.segment;
+      }
+      tracker.add(GeoFix(time: p.time, lat: p.lat, lon: p.lon, accuracy: p.accuracy));
+      if (p.altitude != null) pts.add((tracker.distanceM, p.altitude!));
+    }
+    final st = hikeStats(pts);
+    final climb = widget.run.elevGainM ?? elevationGainLoss([for (final p in pts) p.$2]).climb;
+    if (mounted) {
+      setState(() => _h = (climb: climb, steepestPct: st.steepestPct, highestAboveStart: st.highestAboveStart));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final h = _h;
+    if (h == null) return const SizedBox.shrink();
+    final text = Theme.of(context).textTheme;
+    return Card(
+      key: const Key('hikeCard'),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: '${h.climb.round()}',
+                    style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w900),
+                  ),
+                  TextSpan(text: ' m climbed', style: text.titleMedium),
+                ],
+              ),
+              key: const Key('hikeClimbed'),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              [
+                if (h.steepestPct >= 1) 'Steepest part ${h.steepestPct.round()} %',
+                if (h.highestAboveStart >= 1) 'highest point +${h.highestAboveStart.round()} m above the start',
+              ].join(' · '),
+              style: text.bodyMedium,
             ),
           ],
         ),

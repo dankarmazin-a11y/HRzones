@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../app_services.dart';
 import '../../data/database.dart';
+import '../../run/gait.dart';
 import '../../run/geo.dart';
 import '../../run/run_plan.dart';
 import '../../workout/stats.dart';
 import '../number_input.dart';
 import 'run_start.dart';
+import 'run_summary_screen.dart' show gaitOf;
 import '../theme/emblems.dart';
 import '../../units/units.dart';
 
@@ -87,6 +89,7 @@ class _PlanEditorScreenState extends State<PlanEditorScreen> {
   late int _warmupMin, _cooldownMin, _repeats;
   late bool _workByDistance, _recoverByDistance;
   late int _work, _recover; // metres or seconds; recover 0 = none
+  late bool _walkBreaks; // run/walk: the breaks are walked
 
   @override
   void initState() {
@@ -102,6 +105,7 @@ class _PlanEditorScreenState extends State<PlanEditorScreen> {
     _work = spec?.work?.value ?? 400;
     _recoverByDistance = spec?.recover?.byDistance ?? true;
     _recover = spec?.recover?.value ?? (spec?.isIntervals == true ? 0 : 200);
+    _walkBreaks = spec?.walkBreaks ?? false;
   }
 
   @override
@@ -115,7 +119,9 @@ class _PlanEditorScreenState extends State<PlanEditorScreen> {
           warmup: _warmupMin > 0 ? PlanStep(StepKind.warmup, byDistance: false, value: _warmupMin * 60) : null,
           repeats: _repeats,
           work: PlanStep(StepKind.work, byDistance: _workByDistance, value: _work),
-          recover: _recover > 0 ? PlanStep(StepKind.recover, byDistance: _recoverByDistance, value: _recover) : null,
+          recover: _recover > 0
+              ? PlanStep(StepKind.recover, byDistance: _recoverByDistance, value: _recover, walking: _walkBreaks)
+              : null,
           cooldown: _cooldownMin > 0 ? PlanStep(StepKind.cooldown, byDistance: false, value: _cooldownMin * 60) : null,
         )
       : PlanSpec(
@@ -296,6 +302,15 @@ class _PlanEditorScreenState extends State<PlanEditorScreen> {
                 onValue: (v) => setState(() => _recover = v),
               ),
             ),
+            if (_recover > 0)
+              SwitchListTile(
+                key: const Key('planWalkBreaks'),
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Walk the breaks (run/walk)'),
+                subtitle: const Text('Breaks are called "Walk"; the summary shows if you kept to it'),
+                value: _walkBreaks,
+                onChanged: (v) => setState(() => _walkBreaks = v),
+              ),
             row(
               'Cool-down',
               EditableNumber(
@@ -402,6 +417,7 @@ class LapsCard extends StatelessWidget {
               builder: (context, snap) =>
                   Text(snap.data == null ? 'Laps' : 'Laps · ${snap.data!.name}', style: text.titleMedium),
             ),
+            if (laps.any((l) => l.step.walking)) _KeptToPlan(run: run, laps: laps),
             const SizedBox(height: 8),
             for (final l in laps)
               Padding(
@@ -429,6 +445,35 @@ class LapsCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Run/walk plans: "Kept to the plan: 8 of 8 walk breaks · 1 extra walk".
+class _KeptToPlan extends StatelessWidget {
+  const _KeptToPlan({required this.run, required this.laps});
+
+  final Run run;
+  final List<Lap> laps;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<RunPoint>>(
+      future: Services.of(context).runs.points(run.id),
+      builder: (context, snap) {
+        final rows = snap.data;
+        if (rows == null || rows.length < 2) return const SizedBox.shrink();
+        final k = keptToPlan(gaitOf(rows), [for (final l in laps) (walkStep: l.step.walking, seconds: l.seconds)]);
+        return Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(
+            'Kept to the plan: ${k.walked} of ${k.breaks} walk break${k.breaks == 1 ? '' : 's'}'
+            '${k.extra == 0 ? '' : ' · ${k.extra} extra walk${k.extra == 1 ? '' : 's'}'}',
+            key: const Key('keptToPlan'),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+          ),
+        );
+      },
     );
   }
 }

@@ -352,6 +352,7 @@ class AppServices {
     onStep?.call('Loading timers');
     await s.intervals.seedDefaults();
     await s.intervals.syncExercises(); // interval timers usable as exercises
+    await s.runPlans.seedRunWalk(); // before seedDefaults: new installs get it from the defaults
     await s.runPlans.seedDefaults();
     onStep?.call('Loading settings');
     await s._loadSettings();
