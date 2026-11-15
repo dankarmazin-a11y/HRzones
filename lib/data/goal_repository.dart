@@ -117,7 +117,8 @@ class GoalRepository {
     final list = await (db.select(
       db.runs,
     )..where((r) => r.endedAt.isNotNull() & r.startedAt.isBiggerOrEqualValue(sunday))).get();
-    return list.fold<double>(0, (a, r) => a + r.distanceM) / 1000;
+    // walks and hikes don't count as running km
+    return list.where((r) => r.activity == RunActivity.run).fold<double>(0, (a, r) => a + r.distanceM) / 1000;
   }
 
   /// Changes a goal's target and deadline.

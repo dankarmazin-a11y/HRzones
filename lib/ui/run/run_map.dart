@@ -22,6 +22,10 @@ RouteSegments routeSegments(Iterable<({double lat, double lon, int segment})> po
 
 const routeColor = Color(0xFFFF5722);
 
+/// Walking parts of an outing: dashed grey on the map (doesn't clash with the
+/// heart-rate zone colours), grey in the splits.
+const walkColor = Color(0xFF8C94A3);
+
 /// Map tiles: Stadia Maps ("Outdoors") when the app is built with a key
 /// (`--dart-define=STADIA_KEY=…` from the GitHub secret `STADIA_KEY`), else
 /// the OpenStreetMap server – fine for testing, but its policy doesn't allow
@@ -42,10 +46,14 @@ class RunMap extends StatelessWidget {
     this.onUserMove,
     this.onReady,
     this.colored,
+    this.walked,
   });
 
   /// Drawn instead of the plain route (e.g. coloured by heart-rate zone).
   final List<(List<LatLng>, Color)>? colored;
+
+  /// Walking parts, drawn dashed grey on top.
+  final List<List<LatLng>>? walked;
 
   final RouteSegments segments;
   final MapController? controller;
@@ -113,6 +121,14 @@ class RunMap extends StatelessWidget {
             for (final (s, color) in colored ?? [for (final s in segments) (s, routeColor)])
               if (s.length >= 2)
                 Polyline(points: s, strokeWidth: 5, color: color, borderStrokeWidth: 1.5, borderColor: Colors.white),
+            for (final s in walked ?? const <List<LatLng>>[])
+              if (s.length >= 2)
+                Polyline(
+                  points: s,
+                  strokeWidth: 5,
+                  color: walkColor,
+                  pattern: StrokePattern.dashed(segments: const [10, 7]),
+                ),
           ],
         ),
         MarkerLayer(
@@ -161,15 +177,16 @@ class RunMap extends StatelessWidget {
 
 /// The route of a finished run in full screen (pinch to zoom, drag).
 class RunMapScreen extends StatelessWidget {
-  const RunMapScreen({super.key, required this.segments, required this.title, this.colored});
+  const RunMapScreen({super.key, required this.segments, required this.title, this.colored, this.walked});
 
   final RouteSegments segments;
   final String title;
   final List<(List<LatLng>, Color)>? colored;
+  final List<List<LatLng>>? walked;
 
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: Text(title)),
-    body: RunMap(segments: segments, colored: colored),
+    body: RunMap(segments: segments, colored: colored, walked: walked),
   );
 }

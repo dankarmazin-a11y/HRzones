@@ -48,7 +48,7 @@ List<WeekSummary> weeklySummaries({
     if (w == null) continue;
     w.runs++;
     w.runMinutes += r.durationS ~/ 60;
-    w.metres += r.distanceM;
+    if (r.isRun) w.metres += r.distanceM; // walks don't add running km
   }
   return list;
 }
@@ -78,7 +78,7 @@ PeriodTotals periodTotals({required List<WorkoutListItem> workouts, required Lis
   for (final r in runs.where((r) => !r.startedAt.isBefore(from))) {
     t.runs++;
     t.minutes += r.durationS ~/ 60;
-    t.metres += r.distanceM;
+    if (r.isRun) t.metres += r.distanceM;
   }
   return t;
 }

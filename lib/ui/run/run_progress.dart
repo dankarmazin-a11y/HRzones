@@ -42,7 +42,7 @@ class RunProgressScreen extends StatelessWidget {
                 title: 'Average pace',
                 subtitle: 'Each outdoor run of 1 km or more – lower is faster (per ${Units.mi ? 'mile' : 'km'})',
                 child: _RunLine(
-                  runs: runs.where((r) => r.kind == RunKind.outdoor && r.distanceM >= 1000).toList(),
+                  runs: runs.where((r) => r.isRun && r.kind == RunKind.outdoor && r.distanceM >= 1000).toList(),
                   value: (r) => paceSecPerKm(r.distanceM, r.durationS.toDouble()),
                   label: (v) => formatPace(v),
                 ),
@@ -54,7 +54,9 @@ class RunProgressScreen extends StatelessWidget {
                     'How far you get for each heartbeat (pace ÷ heart rate). Rising over the weeks means your aerobic '
                     'fitness is improving. Needs runs with heart rate.',
                 child: _RunLine(
-                  runs: runs.where((r) => r.avgHr != null && r.durationS > 0 && r.distanceM >= 1000).toList(),
+                  runs: runs
+                      .where((r) => r.isRun && r.avgHr != null && r.durationS > 0 && r.distanceM >= 1000)
+                      .toList(),
                   value: (r) => r.distanceM / (r.durationS / 60) / r.avgHr!,
                   label: (v) => v.toStringAsFixed(2),
                 ),
@@ -104,7 +106,7 @@ class _WeeklyKm extends StatelessWidget {
     final thisWeek = weekStart(DateTime.now());
     final weeks = [for (var i = 11; i >= 0; i--) DateTime(thisWeek.year, thisWeek.month, thisWeek.day - 7 * i)];
     final km = {for (final w in weeks) w: 0.0};
-    for (final r in runs) {
+    for (final r in runs.where((r) => r.isRun)) {
       final w = weekStart(r.startedAt);
       if (km.containsKey(w)) km[w] = km[w]! + Units.toD(r.distanceM); // km or miles
     }

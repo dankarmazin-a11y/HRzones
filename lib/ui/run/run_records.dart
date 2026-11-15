@@ -11,8 +11,10 @@ import '../../units/units.dart';
 
 String _time(double seconds) => formatDuration(Duration(seconds: seconds.round()));
 
-/// Run tab: fastest 1 km / 5 km / 10 km / half marathon and the longest run.
-/// Tap one to open the run it was set in.
+/// Run tab / Profile: fastest 1 km / 5 km / 10 km / half marathon and the
+/// longest run; then walking records (fastest 1 / 5 / 10 km walk, longest
+/// walk, most steps) and hike records (biggest climb, longest hike) once there
+/// are walks / hikes. Tap one to open the outing it was set in.
 class RunRecordsCard extends StatelessWidget {
   const RunRecordsCard({super.key, required this.runs});
 
@@ -30,6 +32,8 @@ class RunRecordsCard extends StatelessWidget {
       builder: (context, snap) {
         final r = snap.data;
         if (r == null) return const SizedBox(height: 120);
+        final walks = runs.any((x) => x.activity == RunActivity.walk);
+        final hikes = runs.any((x) => x.activity == RunActivity.hike);
         Widget row(String label, RunRecord? rec, String Function(RunRecord) value, Key key) => ListTile(
           key: key,
           dense: true,
@@ -54,6 +58,8 @@ class RunRecordsCard extends StatelessWidget {
                 for (final e in recordDistances.entries)
                   row(e.value, r.fastest[e.key], (x) => _time(x.value), Key('record_${e.key}')),
                 row('Longest run', r.longest, (x) => '${formatKm(x.value)} ${Units.d}', const Key('record_longest')),
+                if (walks) _ActivityRecords(activity: RunActivity.walk, row: row),
+                if (hikes) _ActivityRecords(activity: RunActivity.hike, row: row),
               ],
             ),
           ),
@@ -70,8 +76,11 @@ class RunBestsCard extends StatelessWidget {
 
   final Run run;
 
-  Future<(Map<int, double>, RunRecords)> _load(AppServices s) async =>
-      (await s.runs.bestsFor(run), await s.runs.records(before: run.startedAt, excludeId: run.id));
+  // A walk is compared with earlier walks, a run with earlier runs.
+  Future<(Map<int, double>, RunRecords)> _load(AppServices s) async => (
+    await s.runs.bestsFor(run),
+    await s.runs.records(before: run.startedAt, excludeId: run.id, activity: run.activity),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -122,4 +131,60 @@ class RunBestsCard extends StatelessWidget {
       },
     );
   }
+}
+
+typedef _Row = Widget Function(String label, RunRecord? rec, String Function(RunRecord) value, Key key);
+
+/// The Walking or Hiking part of the records card.
+class _ActivityRecords extends StatelessWidget {
+  const _ActivityRecords({required this.activity, required this.row});
+
+  final RunActivity activity;
+  final _Row row;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final walk = activity == RunActivity.walk;
+    return FutureBuilder<RunRecords>(
+      future: Services.of(context).runs.records(activity: activity),
+      builder: (context, snap) {
+        final r = snap.data;
+        if (r == null) return const SizedBox.shrink();
+        final name = walk ? 'walk' : 'hike';
+        return Column(
+          key: Key('${name}Records'),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 10),
+            Text(walk ? 'Walking' : 'Hiking', style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+            if (walk)
+              for (final m in const [1000, 5000, 10000])
+                row('Fastest ${recordDistances[m]} walk', r.fastest[m], (x) => _time(x.value), Key('${name}Record_$m')),
+            if (!walk)
+              row('Biggest climb', r.biggestClimb, (x) => '${x.value.round()} m', const Key('hikeRecord_climb')),
+            row('Longest $name', r.longest, (x) => '${formatKm(x.value)} ${Units.d}', Key('${name}Record_longest')),
+            if (walk)
+              row(
+                'Most steps in one walk',
+                r.mostSteps,
+                (x) => formatThousands(x.value.round()),
+                const Key('walkRecord_steps'),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// "12,310"
+String formatThousands(int n) {
+  final s = n.abs().toString();
+  final b = StringBuffer(n < 0 ? '-' : '');
+  for (var i = 0; i < s.length; i++) {
+    if (i > 0 && (s.length - i) % 3 == 0) b.write(',');
+    b.write(s[i]);
+  }
+  return b.toString();
 }

@@ -16,7 +16,7 @@ class TrainingData {
   final List<Run> runs;
 
   int get count => workouts.length + runs.length;
-  double get metres => runs.fold(0.0, (v, r) => v + r.distanceM);
+  double get metres => runs.where((r) => r.isRun).fold(0.0, (v, r) => v + r.distanceM); // running km
   double get volume => workouts.fold(0.0, (v, w) => v + w.volume);
   int get minutes =>
       workouts.fold(
@@ -444,7 +444,7 @@ class Milestone {
 }
 
 List<Milestone> milestones(TrainingData d) {
-  final longest = d.runs.fold(0.0, (v, r) => r.distanceM > v ? r.distanceM : v);
+  final longest = d.runs.where((r) => r.isRun).fold(0.0, (v, r) => r.distanceM > v ? r.distanceM : v);
   // Distance milestones count in the chosen unit (100 km or 100 miles…);
   // race distances keep their names.
   final run = Units.toD(d.metres);
