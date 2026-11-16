@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hrzones/app.dart';
 import 'package:hrzones/beep/beeper.dart';
 import 'package:hrzones/data/database.dart';
+import 'package:hrzones/data/exercise_repository.dart';
 import 'package:hrzones/data/run_repository.dart';
 import 'package:hrzones/hr/hr_monitor.dart';
 import 'package:hrzones/run/geo.dart';
@@ -10,6 +11,7 @@ import 'package:hrzones/run/run_session.dart';
 import 'package:hrzones/run/run_voice.dart';
 import 'package:hrzones/ui/run/run_start.dart';
 import 'package:hrzones/ui/run/run_summary_screen.dart';
+import 'package:hrzones/ui/run/running_run_bar.dart';
 
 import 'app_test.dart' show settle, tearDownApp;
 import 'run_test.dart' show FakeLocation, lat0, lon0, t0;
@@ -63,6 +65,77 @@ void main() {
     expect(rideRecords.topSpeed!.value, closeTo(11, 0.6));
   });
 
+  test('auto-pause: a ride stops by itself at a red light and goes on when you ride', () async {
+    var clock = t0;
+    final gps = FakeLocation();
+    final beeper = SilentBeeper();
+    final repo = RunRepository(memoryDb());
+    final ride = RunSession(
+      runs: repo,
+      hr: HrMonitor(beeper: beeper),
+      location: gps,
+      clock: () => clock,
+    )..voice = RunVoice(beeper.speak);
+    await ride.start(activity: RunActivity.ride);
+    var m = 0.0;
+    Future<void> second(int s, double speed) async {
+      clock = t0.add(Duration(seconds: s));
+      m += speed;
+      gps.emit(GeoFix(time: clock, lat: lat0 + m / 111195, lon: lon0, accuracy: 5));
+      await Future<void>.delayed(Duration.zero);
+      ride.checkAutoPauseForTest();
+    }
+
+    for (var s = 1; s <= 60; s++) {
+      await second(s, 8); // 28.8 km/h
+    }
+    expect(ride.autoPaused, isFalse);
+    for (var s = 61; s <= 90; s++) {
+      await second(s, 0); // waiting at the lights
+    }
+    expect(ride.autoPaused, isTrue);
+    expect(ride.paused, isTrue);
+    expect(beeper.spoken, contains('Auto-paused.'));
+    final movingAtStop = ride.moving;
+    expect(movingAtStop.inSeconds, inInclusiveRange(59, 62), reason: 'the stop does not count');
+    final km = ride.distanceM;
+    for (var s = 91; s <= 120; s++) {
+      await second(s, 6);
+    }
+    expect(ride.autoPaused, isFalse);
+    expect(ride.paused, isFalse);
+    expect(beeper.spoken, contains('Ride resumed.'));
+    expect(ride.distanceM, greaterThan(km + 150), reason: 'riding off counts');
+    expect(ride.moving.inSeconds, lessThan(95));
+
+    // off: no auto-pause
+    ride.autoPauseRide = false;
+    for (var s = 121; s <= 150; s++) {
+      await second(s, 0);
+    }
+    expect(ride.paused, isFalse);
+    await ride.discard();
+  });
+
+  testWidgets('live screen: tap a small number to make it the big one (remembered per activity)', (tester) async {
+    final s = (await tester.runAsync(testServices))!;
+    await tester.pumpWidget(HrZonesApp(services: s));
+    await settle(tester);
+    await tester.runAsync(() => s.run.start(activity: RunActivity.ride));
+    await settle(tester);
+    await tester.tap(find.byType(RunningRunBar));
+    await settle(tester);
+    expect(find.byKey(const Key('rideSpeed')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('stat_distance')));
+    await tester.pump(const Duration(milliseconds: 400));
+    await settle(tester);
+    expect(s.bigStats.value['ride'], 'distance');
+    expect(find.byKey(const Key('stat_speed')), findsOneWidget, reason: 'speed moved to the small row');
+    expect(await tester.runAsync(() => s.db.getSetting('bigStats')), contains('"ride":"distance"'));
+    await tester.runAsync(s.run.discard);
+    await tearDownApp(tester, s);
+  });
+
   testWidgets('Ready sheet: Ride tile, Indoor instead of Treadmill, no walking options', (tester) async {
     final s = (await tester.runAsync(testServices))!;
     await tester.pumpWidget(HrZonesApp(services: s));
@@ -75,6 +148,8 @@ void main() {
     expect(find.text('Indoor'), findsOneWidget);
     expect(find.byKey(const Key('walkingOptions')), findsNothing);
     expect(find.byKey(const Key('paceAlertRow')), findsNothing);
+    expect(find.byKey(const Key('autoPauseRide')), findsOneWidget);
+    expect(find.byKey(const Key('rideScreenOn')), findsOneWidget);
     await tearDownApp(tester, s);
   });
 }

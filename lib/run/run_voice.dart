@@ -118,6 +118,7 @@ class RunVoice {
 
   void paused() => _say('$word paused.');
   void resumed() => _say('$word resumed.');
+  void autoPaused() => _say('Auto-paused.');
 
   /// [newRecords]: record distance (m) → new fastest time (s).
   void finished(double distanceM, Duration moving, {Map<int, double> newRecords = const {}}) {

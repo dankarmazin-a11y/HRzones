@@ -37,6 +37,27 @@ class LiveRunScreen extends StatefulWidget {
 
 class _LiveRunScreenState extends State<LiveRunScreen> {
   static const _bg = TimerStyle.neutralBackground;
+  bool _screenHeld = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final s = Services.of(context);
+      // handlebar mount: the screen stays on during a ride
+      if (s.run.riding && !s.run.treadmill && s.rideScreenOn) {
+        _screenHeld = true;
+        keepScreenOn(true);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    if (_screenHeld) keepScreenOn(false);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +78,9 @@ class _LiveRunScreenState extends State<LiveRunScreen> {
               onPressed: () => Navigator.pop(context),
             ),
             title: Text(
-              run.paused
+              run.autoPaused
+                  ? 'Auto-paused'
+                  : run.paused
                   ? 'Paused'
                   : switch (run.chosen) {
                       RunActivity.walk => run.treadmill ? 'Treadmill walk' : 'Walk',
@@ -92,6 +115,19 @@ class _LiveRunScreenState extends State<LiveRunScreen> {
                             seconds: run.moving.inMilliseconds / 1000,
                           ),
                         ),
+                      if (run.autoPaused)
+                        Container(
+                          key: const Key('autoPausedBanner'),
+                          width: double.infinity,
+                          margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(color: Colors.white12, borderRadius: BorderRadius.circular(10)),
+                          child: Text(
+                            'Stopped at ${formatKm(run.distanceM)} – carries on when you ride again',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
                       if (map) ...[
                         Expanded(child: _LiveMap(run: run)),
                         ValueListenableBuilder<int>(
@@ -117,13 +153,86 @@ class _LiveRunScreenState extends State<LiveRunScreen> {
   }
 }
 
+/// One number on the live screen (any of them can be the big one).
+class _Stat {
+  const _Stat(this.id, this.value, this.label, this.key);
+
+  final String id;
+  final String value;
+  final String label;
+  final Key key;
+}
+
+/// The numbers for this outing: the big one on top (tap a small one to swap –
+/// the choice is remembered per activity), the rest underneath, then heart
+/// rate and cadence.
 class _Numbers extends StatelessWidget {
   const _Numbers({required this.run});
 
   final RunSession run;
 
+  /// Setting name for the big number: per activity, treadmill/indoor apart.
+  static String bigKey(RunSession run) => '${run.chosen.name}${run.treadmill ? '.indoor' : ''}';
+
+  List<_Stat> _stats() {
+    final t = run.treadmill;
+    final ride = run.riding;
+    final distance = _Stat(
+      'distance',
+      formatKm(run.distanceM),
+      Units.mi ? 'Miles' : 'Kilometres',
+      const Key('runDistance'),
+    );
+    final time = _Stat('time', formatDuration(run.moving), ride ? 'Moving time' : 'Time', const Key('runTime'));
+    final steps = run.steps == null
+        ? null
+        : _Stat('steps', formatThousands(run.steps!), 'Steps', const Key('walkSteps'));
+    final climb = run.climbM == null
+        ? null
+        : _Stat('climb', '${run.climbM!.round()} m', 'Climbed', const Key('hikeClimb'));
+    return switch (run.chosen) {
+      _ when t => [time, ?steps],
+      RunActivity.run => [
+        distance,
+        time,
+        _Stat('pace', formatPace(run.currentPace), 'Pace ${Units.pace}', const Key('runPace')),
+        _Stat('avgPace', formatPace(run.avgPace), 'Avg pace', const Key('runAvgPace')),
+      ],
+      RunActivity.walk => [
+        ?steps,
+        distance,
+        time,
+        _Stat('avgPace', formatPace(run.avgPace), 'Pace ${Units.pace}', const Key('runAvgPace')),
+      ],
+      RunActivity.hike => [?climb, distance, time, ?steps],
+      RunActivity.ride => [
+        _Stat('speed', formatSpeed(run.currentPace, unit: false), 'Speed ${Units.speed}', const Key('rideSpeed')),
+        distance,
+        time,
+        _Stat('avgSpeed', formatSpeed(run.avgPace, unit: false), 'Avg ${Units.speed}', const Key('rideAvgSpeed')),
+        _Stat(
+          'topSpeed',
+          run.maxSpeedMs == null ? '–' : Units.speedOut(run.maxSpeedMs!).toStringAsFixed(1),
+          'Top ${Units.speed}',
+          const Key('rideTopSpeed'),
+        ),
+        ?climb,
+      ],
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
+    final s = Services.of(context);
+    // rebuilds at once when another number is made big (not only on the next tick)
+    return ValueListenableBuilder<Map<String, String>>(
+      valueListenable: s.bigStats,
+      builder: (context, chosen, _) => _build(context, s, chosen),
+    );
+  }
+
+  Widget _build(BuildContext context, AppServices s, Map<String, String> chosen) {
+    final bright = AppTheme.of(context).bright;
     const label = TextStyle(color: Colors.white70, fontSize: 15, fontWeight: FontWeight.w600);
     const small = TextStyle(
       color: Colors.white,
@@ -131,15 +240,71 @@ class _Numbers extends StatelessWidget {
       fontWeight: FontWeight.w800,
       fontFeatures: [FontFeature.tabularFigures()],
     );
-    Widget stat(String value, String name, {Key? key}) => Expanded(
-      child: Column(
-        children: [
-          FittedBox(
-            child: Text(value, key: key, style: small),
+    final stats = _stats();
+    final wanted = chosen[bigKey(run)];
+    final big = stats.where((x) => x.id == wanted).firstOrNull ?? stats.first;
+    final rest = [
+      for (final x in stats)
+        if (x != big) x,
+    ];
+    Widget smallStat(_Stat x) => Expanded(
+      child: InkWell(
+        key: Key('stat_${x.id}'),
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => s.setBigStat(bigKey(run), x.id),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Column(
+            children: [
+              FittedBox(
+                child: Text(x.value, key: x.key, style: small),
+              ),
+              Text(x.label, style: label),
+            ],
           ),
-          Text(name, style: label),
-        ],
+        ),
       ),
+    );
+    final rows = <Widget>[
+      for (var i = 0; i < rest.length; i += 3)
+        Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: Row(children: [for (final x in rest.skip(i).take(3)) smallStat(x)]),
+        ),
+    ];
+    final column = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // the big number: swaps smoothly when another one is tapped
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 280),
+          switchInCurve: Curves.easeOutCubic,
+          transitionBuilder: (child, a) => FadeTransition(
+            opacity: a,
+            child: ScaleTransition(scale: Tween(begin: 0.85, end: 1.0).animate(a), child: child),
+          ),
+          child: Column(
+            key: ValueKey('big_${big.id}'),
+            children: [
+              FittedBox(
+                child: Text(big.value, key: big.key, style: TimerStyle.digits.copyWith(fontSize: 120)),
+              ),
+              Text(
+                big.label,
+                key: const Key('bigStatLabel'),
+                style: label.copyWith(color: bright, fontWeight: FontWeight.w800),
+              ),
+            ],
+          ),
+        ),
+        if (run.chosen == RunActivity.run) _WalkingPill(run: run),
+        const SizedBox(height: 20),
+        ...rows,
+        _GhostChip(run: run),
+        const SizedBox(height: 24),
+        const _HeartRate(),
+        if (!run.riding) _Cadence(run: run),
+      ],
     );
     // Small phones: everything shrinks to fit instead of overflowing.
     return LayoutBuilder(
@@ -148,154 +313,12 @@ class _Numbers extends StatelessWidget {
           fit: BoxFit.scaleDown,
           child: SizedBox(
             width: box.maxWidth,
-            child: Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: _column(run, label, stat)),
+            child: Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: column),
           ),
         ),
       ),
     );
   }
-
-  Widget _column(RunSession run, TextStyle label, Widget Function(String, String, {Key? key}) stat) =>
-      switch (run.chosen) {
-        RunActivity.walk when run.steps != null => _walkColumn(run, label, stat),
-        RunActivity.hike when !run.treadmill => _hikeColumn(run, label, stat),
-        RunActivity.ride when !run.treadmill => _rideColumn(run, label, stat),
-        _ => _runColumn(run, label, stat),
-      };
-
-  /// Walk: steps are the big number, then distance, time and heart rate.
-  Widget _walkColumn(RunSession run, TextStyle label, Widget Function(String, String, {Key? key}) stat) => Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      FittedBox(
-        child: Text(
-          formatThousands(run.steps ?? 0),
-          key: const Key('walkSteps'),
-          style: TimerStyle.digits.copyWith(fontSize: 110),
-        ),
-      ),
-      Text('Steps', style: label),
-      const SizedBox(height: 28),
-      Row(
-        children: [
-          if (!run.treadmill)
-            stat(formatKm(run.distanceM), Units.mi ? 'Miles' : 'Kilometres', key: const Key('runDistance')),
-          stat(formatDuration(run.moving), 'Time', key: const Key('runTime')),
-          if (!run.treadmill) stat(formatPace(run.avgPace), 'Pace ${Units.pace}', key: const Key('runAvgPace')),
-        ],
-      ),
-      const SizedBox(height: 24),
-      const _HeartRate(),
-      _Cadence(run: run),
-    ],
-  );
-
-  /// Ride: speed is the big number, then distance, moving time, average and top speed.
-  Widget _rideColumn(RunSession run, TextStyle label, Widget Function(String, String, {Key? key}) stat) => Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      FittedBox(
-        child: Text(
-          formatSpeed(run.currentPace, unit: false),
-          key: const Key('rideSpeed'),
-          style: TimerStyle.digits.copyWith(fontSize: 120),
-        ),
-      ),
-      Text('Speed ${Units.speed}', style: label),
-      const SizedBox(height: 28),
-      Row(
-        children: [
-          stat(formatKm(run.distanceM), Units.mi ? 'Miles' : 'Kilometres', key: const Key('runDistance')),
-          stat(formatDuration(run.moving), 'Moving time', key: const Key('runTime')),
-          stat(formatSpeed(run.avgPace, unit: false), 'Avg ${Units.speed}', key: const Key('rideAvgSpeed')),
-        ],
-      ),
-      const SizedBox(height: 16),
-      Row(
-        children: [
-          stat(
-            run.maxSpeedMs == null ? '–' : Units.speedOut(run.maxSpeedMs!).toStringAsFixed(1),
-            'Top ${Units.speed}',
-            key: const Key('rideTopSpeed'),
-          ),
-          stat(run.climbM == null ? '–' : '${run.climbM!.round()} m', 'Climbed', key: const Key('rideClimb')),
-        ],
-      ),
-      const SizedBox(height: 24),
-      const _HeartRate(),
-    ],
-  );
-
-  /// Hike: the climb is the big number, then distance, time and steps.
-  Widget _hikeColumn(RunSession run, TextStyle label, Widget Function(String, String, {Key? key}) stat) => Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      FittedBox(
-        child: Text(
-          run.climbM == null ? '–' : '${run.climbM!.round()} m',
-          key: const Key('hikeClimb'),
-          style: TimerStyle.digits.copyWith(fontSize: 110),
-        ),
-      ),
-      Text('Climbed', style: label),
-      const SizedBox(height: 28),
-      Row(
-        children: [
-          stat(formatKm(run.distanceM), Units.mi ? 'Miles' : 'Kilometres', key: const Key('runDistance')),
-          stat(formatDuration(run.moving), 'Time', key: const Key('runTime')),
-          if (run.steps != null) stat(formatThousands(run.steps!), 'Steps', key: const Key('hikeSteps')),
-        ],
-      ),
-      const SizedBox(height: 24),
-      const _HeartRate(),
-      _Cadence(run: run),
-    ],
-  );
-
-  Widget _runColumn(RunSession run, TextStyle label, Widget Function(String, String, {Key? key}) stat) => run.treadmill
-      ? Column(
-          // Treadmill: no GPS – the time is the big number.
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            FittedBox(
-              child: Text(
-                formatDuration(run.moving),
-                key: const Key('runTime'),
-                style: TimerStyle.digits.copyWith(fontSize: 110),
-              ),
-            ),
-            Text('Time', style: label),
-            const SizedBox(height: 32),
-            const _HeartRate(),
-            _Cadence(run: run),
-          ],
-        )
-      : Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            FittedBox(
-              child: Text(
-                formatKm(run.distanceM),
-                key: const Key('runDistance'),
-                style: TimerStyle.digits.copyWith(fontSize: 120),
-              ),
-            ),
-            Text(Units.mi ? 'Miles' : 'Kilometres', style: label),
-            _WalkingPill(run: run),
-            const SizedBox(height: 32),
-            Row(
-              children: [
-                stat(formatDuration(run.moving), 'Time', key: const Key('runTime')),
-                stat(formatPace(run.currentPace), 'Pace ${Units.pace}', key: const Key('runPace')),
-                stat(formatPace(run.avgPace), 'Avg pace', key: const Key('runAvgPace')),
-              ],
-            ),
-            _GhostChip(run: run),
-            const SizedBox(height: 24),
-            const _HeartRate(),
-            _Cadence(run: run),
-          ],
-        );
 }
 
 class _HeartRate extends StatelessWidget {
