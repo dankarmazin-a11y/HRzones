@@ -300,6 +300,16 @@ class RunSession extends ChangeNotifier {
   /// run's (setting `walkPresetId`; null = keep the run's).
   HrPreset? walkPreset;
 
+  /// Rides pause by themselves when you stop and go on when you move again
+  /// (setting `autoPauseRide`, default on). GPS stays on while auto-paused.
+  bool autoPauseRide = true;
+
+  /// Auto-paused (not paused by hand): waiting to move again.
+  bool get autoPaused => _autoPaused;
+  bool _autoPaused = false;
+  DateTime? _resumedAt;
+  final _still = <GeoFix>[];
+
   /// Notice walking / running by itself (setting `autoDetectWalk`, default on):
   /// live label, alerts, and the run / walk label at the end.
   bool autoDetect = true;
@@ -532,7 +542,17 @@ class RunSession extends ChangeNotifier {
   }
 
   Future<void> pause() async {
-    if (!active || paused) return;
+    if (!active) return;
+    if (_autoPaused) {
+      // already stopped: now paused by hand (GPS off, like any pause)
+      _autoPaused = false;
+      _still.clear();
+      await _stopGps();
+      await _stopSteps();
+      notifyListeners();
+      return;
+    }
+    if (paused) return;
     _pausedAt = now();
     await _stopGps();
     await _stopSteps();
@@ -548,6 +568,7 @@ class RunSession extends ChangeNotifier {
   Future<void> resume() async {
     final p = _pausedAt;
     if (!active || p == null) return;
+    if (_autoPaused) return _autoResume();
     _pausedMs += now().difference(p).inMilliseconds;
     _pausedAt = null;
     _lastGoodAt = null;
@@ -887,6 +908,7 @@ class RunSession extends ChangeNotifier {
       _advancePlan(); // time-based steps (and treadmill runs)
       if (_treadmill && ticks.value % 5 == 0) _updateGait(null); // steps only, no GPS pace
       if (ticks.value % 5 == 0) _readSteps();
+      _checkAutoPause();
       _pushLive();
       if (++_sinceSave >= saveEvery) flush();
     });
@@ -902,7 +924,11 @@ class RunSession extends ChangeNotifier {
   }
 
   void _onFix(GeoFix fix) {
-    if (!active || paused) return;
+    if (!active) return;
+    if (paused) {
+      if (_autoPaused) _whileAutoPaused(fix);
+      return;
+    }
     if (!DistanceTracker.usable(fix)) return;
     final wasGood = gps == GpsStatus.good;
     _lastGoodAt = now();
@@ -948,6 +974,82 @@ class RunSession extends ChangeNotifier {
     _checkPace(pace);
     _advancePlan();
     if (!wasGood) notifyListeners();
+  }
+
+  /// Below this speed for [autoPauseAfter] a ride pauses by itself; it goes
+  /// on above [autoResumeAboveMs].
+  static const autoPauseAfter = Duration(seconds: 5);
+  static const autoPauseBelowMs = 3 / 3.6;
+  static const autoResumeAboveMs = 5 / 3.6;
+
+  @visibleForTesting
+  void checkAutoPauseForTest() => _checkAutoPause();
+
+  void _checkAutoPause() {
+    final s = _startedAt;
+    if (!active || paused || _treadmill || !riding || !autoPauseRide || s == null) return;
+    final t = now();
+    // only with a fresh GPS fix (no fixes = no signal, not standing still)
+    final good = _lastGoodAt;
+    if (good == null || t.difference(good) > const Duration(seconds: 3)) return;
+    if (t.difference(_resumedAt ?? s) < autoPauseAfter * 2) return;
+    final before = t.subtract(autoPauseAfter);
+    (DateTime, double)? then;
+    for (final r in _recent) {
+      if (r.$1.isAfter(before)) break;
+      then = r;
+    }
+    if (then == null) return;
+    if (distanceM - then.$2 > autoPauseAfter.inSeconds * autoPauseBelowMs) return;
+    _autoPaused = true;
+    _pausedAt = then.$1.isAfter(_resumedAt ?? s) ? then.$1 : t;
+    _tracker.newSegment();
+    _recent.clear();
+    _still.clear();
+    _segment++;
+    voice?.autoPaused();
+    _pushLive(now: true);
+    flush();
+    notifyListeners();
+  }
+
+  void _whileAutoPaused(GeoFix fix) {
+    if (!DistanceTracker.usable(fix)) return;
+    _lastGoodAt = now();
+    _still.add(fix);
+    while (_still.length > 2 && fix.time.difference(_still[1].time) > const Duration(seconds: 20)) {
+      _still.removeAt(1); // keep the first (where you stopped)
+    }
+    GeoFix? from;
+    for (final f in _still) {
+      if (fix.time.difference(f.time) < const Duration(seconds: 3)) break;
+      from = f;
+    }
+    if (from == null) return;
+    final dt = fix.time.difference(from.time).inMilliseconds / 1000;
+    final fast = geoDistanceM(from.lat, from.lon, fix.lat, fix.lon) / dt >= autoResumeAboveMs;
+    final away = geoDistanceM(_still.first.lat, _still.first.lon, fix.lat, fix.lon) >= 15;
+    if (!fast || !away) return;
+    _autoResume(from: from, to: fix);
+  }
+
+  Future<void> _autoResume({GeoFix? from, GeoFix? to}) async {
+    final p = _pausedAt;
+    if (p == null) return;
+    _pausedMs += now().difference(p).inMilliseconds;
+    _pausedAt = null;
+    _autoPaused = false;
+    _resumedAt = now();
+    _lastMoveAt = now();
+    _snoozedAt = null;
+    _still.clear();
+    voice?.resumed();
+    // the stretch since moving off counts in the new segment
+    if (from != null) _onFix(from);
+    if (to != null) _onFix(to);
+    _pushLive(now: true);
+    notifyListeners();
+    await flush();
   }
 
   Future<void> _savePoints() async {
@@ -1016,6 +1118,9 @@ class RunSession extends ChangeNotifier {
     _id = null;
     _startedAt = null;
     _pausedAt = null;
+    _autoPaused = false;
+    _resumedAt = null;
+    _still.clear();
     _pausedMs = 0;
     _presetId = null;
     _shoeId = null;

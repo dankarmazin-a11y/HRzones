@@ -467,6 +467,32 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
                         ),
                     ],
                     if (!_treadmill && _activity == RunActivity.run) const PaceAlertRow(),
+                    if (!_treadmill && _activity == RunActivity.ride) ...[
+                      SwitchListTile(
+                        key: const Key('autoPauseRide'),
+                        contentPadding: EdgeInsets.zero,
+                        secondary: const Icon(Icons.pause_circle_outline),
+                        title: const Text('Auto-pause'),
+                        subtitle: const Text('Pauses when you stop, goes on when you ride'),
+                        value: s.run.autoPauseRide,
+                        onChanged: (v) async {
+                          await s.setAutoPauseRide(v);
+                          setState(() {});
+                        },
+                      ),
+                      SwitchListTile(
+                        key: const Key('rideScreenOn'),
+                        contentPadding: EdgeInsets.zero,
+                        secondary: const Icon(Icons.light_mode_outlined),
+                        title: const Text('Keep the screen on'),
+                        subtitle: const Text('For a phone on the handlebars'),
+                        value: s.rideScreenOn,
+                        onChanged: (v) async {
+                          await s.setRideScreenOn(v);
+                          setState(() {});
+                        },
+                      ),
+                    ],
                     if (_activity != RunActivity.ride)
                       _WalkingOptions(activity: _activity, presets: _presets, zonesOn: on, treadmill: _treadmill),
                     if (_shoes.isNotEmpty && _activity != RunActivity.ride) ...[

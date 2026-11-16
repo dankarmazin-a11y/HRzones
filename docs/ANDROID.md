@@ -89,3 +89,62 @@ sources: `docs/REVIEW.md` §3–4.
     testing (Android). Google Play needs a minimum number of testers for a set time before a
     public release on new personal accounts – check the current rule at that time.
 33. Map tiles must come from a provider that allows apps before the beta (see REVIEW.md §2). Now: Stadia Maps (key from the `STADIA_KEY` secret). Owner's later plan: **Google Maps on Android**, Apple Maps on iPhone.
+
+## K. New since these rules were written (also needs an Android twin)
+34. **Walks, hikes, rides** (Phase 4, Nov 2026) are Dart only – they work as soon as GPS, steps
+    and the barometer work. Auto-pause for rides keeps GPS on while paused → the foreground
+    service must stay up during an auto-pause.
+35. **Daily steps on Home** (`MotionSource.dailySteps`): iOS asks CMPedometer for past days.
+    Android's step counter only counts since the phone was switched on – there is no history.
+    Plan: read Health Connect steps if the user allows it; otherwise count from the day the app
+    was installed (store a daily reading) and say so. Never show wrong numbers – hide the card
+    rather than guess.
+36. **Screen stays on** during rides / full-screen timers: `wakelock_plus` already supports Android.
+37. Map key: `STADIA_KEY` must also be passed to the Android build (`--dart-define`), never in the repo.
+
+## L. Game plan (owner said **go** on 2026-11-16) – one PR per step, in this order
+1. **Android project + CI.** `flutter create --platforms android .` (keep `com.hrzones.app`),
+   minSdk 26, targetSdk/compileSdk 36, app name "HR Zones", the heart icon (adaptive icon),
+   ink launch background. New CI job `android` in `build.yml` on `ubuntu-latest`: build a
+   **debug APK** and upload it as an artifact on every push (no Mac minutes). Check, web and
+   iOS stay exactly as they are. Done when the APK builds green.
+2. **First launch on a phone.** Manifest permissions (location, notifications, Bluetooth,
+   activity recognition, foreground service types, wake lock), make every package work on
+   Android (geolocator, flutter_reactive_ble, flutter_local_notifications, file_picker,
+   share_plus, wakelock_plus, path_provider, flutter_map). The app must start, record a
+   strength workout and a short run with the screen on – beeps may still be silent here.
+3. **Sounds and voice (Kotlin `BeeperPlugin`)** on channel `hrzones/beeper`: every method the
+   Swift one has (`init`, `start`/`stop` holds with linger, `play`/`sound`, `ding`, `speak` with
+   voice choice, `preview`), AudioTrack + audio focus with ducking, TextToSpeech.
+4. **Foreground service + notification card.** One service for a live workout / run / interval
+   timer (types: location for outdoor GPS, health for the rest); ongoing notification built
+   from `LiveCard` (channel `hrzones/live`, same methods), Live Update on Android 16, actions →
+   `handleCardAction`. Done when a run keeps recording and beeping with the screen off for 30 min.
+5. **Motion (Kotlin `MotionPlugin`, channel `hrzones/motion`)**: steps + cadence (step counter),
+   barometer climb, daily steps (rule 35).
+6. **Permissions + battery-saver guide** (rules 15, 22–25), Android wording in the app
+   (no AirPods heart rate on Android – rule 18).
+7. **Screen pass**: edge-to-edge, back gesture, keyboard bar, every main screen in the web
+   preview at Android sizes; fix what's off.
+8. **Phone check with the owner** (`docs/PHONE_CHECK.md` on Android) → fix round(s).
+9. **Release build**: upload key as a GitHub secret (owner creates it with Claude's steps),
+   signed AAB in CI, ready for Google Play closed testing in Phase 6.
+
+## M. How Claude works in Phase 5
+- Read `CLAUDE.md` and this file first in every session.
+- Every PR: `dart format lib test`, `flutter analyze`, `flutter test` green locally; then CI:
+  check + web + **android** green before merging. **No pre-merge Mac build for Android-only or
+  docs PRs** (owner, 2026-11-16) – main builds the IPA after every merge anyway. A PR that touches
+  `ios/`, Swift, `pubspec.yaml`/`pubspec.lock` or the iOS CI job still gets a pre-merge iOS build
+  (dispatch `build.yml` with `ios_runner: macos-15-intel`). The `ios` job is in a repo-wide
+  `concurrency: ios-build` group, so GitHub never runs two Mac builds at once.
+- If GitHub's merge API fails (502 / "Merge already in progress"), fast-forward main to the green,
+  up-to-date PR branch (`git push origin origin/<branch>:main`) – only with the owner's OK.
+- An Android change must never break the iPhone: Swift files untouched unless the step says so.
+- After every merge send the owner: web preview link, IPA link **and the APK link** (the
+  Actions run page with the `android` artifact) + how to install it (allow "install unknown
+  apps" for the browser/Files once).
+- Owner is not a developer: short plain words, explain only what he has to do on his phone.
+- Ask the owner early: **which Android phone (brand, model, Android version)** will be used for
+  testing – Samsung matters for rule 15.
+- Keep `CLAUDE.md` (Phase 5 status) and this file up to date after each step.
