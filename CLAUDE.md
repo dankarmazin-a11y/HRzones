@@ -11,7 +11,7 @@ The owner is not a developer. Explain steps plainly, keep instructions short, an
 - After every change, always send the **web preview link** (https://dankarmazin-a11y.github.io/HRzones/ – updates ~5 min after the PR is merged) and the IPA link.
 - In conversation, **"workout" means any training** – strength or running.
 - **Claude merges its own PRs** (owner, 2026-11-05) unless the owner says otherwise – only after check + web + iOS builds are green (dispatch `build.yml` on the branch for the iOS build before merging).
-  - **Exception (owner, 2026-11-16):** PRs that don't touch the iPhone side – Android-only changes and docs – merge once check + web (+ android) are green, **without** a pre-merge Mac build. Main still builds the IPA after every merge, so an iPhone problem shows up within the hour. A PR that touches `ios/`, Swift files, `pubspec.yaml`/`pubspec.lock` or the iOS CI job still gets the pre-merge iOS build.
+  - **Exception (owner, 2026-11-16):** PRs that don't touch the iPhone side – Android-only changes and docs – merge once check + web (+ android) are green, **without** a pre-merge Mac build. Main still builds the IPA after every merge, so an iPhone problem shows up within the hour. A PR that touches `ios/`, Swift files, `pubspec.yaml`/`pubspec.lock` or the iOS build steps in CI still gets the pre-merge iOS build.
 - After every Android merge also send the **APK link** (Actions run → artifact `HRZones-apk`). The `ios` job has a repo-wide `concurrency: ios-build` group, so GitHub itself never runs two Mac builds at once.
 
 ## Decisions so far

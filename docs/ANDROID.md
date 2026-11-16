@@ -135,7 +135,7 @@ sources: `docs/REVIEW.md` §3–4.
 - Every PR: `dart format lib test`, `flutter analyze`, `flutter test` green locally; then CI:
   check + web + **android** green before merging. **No pre-merge Mac build for Android-only or
   docs PRs** (owner, 2026-11-16) – main builds the IPA after every merge anyway. A PR that touches
-  `ios/`, Swift, `pubspec.yaml`/`pubspec.lock` or the iOS CI job still gets a pre-merge iOS build
+  `ios/`, Swift, `pubspec.yaml`/`pubspec.lock` or the iOS build steps in CI still gets a pre-merge iOS build
   (dispatch `build.yml` with `ios_runner: macos-15-intel`). The `ios` job is in a repo-wide
   `concurrency: ios-build` group, so GitHub never runs two Mac builds at once.
 - If GitHub's merge API fails (502 / "Merge already in progress"), fast-forward main to the green,
