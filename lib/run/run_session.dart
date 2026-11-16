@@ -4,6 +4,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 
+import '../bike/bike_sensors.dart';
 import '../data/database.dart';
 import '../data/run_repository.dart';
 import '../hr/hr_monitor.dart';
@@ -80,6 +81,72 @@ class RunSession extends ChangeNotifier {
   }) : location = location ?? LocationSource.create(),
        motion = motion ?? NoMotionSource(),
        now = clock ?? DateTime.now;
+
+  /// Bluetooth speed/cadence and power sensors, used on rides.
+  BikeSensorHub? bike;
+
+  /// The rider's weight in kg for W/kg (latest body weight; set at start).
+  Future<double?> Function()? riderWeight;
+  double? _riderKg;
+  int _powerSum = 0, _powerN = 0;
+  int? _maxPowerW;
+  double _bikeCadSum = 0;
+  int _bikeCadN = 0;
+  DateTime? _lastBikeSample;
+
+  /// Watts now (rides with a power meter).
+  int? get powerW => riding && !paused ? bike?.power : null;
+
+  /// Average watts so far (coasting counts as 0); null without a power meter.
+  int? get avgPowerW => _powerN == 0 ? null : (_powerSum / _powerN).round();
+  int? get maxPowerW => _maxPowerW;
+
+  /// Pedal turns per minute (rides with a cadence sensor or power meter).
+  double? get bikeCadence => riding && !paused ? bike?.cadence : null;
+
+  /// Watts per kg of body weight (null without a power meter or a weight).
+  double? get wattsPerKg {
+    final w = powerW, kg = _riderKg;
+    return w == null || kg == null || kg <= 0 ? null : w / kg;
+  }
+
+  double? get avgWattsPerKg {
+    final w = avgPowerW, kg = _riderKg;
+    return w == null || kg == null || kg <= 0 ? null : w / kg;
+  }
+
+  @visibleForTesting
+  void sampleBikeForTest() => _sampleBike();
+
+  /// Every second while a ride records: power, cadence and (indoors) the
+  /// wheel sensor's speed and distance.
+  void _sampleBike() {
+    final b = bike;
+    if (b == null || !riding || paused) {
+      _lastBikeSample = null;
+      return;
+    }
+    final t = now();
+    final last = _lastBikeSample;
+    _lastBikeSample = t;
+    final w = b.power;
+    if (w != null) {
+      _powerSum += w;
+      _powerN++;
+      if (_maxPowerW == null || w > _maxPowerW!) _maxPowerW = w;
+    }
+    final c = b.cadence;
+    if (c != null && c > 0) {
+      _bikeCadSum += c;
+      _bikeCadN++;
+    }
+    final v = b.speedMs;
+    if (_treadmill && v != null && last != null) {
+      final dt = t.difference(last).inMilliseconds / 1000;
+      if (dt > 0 && dt <= 5) _tracker.distanceM += v * dt;
+      if (v <= maxPlausibleSpeedMs && (_maxSpeedMs == null || v > _maxSpeedMs!)) _maxSpeedMs = v;
+    }
+  }
 
   /// Step counter for cadence (the phone's motion chip).
   MotionSource motion;
@@ -229,8 +296,12 @@ class RunSession extends ChangeNotifier {
       // walks and hikes: steps / climb instead of the current pace
       if (_chosen == RunActivity.walk && st != null) ('Steps', '$st'),
       if (_chosen == RunActivity.hike && climbM != null) ('Climbed', '${climbM!.round()} m'),
-      if (!_treadmill && riding) ('Speed', paused || cp == null ? '–' : formatSpeed(cp, unit: false)),
-      if (!_treadmill && riding) ('Avg ${Units.speed}', ap == null ? '–' : formatSpeed(ap, unit: false)),
+      if (riding && (!_treadmill || bike?.speedMs != null))
+        ('Speed', paused || cp == null ? '–' : formatSpeed(cp, unit: false)),
+      if (riding && powerW != null)
+        ('Watts', '$powerW')
+      else if (!_treadmill && riding)
+        ('Avg ${Units.speed}', ap == null ? '–' : formatSpeed(ap, unit: false)),
       if (!_treadmill && _chosen == RunActivity.run) ('Pace', paused || cp == null ? '–' : formatPace(cp)),
       if (!_treadmill && !riding) ('Avg pace', ap == null ? '–' : formatPace(ap)),
       ('Heart rate', bpm == null ? '–' : '$bpm'),
@@ -438,7 +509,11 @@ class RunSession extends ChangeNotifier {
 
   /// Pace over the last 30 s (s/km); null when standing still or no GPS.
   double? get currentPace {
-    if (paused || _recent.length < 2) return null;
+    if (paused) return null;
+    // indoor ride with a speed sensor: the wheel's speed
+    final wheel = _treadmill && riding ? bike?.speedMs : null;
+    if (wheel != null) return wheel < 0.5 ? null : 1000 / wheel;
+    if (_recent.length < 2) return null;
     final last = _recent.last;
     if (now().difference(_lastGoodAt ?? DateTime(0)) > const Duration(seconds: 10)) return null;
     final first = _recent.first;
@@ -521,6 +596,10 @@ class RunSession extends ChangeNotifier {
     _lastMoveAt = _startedAt;
     _presetId = preset?.id;
     _chosen = activity;
+    if (riding) {
+      bike?.start();
+      _riderKg = await riderWeight?.call();
+    }
     voice?.word = _word(activity);
     _liveGait = activity == RunActivity.run ? Gait.run : Gait.walk;
     _runRange = preset == null ? null : HrRange(min: preset.minBpm, max: preset.maxBpm);
@@ -596,6 +675,7 @@ class RunSession extends ChangeNotifier {
     try {
       await _stopGps();
       await _stopSteps();
+      bike?.stop();
       if (endAt != null) {
         final p = _pausedAt;
         _endOverride = p != null && p.isBefore(endAt) ? p : endAt;
@@ -673,6 +753,7 @@ class RunSession extends ChangeNotifier {
     if (id == null) return;
     await _stopGps();
     await _stopSteps();
+    bike?.stop();
     if (_hrStartedByRun) await hr.stop();
     hr.onAlert = null;
     await notifier?.cancelRunIdle();
@@ -694,6 +775,20 @@ class RunSession extends ChangeNotifier {
     _presetId = row.hrPresetId;
     _maxSpeedMs = row.maxSpeedMs;
     _chosen = row.activity;
+    if (riding) {
+      bike?.start();
+      _riderKg = await riderWeight?.call();
+      _maxPowerW = row.maxPowerW;
+      final secs = (row.durationS).clamp(0, 1 << 30);
+      if (row.avgPowerW != null && secs > 0) {
+        _powerN = secs;
+        _powerSum = row.avgPowerW! * secs;
+      }
+      if (row.avgCadence != null && secs > 0) {
+        _bikeCadN = secs;
+        _bikeCadSum = row.avgCadence! * secs.toDouble();
+      }
+    }
     voice?.word = _word(_chosen);
     _liveGait = _chosen == RunActivity.run ? Gait.run : Gait.walk;
     _treadmill = row.kind == RunKind.treadmill;
@@ -920,6 +1015,7 @@ class RunSession extends ChangeNotifier {
       _advancePlan(); // time-based steps (and treadmill runs)
       if (_treadmill && ticks.value % 5 == 0) _updateGait(null); // steps only, no GPS pace
       if (ticks.value % 5 == 0) _readSteps();
+      _sampleBike();
       _checkAutoPause();
       _pushLive();
       if (++_sinceSave >= saveEvery) flush();
@@ -1113,6 +1209,8 @@ class RunSession extends ChangeNotifier {
         elevGainM: Value(_hasBaro ? _gainM : null),
         elevLossM: Value(_hasBaro ? _lossM : null),
         maxSpeedMs: Value(_maxSpeedMs),
+        avgPowerW: Value(avgPowerW),
+        maxPowerW: Value(_maxPowerW),
         // while recording: what was picked (so a restart keeps it); at the end: the decision
         activity: Value(endedAt == null ? _chosen : _activity),
         walkedM: Value(_walkedM),
@@ -1122,6 +1220,8 @@ class RunSession extends ChangeNotifier {
   }
 
   int? _avgCadence() {
+    // rides: pedal turns per minute from the bike's sensor (steps mean nothing on a bike)
+    if (riding) return _bikeCadN == 0 ? null : (_bikeCadSum / _bikeCadN).round();
     final st = steps, mins = moving.inMilliseconds / 60000;
     return st == null || st == 0 || mins < 0.5 ? null : (st / mins).round();
   }
@@ -1168,6 +1268,13 @@ class RunSession extends ChangeNotifier {
     _gaitCandidate = null;
     _runRange = null;
     _maxSpeedMs = null;
+    _riderKg = null;
+    _powerSum = 0;
+    _powerN = 0;
+    _maxPowerW = null;
+    _bikeCadSum = 0;
+    _bikeCadN = 0;
+    _lastBikeSample = null;
     _activity = RunActivity.run;
     _walkedM = null;
     _lastMoveAt = null;

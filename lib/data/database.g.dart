@@ -5505,6 +5505,24 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
     type: DriftSqlType.double,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _avgPowerWMeta = const VerificationMeta('avgPowerW');
+  @override
+  late final GeneratedColumn<int> avgPowerW = GeneratedColumn<int>(
+    'avg_power_w',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _maxPowerWMeta = const VerificationMeta('maxPowerW');
+  @override
+  late final GeneratedColumn<int> maxPowerW = GeneratedColumn<int>(
+    'max_power_w',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -5534,6 +5552,8 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
     activity,
     walkedM,
     maxSpeedMs,
+    avgPowerW,
+    maxPowerW,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -5621,6 +5641,12 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
     if (data.containsKey('max_speed_ms')) {
       context.handle(_maxSpeedMsMeta, maxSpeedMs.isAcceptableOrUnknown(data['max_speed_ms']!, _maxSpeedMsMeta));
     }
+    if (data.containsKey('avg_power_w')) {
+      context.handle(_avgPowerWMeta, avgPowerW.isAcceptableOrUnknown(data['avg_power_w']!, _avgPowerWMeta));
+    }
+    if (data.containsKey('max_power_w')) {
+      context.handle(_maxPowerWMeta, maxPowerW.isAcceptableOrUnknown(data['max_power_w']!, _maxPowerWMeta));
+    }
     return context;
   }
 
@@ -5661,6 +5687,8 @@ class $RunsTable extends Runs with TableInfo<$RunsTable, Run> {
       ),
       walkedM: attachedDatabase.typeMapping.read(DriftSqlType.double, data['${effectivePrefix}walked_m']),
       maxSpeedMs: attachedDatabase.typeMapping.read(DriftSqlType.double, data['${effectivePrefix}max_speed_ms']),
+      avgPowerW: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}avg_power_w']),
+      maxPowerW: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}max_power_w']),
     );
   }
 
@@ -5738,6 +5766,11 @@ class Run extends DataClass implements Insertable<Run> {
 
   /// Top speed in m/s over 10 s (rides; null = not measured).
   final double? maxSpeedMs;
+
+  /// Rides with a power meter: average watts (coasting counts as 0) and the
+  /// highest reading (null = no power meter).
+  final int? avgPowerW;
+  final int? maxPowerW;
   const Run({
     required this.id,
     required this.updatedAt,
@@ -5766,6 +5799,8 @@ class Run extends DataClass implements Insertable<Run> {
     required this.activity,
     this.walkedM,
     this.maxSpeedMs,
+    this.avgPowerW,
+    this.maxPowerW,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -5835,6 +5870,12 @@ class Run extends DataClass implements Insertable<Run> {
     if (!nullToAbsent || maxSpeedMs != null) {
       map['max_speed_ms'] = Variable<double>(maxSpeedMs);
     }
+    if (!nullToAbsent || avgPowerW != null) {
+      map['avg_power_w'] = Variable<int>(avgPowerW);
+    }
+    if (!nullToAbsent || maxPowerW != null) {
+      map['max_power_w'] = Variable<int>(maxPowerW);
+    }
     return map;
   }
 
@@ -5867,6 +5908,8 @@ class Run extends DataClass implements Insertable<Run> {
       activity: Value(activity),
       walkedM: walkedM == null && nullToAbsent ? const Value.absent() : Value(walkedM),
       maxSpeedMs: maxSpeedMs == null && nullToAbsent ? const Value.absent() : Value(maxSpeedMs),
+      avgPowerW: avgPowerW == null && nullToAbsent ? const Value.absent() : Value(avgPowerW),
+      maxPowerW: maxPowerW == null && nullToAbsent ? const Value.absent() : Value(maxPowerW),
     );
   }
 
@@ -5900,6 +5943,8 @@ class Run extends DataClass implements Insertable<Run> {
       activity: $RunsTable.$converteractivity.fromJson(serializer.fromJson<int>(json['activity'])),
       walkedM: serializer.fromJson<double?>(json['walkedM']),
       maxSpeedMs: serializer.fromJson<double?>(json['maxSpeedMs']),
+      avgPowerW: serializer.fromJson<int?>(json['avgPowerW']),
+      maxPowerW: serializer.fromJson<int?>(json['maxPowerW']),
     );
   }
   @override
@@ -5933,6 +5978,8 @@ class Run extends DataClass implements Insertable<Run> {
       'activity': serializer.toJson<int>($RunsTable.$converteractivity.toJson(activity)),
       'walkedM': serializer.toJson<double?>(walkedM),
       'maxSpeedMs': serializer.toJson<double?>(maxSpeedMs),
+      'avgPowerW': serializer.toJson<int?>(avgPowerW),
+      'maxPowerW': serializer.toJson<int?>(maxPowerW),
     };
   }
 
@@ -5964,6 +6011,8 @@ class Run extends DataClass implements Insertable<Run> {
     RunActivity? activity,
     Value<double?> walkedM = const Value.absent(),
     Value<double?> maxSpeedMs = const Value.absent(),
+    Value<int?> avgPowerW = const Value.absent(),
+    Value<int?> maxPowerW = const Value.absent(),
   }) => Run(
     id: id ?? this.id,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -5992,6 +6041,8 @@ class Run extends DataClass implements Insertable<Run> {
     activity: activity ?? this.activity,
     walkedM: walkedM.present ? walkedM.value : this.walkedM,
     maxSpeedMs: maxSpeedMs.present ? maxSpeedMs.value : this.maxSpeedMs,
+    avgPowerW: avgPowerW.present ? avgPowerW.value : this.avgPowerW,
+    maxPowerW: maxPowerW.present ? maxPowerW.value : this.maxPowerW,
   );
   Run copyWithCompanion(RunsCompanion data) {
     return Run(
@@ -6022,6 +6073,8 @@ class Run extends DataClass implements Insertable<Run> {
       activity: data.activity.present ? data.activity.value : this.activity,
       walkedM: data.walkedM.present ? data.walkedM.value : this.walkedM,
       maxSpeedMs: data.maxSpeedMs.present ? data.maxSpeedMs.value : this.maxSpeedMs,
+      avgPowerW: data.avgPowerW.present ? data.avgPowerW.value : this.avgPowerW,
+      maxPowerW: data.maxPowerW.present ? data.maxPowerW.value : this.maxPowerW,
     );
   }
 
@@ -6054,7 +6107,9 @@ class Run extends DataClass implements Insertable<Run> {
           ..write('lapsJson: $lapsJson, ')
           ..write('activity: $activity, ')
           ..write('walkedM: $walkedM, ')
-          ..write('maxSpeedMs: $maxSpeedMs')
+          ..write('maxSpeedMs: $maxSpeedMs, ')
+          ..write('avgPowerW: $avgPowerW, ')
+          ..write('maxPowerW: $maxPowerW')
           ..write(')'))
         .toString();
   }
@@ -6088,6 +6143,8 @@ class Run extends DataClass implements Insertable<Run> {
     activity,
     walkedM,
     maxSpeedMs,
+    avgPowerW,
+    maxPowerW,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -6119,7 +6176,9 @@ class Run extends DataClass implements Insertable<Run> {
           other.lapsJson == this.lapsJson &&
           other.activity == this.activity &&
           other.walkedM == this.walkedM &&
-          other.maxSpeedMs == this.maxSpeedMs);
+          other.maxSpeedMs == this.maxSpeedMs &&
+          other.avgPowerW == this.avgPowerW &&
+          other.maxPowerW == this.maxPowerW);
 }
 
 class RunsCompanion extends UpdateCompanion<Run> {
@@ -6150,6 +6209,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
   final Value<RunActivity> activity;
   final Value<double?> walkedM;
   final Value<double?> maxSpeedMs;
+  final Value<int?> avgPowerW;
+  final Value<int?> maxPowerW;
   final Value<int> rowid;
   const RunsCompanion({
     this.id = const Value.absent(),
@@ -6179,6 +6240,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
     this.activity = const Value.absent(),
     this.walkedM = const Value.absent(),
     this.maxSpeedMs = const Value.absent(),
+    this.avgPowerW = const Value.absent(),
+    this.maxPowerW = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RunsCompanion.insert({
@@ -6209,6 +6272,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
     this.activity = const Value.absent(),
     this.walkedM = const Value.absent(),
     this.maxSpeedMs = const Value.absent(),
+    this.avgPowerW = const Value.absent(),
+    this.maxPowerW = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : startedAt = Value(startedAt);
   static Insertable<Run> custom({
@@ -6239,6 +6304,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
     Expression<int>? activity,
     Expression<double>? walkedM,
     Expression<double>? maxSpeedMs,
+    Expression<int>? avgPowerW,
+    Expression<int>? maxPowerW,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -6269,6 +6336,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
       if (activity != null) 'activity': activity,
       if (walkedM != null) 'walked_m': walkedM,
       if (maxSpeedMs != null) 'max_speed_ms': maxSpeedMs,
+      if (avgPowerW != null) 'avg_power_w': avgPowerW,
+      if (maxPowerW != null) 'max_power_w': maxPowerW,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -6301,6 +6370,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
     Value<RunActivity>? activity,
     Value<double?>? walkedM,
     Value<double?>? maxSpeedMs,
+    Value<int?>? avgPowerW,
+    Value<int?>? maxPowerW,
     Value<int>? rowid,
   }) {
     return RunsCompanion(
@@ -6331,6 +6402,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
       activity: activity ?? this.activity,
       walkedM: walkedM ?? this.walkedM,
       maxSpeedMs: maxSpeedMs ?? this.maxSpeedMs,
+      avgPowerW: avgPowerW ?? this.avgPowerW,
+      maxPowerW: maxPowerW ?? this.maxPowerW,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -6419,6 +6492,12 @@ class RunsCompanion extends UpdateCompanion<Run> {
     if (maxSpeedMs.present) {
       map['max_speed_ms'] = Variable<double>(maxSpeedMs.value);
     }
+    if (avgPowerW.present) {
+      map['avg_power_w'] = Variable<int>(avgPowerW.value);
+    }
+    if (maxPowerW.present) {
+      map['max_power_w'] = Variable<int>(maxPowerW.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -6455,6 +6534,8 @@ class RunsCompanion extends UpdateCompanion<Run> {
           ..write('activity: $activity, ')
           ..write('walkedM: $walkedM, ')
           ..write('maxSpeedMs: $maxSpeedMs, ')
+          ..write('avgPowerW: $avgPowerW, ')
+          ..write('maxPowerW: $maxPowerW, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -11735,6 +11816,8 @@ typedef $$RunsTableCreateCompanionBuilder = RunsCompanion Function({
   Value<RunActivity> activity,
   Value<double?> walkedM,
   Value<double?> maxSpeedMs,
+  Value<int?> avgPowerW,
+  Value<int?> maxPowerW,
   Value<int> rowid,
 });
 typedef $$RunsTableUpdateCompanionBuilder = RunsCompanion Function({
@@ -11765,6 +11848,8 @@ typedef $$RunsTableUpdateCompanionBuilder = RunsCompanion Function({
   Value<RunActivity> activity,
   Value<double?> walkedM,
   Value<double?> maxSpeedMs,
+  Value<int?> avgPowerW,
+  Value<int?> maxPowerW,
   Value<int> rowid,
 });
 
@@ -11868,6 +11953,12 @@ class $$RunsTableFilterComposer extends Composer<_$AppDatabase, $RunsTable> {
 
   ColumnFilters<double> get maxSpeedMs =>
       $composableBuilder(column: $table.maxSpeedMs, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get avgPowerW =>
+      $composableBuilder(column: $table.avgPowerW, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get maxPowerW =>
+      $composableBuilder(column: $table.maxPowerW, builder: (column) => ColumnFilters(column));
 
   Expression<bool> runPointsRefs(Expression<bool> Function($$RunPointsTableFilterComposer f) f) {
     final $$RunPointsTableFilterComposer composer = $composerBuilder(
@@ -11975,6 +12066,12 @@ class $$RunsTableOrderingComposer extends Composer<_$AppDatabase, $RunsTable> {
 
   ColumnOrderings<double> get maxSpeedMs =>
       $composableBuilder(column: $table.maxSpeedMs, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get avgPowerW =>
+      $composableBuilder(column: $table.avgPowerW, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get maxPowerW =>
+      $composableBuilder(column: $table.maxPowerW, builder: (column) => ColumnOrderings(column));
 }
 
 class $$RunsTableAnnotationComposer extends Composer<_$AppDatabase, $RunsTable> {
@@ -12040,6 +12137,10 @@ class $$RunsTableAnnotationComposer extends Composer<_$AppDatabase, $RunsTable> 
   GeneratedColumn<double> get walkedM => $composableBuilder(column: $table.walkedM, builder: (column) => column);
 
   GeneratedColumn<double> get maxSpeedMs => $composableBuilder(column: $table.maxSpeedMs, builder: (column) => column);
+
+  GeneratedColumn<int> get avgPowerW => $composableBuilder(column: $table.avgPowerW, builder: (column) => column);
+
+  GeneratedColumn<int> get maxPowerW => $composableBuilder(column: $table.maxPowerW, builder: (column) => column);
 
   Expression<T> runPointsRefs<T extends Object>(Expression<T> Function($$RunPointsTableAnnotationComposer a) f) {
     final $$RunPointsTableAnnotationComposer composer = $composerBuilder(
@@ -12112,6 +12213,8 @@ class $$RunsTableTableManager
                 Value<RunActivity> activity = const Value.absent(),
                 Value<double?> walkedM = const Value.absent(),
                 Value<double?> maxSpeedMs = const Value.absent(),
+                Value<int?> avgPowerW = const Value.absent(),
+                Value<int?> maxPowerW = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RunsCompanion(
                 id: id,
@@ -12141,6 +12244,8 @@ class $$RunsTableTableManager
                 activity: activity,
                 walkedM: walkedM,
                 maxSpeedMs: maxSpeedMs,
+                avgPowerW: avgPowerW,
+                maxPowerW: maxPowerW,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -12172,6 +12277,8 @@ class $$RunsTableTableManager
                 Value<RunActivity> activity = const Value.absent(),
                 Value<double?> walkedM = const Value.absent(),
                 Value<double?> maxSpeedMs = const Value.absent(),
+                Value<int?> avgPowerW = const Value.absent(),
+                Value<int?> maxPowerW = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RunsCompanion.insert(
                 id: id,
@@ -12201,6 +12308,8 @@ class $$RunsTableTableManager
                 activity: activity,
                 walkedM: walkedM,
                 maxSpeedMs: maxSpeedMs,
+                avgPowerW: avgPowerW,
+                maxPowerW: maxPowerW,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) =>

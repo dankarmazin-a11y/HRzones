@@ -328,6 +328,11 @@ class Runs extends Table with SyncColumns {
   /// Top speed in m/s over 10 s (rides; null = not measured).
   RealColumn get maxSpeedMs => real().nullable()();
 
+  /// Rides with a power meter: average watts (coasting counts as 0) and the
+  /// highest reading (null = no power meter).
+  IntColumn get avgPowerW => integer().nullable()();
+  IntColumn get maxPowerW => integer().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -466,7 +471,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 18;
+  int get schemaVersion => 19;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -541,6 +546,10 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(runPoints, runPoints.cadence);
       }
       if (from >= 7 && from < 17) await m.addColumn(runs, runs.maxSpeedMs);
+      if (from >= 7 && from < 19) {
+        await m.addColumn(runs, runs.avgPowerW);
+        await m.addColumn(runs, runs.maxPowerW);
+      }
       if (from >= 11 && from < 18) {
         await m.addColumn(shoes, shoes.kind);
         await m.addColumn(shoes, shoes.servicedKm);

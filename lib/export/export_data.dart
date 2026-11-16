@@ -123,6 +123,8 @@ Future<Uint8List> exportWorkbook(AppDatabase db) async {
       'Notes',
       'Activity',
       'Walked (km)',
+      'Avg power (W)',
+      'Max power (W)',
     ],
   ];
   final splitRows = <List<Object?>>[
@@ -155,6 +157,8 @@ Future<Uint8List> exportWorkbook(AppDatabase db) async {
       r.notes.isEmpty ? null : r.notes,
       r.activity.name,
       r.walkedM == null ? null : double.parse((r.walkedM! / 1000).toStringAsFixed(2)),
+      r.avgPowerW,
+      r.maxPowerW,
     ]);
     for (final sp in computeSplits(
       points.map((p) => (time: p.time, lat: p.lat, lon: p.lon, accuracy: p.accuracy, segment: p.segment, hr: p.hr)),
