@@ -223,6 +223,13 @@ The owner is not a developer. Explain steps plainly, keep instructions short, an
 - The repo is **public** (made public 2026-11-01 so GitHub Pages is free). Pages source = GitHub Actions; every push to `main` deploys the web preview to https://dankarmazin-a11y.github.io/HRzones/. The iOS job runs only on `main` / manual dispatch.
 
 ## Working conventions
+- **Several chats at once (owner, 2026-11-16).** At most **two** sessions work at the same time, split by job (e.g. "cycling features" + "Android"), not by phone – ~95 % of the code is shared. Rules:
+  1. **Announce before merging** to `main` (send_message to the other session) and say when your Mac build is done ("Mac is free").
+  2. **One Mac (iOS) build at a time** – never dispatch while another iOS job runs (the `ios-build` concurrency group queues, but don't pile up runs; the account was suspended once for parallel Mac builds). Android and web builds run on Linux and don't count.
+  3. **Shared code** (`lib/`, `test/`, `pubspec.*`): the full `flutter test` must pass, including the other session's tests; tell the other session which of its files you touched.
+  4. **Stop rule:** if one session sees the other break something (red CI on `main`, a failing test, a broken IPA/APK), it says "stop" with the reason; the other fixes that before anything else, and nobody merges until `main` is green again.
+  5. Merge `main` into your branch right before merging; `CLAUDE.md` conflicts: keep both sides.
+  6. Times for the owner in Israel time; each session sends the owner its own links after its merges.
 - Small, working increments; every push to `main` should build green.
 - **New packages:** check each on pub.dev first (publisher, licence, recent releases, real usage) – AI tools sometimes suggest package names that don't exist or were registered by attackers; name it in this file; keep `pubspec.lock` committed. Never put a key or secret in the repo (it is public).
 - One theme per PR; every bug fix gets a test that fails without the fix.
