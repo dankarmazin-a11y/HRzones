@@ -151,7 +151,9 @@ class _SetRowState extends State<SetRow> {
         icon: Icon(running ? Icons.stop_circle : Icons.play_circle, color: timedColor(context)),
         onPressed: () {
           FocusScope.of(context).unfocus();
-          running ? session.stopTimer() : session.startSetTimer(widget.entry, l.done ? r : l);
+          if (running) return session.stopTimer();
+          session.startSetTimer(widget.entry, l.done ? r : l);
+          openFullScreenTimer(context, session); // owner: timed sets open the big timer by themselves
         },
       );
     }
@@ -369,7 +371,9 @@ class _SetRowState extends State<SetRow> {
         icon: Icon(running ? Icons.stop_circle : Icons.play_circle, color: timedColor(context)),
         onPressed: () {
           FocusScope.of(context).unfocus();
-          running ? session.stopTimer() : session.startSetTimer(widget.entry, s);
+          if (running) return session.stopTimer();
+          session.startSetTimer(widget.entry, s);
+          openFullScreenTimer(context, session); // owner: timed sets open the big timer by themselves
         },
       );
     }

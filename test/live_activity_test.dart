@@ -35,6 +35,20 @@ void main() {
     expect(live.kind, isNull);
   });
 
+  testWidgets('a throttled update is sent a little later, not dropped (card stuck on "Rest 0:00")', (tester) async {
+    var now = t0;
+    final live = NoLiveActivity(clock: () => now);
+    await live.start('strength', 'Back', const LiveCard(title: 'Curl', countdownLabel: 'Rest'));
+    now = now.add(const Duration(seconds: 2));
+    await live.update(const LiveCard(title: 'Curl', detail: 'Set 3 of 3'));
+    expect(live.calls.map((c) => c.$1), ['start'], reason: 'too soon');
+    now = now.add(const Duration(seconds: 3));
+    await tester.pump(const Duration(seconds: 3));
+    expect(live.calls.map((c) => c.$1), ['start', 'update'], reason: 'sent once the gap has passed');
+    expect(stateOf(live.calls.last)['detail'], 'Set 3 of 3');
+    await live.end();
+  });
+
   test('a strength workout shows the current set, rest countdown and progress on the lock screen', () async {
     final s = await testServices();
     final live = s.live as NoLiveActivity;

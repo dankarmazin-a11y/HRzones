@@ -198,9 +198,16 @@ class _TimerBarState extends State<TimerBar> {
   }
 }
 
-Future<void> openFullScreenTimer(BuildContext context, WorkoutSession session) =>
-    Navigator.of(context)
+Future<void> openFullScreenTimer(BuildContext context, WorkoutSession session) async {
+  if (FullScreenTimer.isOpen) return; // one at a time (it follows the chain by itself)
+  FullScreenTimer.isOpen = true;
+  try {
+    await Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => FullScreenTimer(session: session), fullscreenDialog: true));
+  } finally {
+    FullScreenTimer.isOpen = false;
+  }
+}
 
 /// Huge sideways timer for stretching / holds: readable from the floor.
 /// Follows the whole chain (stretch → rest → next stretch) until closed.
@@ -208,6 +215,9 @@ class FullScreenTimer extends StatefulWidget {
   const FullScreenTimer({super.key, required this.session});
 
   final WorkoutSession session;
+
+  /// A full-screen timer is showing (don't open a second one).
+  static bool isOpen = false;
 
   @override
   State<FullScreenTimer> createState() => _FullScreenTimerState();

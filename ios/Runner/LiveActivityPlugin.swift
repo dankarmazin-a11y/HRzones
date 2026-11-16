@@ -126,7 +126,7 @@ private enum LiveActivities {
     do {
       current = try Activity.request(
         attributes: WorkoutAttributes(kind: kind, name: name),
-        content: ActivityContent(state: state, staleDate: nil),
+        content: ActivityContent(state: state, staleDate: state.countdownEnd),
         pushType: nil)
       LiveActivityPlugin.lastError = nil
     } catch {
@@ -138,7 +138,9 @@ private enum LiveActivities {
   static func update(_ state: WorkoutAttributes.ContentState) async {
     guard let a = current ?? Activity<WorkoutAttributes>.activities.first else { return }
     current = a
-    await a.update(ActivityContent(state: state, staleDate: nil))
+    // The countdown's end is the stale date: iOS redraws the card then by itself (the timer
+    // bar disappears) even when the app is asleep – it used to stay on "0:00".
+    await a.update(ActivityContent(state: state, staleDate: state.countdownEnd))
   }
 
   static func endAll() async {

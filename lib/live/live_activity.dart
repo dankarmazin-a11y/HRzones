@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
@@ -114,6 +116,8 @@ abstract class LiveActivity {
 
   String? _kind;
   LiveCard? _last;
+  LiveCard? _pending;
+  Timer? _pendingTimer;
   DateTime? _sentAt;
 
   /// "run" / "strength" while a card is up.
@@ -131,7 +135,21 @@ abstract class LiveActivity {
   Future<void> update(LiveCard card, {bool now = false}) async {
     if (_kind == null || card == _last) return;
     final t = _now();
-    if (!now && _sentAt != null && t.difference(_sentAt!) < minGap) return;
+    if (!now && _sentAt != null && t.difference(_sentAt!) < minGap) {
+      // Too soon: send this card a little later instead of dropping it (a dropped
+      // update left the card stuck, e.g. on "Rest 0:00").
+      _pending = card;
+      _pendingTimer ??= Timer(minGap - t.difference(_sentAt!), () {
+        _pendingTimer = null;
+        final p = _pending;
+        _pending = null;
+        if (p != null && _kind != null) update(p, now: true);
+      });
+      return;
+    }
+    _pending = null;
+    _pendingTimer?.cancel();
+    _pendingTimer = null;
     _last = card;
     _sentAt = t;
     await send('update', {'state': _state(card)});
@@ -143,6 +161,9 @@ abstract class LiveActivity {
     _kind = null;
     _last = null;
     _sentAt = null;
+    _pending = null;
+    _pendingTimer?.cancel();
+    _pendingTimer = null;
     await send('end', const {});
   }
 
