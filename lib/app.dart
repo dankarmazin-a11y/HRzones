@@ -98,86 +98,94 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
-    return ForgottenWorkoutWatcher(
-      child: AppShell(
-        goTo: _goTo,
-        child: Scaffold(
-          body: PageView(
-            key: const Key('tabPages'),
-            controller: _pages,
-            physics: const SnappyPagePhysics(),
-            // Builds the neighbouring tabs ahead of time: no stutter at the
-            // start of a swipe.
-            allowImplicitScrolling: true,
-            onPageChanged: (i) => setState(() => _tab = AppTab.values[i]),
-            children: [
-              for (final (i, screen) in _screens.indexed)
-                _KeepAlive(
-                  child: RepaintBoundary(
-                    child: PrimaryScrollController(
-                      controller: _scroll[i],
-                      automaticallyInheritForPlatforms: TargetPlatform.values.toSet(),
-                      child: screen,
+    // Android back on another tab goes to Home first; on Home it leaves the app as usual.
+    return PopScope(
+      canPop: _tab == AppTab.home,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _goTo(AppTab.home);
+      },
+      child: ForgottenWorkoutWatcher(
+        child: AppShell(
+          goTo: _goTo,
+          child: Scaffold(
+            body: PageView(
+              key: const Key('tabPages'),
+              controller: _pages,
+              physics: const SnappyPagePhysics(),
+              // Builds the neighbouring tabs ahead of time: no stutter at the
+              // start of a swipe.
+              allowImplicitScrolling: true,
+              onPageChanged: (i) => setState(() => _tab = AppTab.values[i]),
+              children: [
+                for (final (i, screen) in _screens.indexed)
+                  _KeepAlive(
+                    child: RepaintBoundary(
+                      child: PrimaryScrollController(
+                        controller: _scroll[i],
+                        automaticallyInheritForPlatforms: TargetPlatform.values.toSet(),
+                        child: screen,
+                      ),
                     ),
                   ),
+              ],
+            ),
+            bottomNavigationBar: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const RunningWorkoutBar(),
+                const RunningRunBar(),
+                // The Start button and the bar's bump stick up above the tab
+                // bar. They stay inside the Stack (taps outside a Stack's box
+                // are lost); the space also keeps every tab's content clear.
+                Stack(
+                  alignment: Alignment.topCenter,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: StartButton.overhang),
+                      child: NavigationBar(
+                        selectedIndex: _slot(_tab),
+                        onDestinationSelected: (i) {
+                          if (i == 2) return; // the Start button's gap
+                          _select(AppTab.values[i < 2 ? i : i - 1]);
+                        },
+                        destinations: const [
+                          NavigationDestination(
+                            icon: Icon(Icons.home_outlined),
+                            selectedIcon: Icon(Icons.home),
+                            label: 'Home',
+                          ),
+                          NavigationDestination(
+                            icon: Icon(Icons.fitness_center_outlined),
+                            selectedIcon: Icon(Icons.fitness_center),
+                            label: 'Strength',
+                          ),
+                          NavigationDestination(icon: SizedBox(width: 24, height: 24), label: '', enabled: false),
+                          NavigationDestination(
+                            icon: EmblemIcon(EmblemKind.run),
+                            selectedIcon: EmblemIcon(EmblemKind.run, bold: true),
+                            label: 'Run',
+                          ),
+                          NavigationDestination(
+                            icon: Icon(Icons.person_outline),
+                            selectedIcon: Icon(Icons.person),
+                            label: 'Profile',
+                          ),
+                        ],
+                      ),
+                    ),
+                    Positioned(
+                      top: StartButton.overhang - StartBump.height,
+                      child: StartBump(
+                        color:
+                            Theme.of(context).navigationBarTheme.backgroundColor ??
+                            Theme.of(context).colorScheme.surface,
+                      ),
+                    ),
+                    const Positioned(top: 0, child: StartButton()),
+                  ],
                 ),
-            ],
-          ),
-          bottomNavigationBar: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const RunningWorkoutBar(),
-              const RunningRunBar(),
-              // The Start button and the bar's bump stick up above the tab
-              // bar. They stay inside the Stack (taps outside a Stack's box
-              // are lost); the space also keeps every tab's content clear.
-              Stack(
-                alignment: Alignment.topCenter,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: StartButton.overhang),
-                    child: NavigationBar(
-                      selectedIndex: _slot(_tab),
-                      onDestinationSelected: (i) {
-                        if (i == 2) return; // the Start button's gap
-                        _select(AppTab.values[i < 2 ? i : i - 1]);
-                      },
-                      destinations: const [
-                        NavigationDestination(
-                          icon: Icon(Icons.home_outlined),
-                          selectedIcon: Icon(Icons.home),
-                          label: 'Home',
-                        ),
-                        NavigationDestination(
-                          icon: Icon(Icons.fitness_center_outlined),
-                          selectedIcon: Icon(Icons.fitness_center),
-                          label: 'Strength',
-                        ),
-                        NavigationDestination(icon: SizedBox(width: 24, height: 24), label: '', enabled: false),
-                        NavigationDestination(
-                          icon: EmblemIcon(EmblemKind.run),
-                          selectedIcon: EmblemIcon(EmblemKind.run, bold: true),
-                          label: 'Run',
-                        ),
-                        NavigationDestination(
-                          icon: Icon(Icons.person_outline),
-                          selectedIcon: Icon(Icons.person),
-                          label: 'Profile',
-                        ),
-                      ],
-                    ),
-                  ),
-                  Positioned(
-                    top: StartButton.overhang - StartBump.height,
-                    child: StartBump(
-                      color:
-                          Theme.of(context).navigationBarTheme.backgroundColor ?? Theme.of(context).colorScheme.surface,
-                    ),
-                  ),
-                  const Positioned(top: 0, child: StartButton()),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

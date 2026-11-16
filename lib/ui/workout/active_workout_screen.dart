@@ -73,129 +73,163 @@ class ActiveWorkoutScreen extends StatelessWidget {
       builder: (context, _) {
         final w = session.active;
         if (w == null) return const Scaffold(body: Center(child: Text('No workout in progress')));
-        return Scaffold(
-          appBar: session.templateMode
-              ? _templateAppBar(context, session, w)
-              : session.editMode
-              ? _editAppBar(context, session, w)
-              : AppBar(
-                  leading: IconButton(
-                    tooltip: 'Minimise',
-                    icon: const Icon(Icons.keyboard_arrow_down),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                  titleSpacing: 0,
-                  title: GestureDetector(
-                    onTap: () => _rename(context, session, w),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _ElapsedText(key: const Key('workoutClock'), since: w.startedAt),
-                        Text(w.name, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall),
-                      ],
+        // Editing a past workout or a template: the back gesture / Android back button asks like
+        // Cancel instead of dropping the changes (docs/ANDROID.md rule 27). A live workout just
+        // minimises – it keeps running.
+        return PopScope(
+          canPop: !session.editMode,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) _cancelEditing(context, session, w);
+          },
+          child: Scaffold(
+            appBar: session.templateMode
+                ? _templateAppBar(context, session, w)
+                : session.editMode
+                ? _editAppBar(context, session, w)
+                : AppBar(
+                    leading: IconButton(
+                      tooltip: 'Minimise',
+                      icon: const Icon(Icons.keyboard_arrow_down),
+                      onPressed: () => Navigator.of(context).pop(),
                     ),
-                  ),
-                  actions: [
-                    IconButton(
-                      tooltip: 'Timers',
-                      icon: const Icon(Icons.timer_outlined),
-                      onPressed: () => showTimerSheet(context, session),
+                    titleSpacing: 0,
+                    title: GestureDetector(
+                      onTap: () => _rename(context, session, w),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _ElapsedText(key: const Key('workoutClock'), since: w.startedAt),
+                          Text(w.name, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.bodySmall),
+                        ],
+                      ),
                     ),
-                    const _HrChip(),
+                    actions: [
+                      IconButton(
+                        tooltip: 'Timers',
+                        icon: const Icon(Icons.timer_outlined),
+                        onPressed: () => showTimerSheet(context, session),
+                      ),
+                      const _HrChip(),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4, right: 8),
+                        child: FilledButton(onPressed: () => _finish(context, session), child: const Text('Finish')),
+                      ),
+                    ],
+                  ),
+            body: _withKeyboardBar(
+              context,
+              // The progress line stays at the top while the exercises scroll.
+              header: session.editMode
+                  ? null
+                  : Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
+                      child: LinearProgressIndicator(
+                        key: const Key('workoutProgress'),
+                        value: session.progress,
+                        minHeight: 8,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+              ValueListenableBuilder<bool>(
+                valueListenable: session.reorderMode,
+                builder: (context, reordering, cards) => AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  child: reordering ? InPlaceReorder(session: session) : cards,
+                ),
+                child: ListView(
+                  // Keep cards that load data built off-screen (no jumping while scrolling).
+                  scrollCacheExtent: const ScrollCacheExtent.pixels(4000),
+                  padding: const EdgeInsets.only(bottom: 120),
+                  children: [
+                    if ((!session.editMode || session.templateMode) && Services.of(context).zonesEnabled.value)
+                      PresetRow(presetId: w.hrPresetId, onChanged: session.applyPreset),
+                    for (final (i, e) in w.exercises.indexed) _ExerciseCard(key: ValueKey(e.id), index: i, entry: e),
+                    if (w.exercises.length > 1)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          'Tip: hold an exercise name to reorder',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
                     Padding(
-                      padding: const EdgeInsets.only(left: 4, right: 8),
-                      child: FilledButton(onPressed: () => _finish(context, session), child: const Text('Finish')),
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: FilledButton.tonalIcon(
+                              icon: const Icon(Icons.add),
+                              label: const Text('Exercises'),
+                              onPressed: () async {
+                                final picked = await ExerciseLibraryScreen.pick(context);
+                                if (picked != null) await session.addExercises(picked);
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: FilledButton.tonalIcon(
+                              icon: const Icon(Icons.self_improvement),
+                              label: const Text('Stretching'),
+                              onPressed: () async {
+                                final picked = await ExerciseLibraryScreen.pick(
+                                  context,
+                                  group: ExerciseGroup.stretching,
+                                );
+                                if (picked != null) await session.addExercises(picked);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                    if (!session.editMode)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                        child: FilledButton(
+                          key: const Key('discardWorkout'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.red.shade700,
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size.fromHeight(48),
+                            textStyle: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700),
+                          ),
+                          onPressed: () => _discard(context, session),
+                          child: const Text('Discard workout'),
+                        ),
+                      ),
                   ],
                 ),
-          body: _withKeyboardBar(
-            context,
-            // The progress line stays at the top while the exercises scroll.
-            header: session.editMode
-                ? null
-                : Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
-                    child: LinearProgressIndicator(
-                      key: const Key('workoutProgress'),
-                      value: session.progress,
-                      minHeight: 8,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-            ValueListenableBuilder<bool>(
-              valueListenable: session.reorderMode,
-              builder: (context, reordering, cards) => AnimatedSwitcher(
-                duration: const Duration(milliseconds: 180),
-                child: reordering ? InPlaceReorder(session: session) : cards,
-              ),
-              child: ListView(
-                // Keep cards that load data built off-screen (no jumping while scrolling).
-                scrollCacheExtent: const ScrollCacheExtent.pixels(4000),
-                padding: const EdgeInsets.only(bottom: 120),
-                children: [
-                  if ((!session.editMode || session.templateMode) && Services.of(context).zonesEnabled.value)
-                    PresetRow(presetId: w.hrPresetId, onChanged: session.applyPreset),
-                  for (final (i, e) in w.exercises.indexed) _ExerciseCard(key: ValueKey(e.id), index: i, entry: e),
-                  if (w.exercises.length > 1)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        'Tip: hold an exercise name to reorder',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: FilledButton.tonalIcon(
-                            icon: const Icon(Icons.add),
-                            label: const Text('Exercises'),
-                            onPressed: () async {
-                              final picked = await ExerciseLibraryScreen.pick(context);
-                              if (picked != null) await session.addExercises(picked);
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: FilledButton.tonalIcon(
-                            icon: const Icon(Icons.self_improvement),
-                            label: const Text('Stretching'),
-                            onPressed: () async {
-                              final picked = await ExerciseLibraryScreen.pick(context, group: ExerciseGroup.stretching);
-                              if (picked != null) await session.addExercises(picked);
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (!session.editMode)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                      child: FilledButton(
-                        key: const Key('discardWorkout'),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: Colors.red.shade700,
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size.fromHeight(48),
-                          textStyle: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w700),
-                        ),
-                        onPressed: () => _discard(context, session),
-                        child: const Text('Discard workout'),
-                      ),
-                    ),
-                ],
               ),
             ),
+            bottomNavigationBar: session.timer == null || session.editMode ? null : TimerBar(session: session),
           ),
-          bottomNavigationBar: session.timer == null || session.editMode ? null : TimerBar(session: session),
         );
       },
     );
+  }
+
+  /// Cancel (✕, back gesture) while editing a past workout or a template: asks when there are
+  /// unsaved changes, then leaves without saving.
+  Future<void> _cancelEditing(BuildContext context, WorkoutSession session, ActiveWorkout w) async {
+    final unsaved = session.hasUnsavedEdits && (!session.templateMode || w.exercises.isNotEmpty);
+    if (unsaved) {
+      final leave = await showDialog<bool>(
+        context: context,
+        builder: (c) => AlertDialog(
+          key: const Key('discardEdits'),
+          title: const Text('Discard changes?'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Keep editing')),
+            TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Discard')),
+          ],
+        ),
+      );
+      if (leave != true) return;
+    }
+    if (!session.templateMode) await session.discard();
+    if (context.mounted) Navigator.of(context).pop();
   }
 
   /// Header when building a template: name + folder (tap to change), Save.
@@ -204,22 +238,7 @@ class ActiveWorkoutScreen extends StatelessWidget {
       leading: IconButton(
         tooltip: 'Cancel',
         icon: const Icon(Icons.close),
-        onPressed: () async {
-          if (session.hasUnsavedEdits && w.exercises.isNotEmpty) {
-            final leave = await showDialog<bool>(
-              context: context,
-              builder: (c) => AlertDialog(
-                title: const Text('Discard changes?'),
-                actions: [
-                  TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Keep editing')),
-                  TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Discard')),
-                ],
-              ),
-            );
-            if (leave != true) return;
-          }
-          if (context.mounted) Navigator.of(context).pop();
-        },
+        onPressed: () => _cancelEditing(context, session, w),
       ),
       titleSpacing: 0,
       title: InkWell(
@@ -298,23 +317,7 @@ class ActiveWorkoutScreen extends StatelessWidget {
       leading: IconButton(
         tooltip: 'Cancel',
         icon: const Icon(Icons.close),
-        onPressed: () async {
-          if (session.hasUnsavedEdits) {
-            final leave = await showDialog<bool>(
-              context: context,
-              builder: (c) => AlertDialog(
-                title: const Text('Discard changes?'),
-                actions: [
-                  TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Keep editing')),
-                  TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Discard')),
-                ],
-              ),
-            );
-            if (leave != true) return;
-          }
-          await session.discard();
-          if (context.mounted) Navigator.of(context).pop();
-        },
+        onPressed: () => _cancelEditing(context, session, w),
       ),
       titleSpacing: 0,
       title: InkWell(
