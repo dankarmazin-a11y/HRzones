@@ -6,6 +6,7 @@ import io.flutter.embedding.engine.FlutterEngine
 class MainActivity : FlutterActivity() {
   private var beeper: BeeperPlugin? = null
   private var live: LiveActivityPlugin? = null
+  private var motion: MotionPlugin? = null
 
   override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
     super.configureFlutterEngine(flutterEngine)
@@ -13,6 +14,7 @@ class MainActivity : FlutterActivity() {
     val messenger = flutterEngine.dartExecutor.binaryMessenger
     beeper = BeeperPlugin(applicationContext, messenger)
     live = LiveActivityPlugin(applicationContext, messenger)
+    motion = MotionPlugin(applicationContext, messenger, this)
   }
 
   override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
@@ -20,6 +22,8 @@ class MainActivity : FlutterActivity() {
     beeper = null
     live?.dispose()
     live = null
+    motion?.dispose()
+    motion = null
     super.cleanUpFlutterEngine(flutterEngine)
   }
 }
