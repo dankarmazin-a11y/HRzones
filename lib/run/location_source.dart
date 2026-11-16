@@ -54,6 +54,13 @@ class DeviceLocationSource extends LocationSource {
           allowBackgroundLocationUpdates: true,
           showBackgroundLocationIndicator: true,
         )
+      : defaultTargetPlatform == TargetPlatform.android
+      // A fix every second from the GPS chip itself (the fused provider smooths runs too much).
+      ? AndroidSettings(
+          accuracy: LocationAccuracy.best,
+          distanceFilter: 0,
+          intervalDuration: const Duration(seconds: 1),
+        )
       : const LocationSettings(accuracy: LocationAccuracy.best);
 
   @override

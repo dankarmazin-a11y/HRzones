@@ -37,11 +37,28 @@ class LocalRestNotifier extends RestNotifier {
   static const _idleId = 2;
   static const _runIdleId = 3;
 
+  // Android notification channels (the user can switch each one off in the phone's settings).
+  static const _restChannel = AndroidNotificationDetails(
+    'rest',
+    'Rest timer',
+    channelDescription: 'Tells you when your rest is over',
+    importance: Importance.high,
+    priority: Priority.high,
+    category: AndroidNotificationCategory.reminder,
+  );
+  static const _reminderChannel = AndroidNotificationDetails(
+    'reminders',
+    'Reminders',
+    channelDescription: 'Asks when a workout has been open for a long time',
+  );
+
   Future<bool> _init() async {
     if (_ready) return true;
     try {
       await _plugin.initialize(
         settings: const InitializationSettings(
+          // Android: small white heart in the status bar (res/drawable/ic_notification.xml).
+          android: AndroidInitializationSettings('ic_notification'),
           // Don't ask at start-up; only when the user turns it on.
           iOS: DarwinInitializationSettings(
             requestAlertPermission: false,
@@ -61,7 +78,9 @@ class LocalRestNotifier extends RestNotifier {
   Future<bool> requestPermission() async {
     if (!await _init()) return false;
     final ios = _plugin.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
-    return await ios?.requestPermissions(alert: true, sound: true) ?? false;
+    if (ios != null) return await ios.requestPermissions(alert: true, sound: true) ?? false;
+    final android = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    return await android?.requestNotificationsPermission() ?? false;
   }
 
   @override
@@ -74,6 +93,7 @@ class LocalRestNotifier extends RestNotifier {
         body: next == null ? 'Time for your next set' : 'Next: $next',
         scheduledDate: tz.TZDateTime.now(tz.UTC).add(after),
         notificationDetails: const NotificationDetails(
+          android: _restChannel,
           // Inside the app (foreground) stay quiet: the app dings itself.
           iOS: DarwinNotificationDetails(
             presentAlert: false,
@@ -107,6 +127,7 @@ class LocalRestNotifier extends RestNotifier {
         body: '"$workout" is still open. Tap to finish it or keep going.',
         scheduledDate: tz.TZDateTime.now(tz.UTC).add(after),
         notificationDetails: const NotificationDetails(
+          android: _reminderChannel,
           // In the app the same question is asked on screen instead.
           iOS: DarwinNotificationDetails(presentAlert: false, presentBanner: false, presentList: false),
         ),
@@ -137,6 +158,7 @@ class LocalRestNotifier extends RestNotifier {
             : 'Your run is still recording but you haven\'t moved for 20 minutes. Tap to finish it.',
         scheduledDate: tz.TZDateTime.now(tz.UTC).add(after),
         notificationDetails: const NotificationDetails(
+          android: _reminderChannel,
           iOS: DarwinNotificationDetails(presentAlert: false, presentBanner: false, presentList: false),
         ),
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
