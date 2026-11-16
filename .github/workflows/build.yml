@@ -3,6 +3,7 @@ name: Build
 # check  – analyze + unit tests (every push and PR, Linux, cheap)
 # web    – Flutter web preview; deployed to GitHub Pages from main
 #          (https://dankarmazin-a11y.github.io/HRzones/)
+# android – debug APK for the owner's Android phone (every push and PR, Linux, no Mac minutes)
 # ios    – unsigned IPA for Sideloadly (main + manual runs; macOS minutes are expensive)
 
 on:
@@ -65,6 +66,32 @@ jobs:
         with:
           path: build/web
           name: web-preview
+
+  android:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Build Android app (debug APK)
+        run: flutter build apk --debug --dart-define=APP_BUILD="${GITHUB_SHA::7} $(date -u +%Y-%m-%d)" --dart-define=STADIA_KEY="${{ secrets.STADIA_KEY }}"
+      - name: Name the APK
+        run: cp build/app/outputs/flutter-apk/app-debug.apk HRZones.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HRZones-apk
+          path: HRZones.apk
 
   deploy-web:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'

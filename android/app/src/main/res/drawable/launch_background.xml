@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launch screen: ink background with the heart in the middle (like iOS). -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/ink" />
+    <item>
+        <bitmap android:gravity="center" android:src="@drawable/launch_heart" />
+    </item>
+</layer-list>

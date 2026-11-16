@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Same ink as the iOS launch screen and the app's loading screen (AppPalette ink). -->
+    <color name="ink">#141B2B</color>
+</resources>
