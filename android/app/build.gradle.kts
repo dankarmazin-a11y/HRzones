@@ -6,7 +6,8 @@ plugins {
 
 android {
     namespace = "com.hrzones.app"
-    compileSdk = 36
+    // 37: flutter_reactive_ble (reactive_ble_mobile) compiles against it. targetSdk stays 36.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
