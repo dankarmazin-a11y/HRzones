@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import '../../app_services.dart';
 import '../../live/live_activity.dart';
 import '../../run/run_voice.dart';
+import '../run/bike_sensors_sheet.dart';
 import '../run/pace_alert.dart';
 import '../../beep/sounds.dart';
 import '../../workout/training_level.dart';
@@ -374,6 +375,7 @@ class _RunVoiceSettingsState extends State<RunVoiceSettings> {
           ),
           const PaceAlertRow(),
           const SpeedAlertRow(),
+          const BikeSensorsRow(),
           SwitchListTile(
             key: const Key('settingsAutoDetectWalk'),
             contentPadding: EdgeInsets.zero,

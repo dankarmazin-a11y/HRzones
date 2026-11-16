@@ -175,7 +175,9 @@ class _BodyState extends State<_Body> {
             builder: (context, snap) {
               final ride = run.activity == RunActivity.ride;
               final kcal = ride
-                  ? rideCalories(durationS: run.durationS, distanceM: run.distanceM, weightKg: snap.data)
+                  ? (run.avgPowerW != null
+                        ? powerCalories(avgW: run.avgPowerW!, durationS: run.durationS)
+                        : rideCalories(durationS: run.durationS, distanceM: run.distanceM, weightKg: snap.data))
                   : runCalories(run.distanceM, snap.data);
               return Row(
                 children: [
@@ -191,6 +193,24 @@ class _BodyState extends State<_Body> {
           ),
           if (run.activity == RunActivity.ride && run.maxSpeedMs != null)
             Row(children: [tile(Units.speedOut(run.maxSpeedMs!).toStringAsFixed(1), 'Top ${Units.speed}')]),
+          if (run.avgPowerW != null)
+            FutureBuilder<double?>(
+              future: _weight,
+              builder: (context, snap) {
+                final kg = snap.data;
+                return Row(
+                  key: const Key('ridePowerTiles'),
+                  children: [
+                    tile('${run.avgPowerW}', 'Avg watts'),
+                    tile(run.maxPowerW == null ? '–' : '${run.maxPowerW}', 'Max watts'),
+                    tile(
+                      kg == null || kg <= 0 ? '–' : (run.avgPowerW! / kg).toStringAsFixed(1),
+                      kg == null || kg <= 0 ? 'W/kg (add weight)' : 'W/kg',
+                    ),
+                  ],
+                );
+              },
+            ),
           if (run.avgHr != null || run.maxHr != null)
             Row(
               children: [
@@ -233,6 +253,10 @@ class _BodyState extends State<_Body> {
     );
   }
 }
+
+/// Energy from a power meter: work in kJ ≈ kcal burned (the body is about
+/// 24 % efficient, which cancels the 4.184 kJ per kcal).
+double powerCalories({required int avgW, required int durationS}) => avgW * durationS / 1000;
 
 /// Rough energy used riding: MET by average speed (Compendium of Physical
 /// Activities) × body weight × hours. Null without a body weight.
@@ -797,7 +821,8 @@ class _ClimbAndCadenceState extends State<_ClimbAndCadence> {
           children: [
             if (hasClimb) widget.tile('↑ ${e.climb.round()} m', 'Climb'),
             if (hasClimb) widget.tile('↓ ${e.descent.round()} m', 'Descent'),
-            if (hasCadence) widget.tile('${r.avgCadence}', 'Cadence (spm)'),
+            if (hasCadence)
+              widget.tile('${r.avgCadence}', r.activity == RunActivity.ride ? 'Cadence (rpm)' : 'Cadence (spm)'),
           ],
         ),
         if (hasClimb && (e.climb >= 5 || e.descent >= 5)) _ElevationChart(profile: _profile),

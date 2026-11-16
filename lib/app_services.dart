@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'ui/theme/app_theme.dart';
 
 import 'beep/sounds.dart';
+import 'bike/bike_sensors.dart';
 import 'feedback/problem_log.dart';
 import 'feedback/rating.dart';
 import 'data/body_repository.dart';
@@ -57,7 +58,9 @@ class AppServices {
       ..voice = RunVoice(hr.beeper.speak)
       ..notifier = restNotifier
       ..plans = runPlans.byId
-      ..presetFor = ((id) async => zonesEnabled.value ? presets.byId(id) : null);
+      ..presetFor = ((id) async => zonesEnabled.value ? presets.byId(id) : null)
+      ..bike = bike
+      ..riderWeight = (() => body.latest('weight'));
     session.locationFor = () => run.location;
     session.live = live;
     run.live = live;
@@ -83,6 +86,21 @@ class AppServices {
   Future<void> setPaceAlert(HrRange? range) async {
     run.paceAlert = range;
     await db.setSetting('runPaceAlert', range == null ? '' : '${range.min}-${range.max}');
+  }
+
+  /// Bluetooth speed/cadence and power sensors for rides.
+  final bike = BikeSensorHub();
+
+  /// Saves the bike sensors (setting `bikeSensors`).
+  Future<void> setBikeSensors(List<BikeSensor> list) async {
+    bike.sensors = list;
+    await db.setSetting('bikeSensors', BikeSensor.encodeList(list));
+  }
+
+  /// Wheel circumference in mm (setting `wheelMm`).
+  Future<void> setWheelMm(int mm) async {
+    bike.wheelMm = mm;
+    await db.setSetting('wheelMm', '$mm');
   }
 
   /// Rides: beep when slower than [minMs] m/s (setting `rideSpeedAlert`; null = off).
@@ -438,6 +456,8 @@ class AppServices {
     final pMin = int.tryParse(pace?.firstOrNull ?? ''), pMax = int.tryParse(pace?.lastOrNull ?? '');
     run.paceAlert = pMin != null && pMax != null && pMin < pMax ? HrRange(min: pMin, max: pMax) : null;
     run.rideSpeedAlert = double.tryParse(await db.getSetting('rideSpeedAlert') ?? '');
+    bike.sensors = BikeSensor.decodeList(await db.getSetting('bikeSensors'));
+    bike.wheelMm = int.tryParse(await db.getSetting('wheelMm') ?? '') ?? defaultWheelMm;
     stepGoal.value = await getInt('stepGoal') ?? 8000;
     try {
       bigStats.value = (jsonDecode(await db.getSetting('bigStats') ?? '{}') as Map).cast<String, String>();
