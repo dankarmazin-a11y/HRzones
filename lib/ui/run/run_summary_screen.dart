@@ -173,16 +173,24 @@ class _BodyState extends State<_Body> {
           FutureBuilder<double?>(
             future: _weight,
             builder: (context, snap) {
-              final kcal = runCalories(run.distanceM, snap.data);
+              final ride = run.activity == RunActivity.ride;
+              final kcal = ride
+                  ? rideCalories(durationS: run.durationS, distanceM: run.distanceM, weightKg: snap.data)
+                  : runCalories(run.distanceM, snap.data);
               return Row(
                 children: [
                   tile(formatDuration(Duration(seconds: run.durationS)), 'Time'),
-                  tile(formatPace(pace), 'Avg pace ${Units.pace}'),
+                  if (ride)
+                    tile(formatSpeed(pace, unit: false), 'Avg ${Units.speed}')
+                  else
+                    tile(formatPace(pace), 'Avg pace ${Units.pace}'),
                   tile(kcal == null ? '–' : '${kcal.round()}', kcal == null ? 'kcal (add weight)' : 'Calories'),
                 ],
               );
             },
           ),
+          if (run.activity == RunActivity.ride && run.maxSpeedMs != null)
+            Row(children: [tile(Units.speedOut(run.maxSpeedMs!).toStringAsFixed(1), 'Top ${Units.speed}')]),
           if (run.avgHr != null || run.maxHr != null)
             Row(
               children: [
@@ -222,6 +230,25 @@ class _BodyState extends State<_Body> {
   }
 }
 
+/// Rough energy used riding: MET by average speed (Compendium of Physical
+/// Activities) × body weight × hours. Null without a body weight.
+double? rideCalories({required int durationS, required double distanceM, double? weightKg}) {
+  if (weightKg == null || weightKg <= 0 || durationS <= 0) return null;
+  final kmh = distanceM / durationS * 3.6;
+  final met = kmh < 16
+      ? 4.0
+      : kmh < 19
+      ? 6.8
+      : kmh < 22
+      ? 8.0
+      : kmh < 25
+      ? 10.0
+      : kmh < 30
+      ? 12.0
+      : 15.8;
+  return met * weightKg * durationS / 3600;
+}
+
 /// Rough energy used running [distanceM]: about 1 kcal per kg of body
 /// weight per km (the usual estimate; pace barely changes it). Null
 /// without a body weight.
@@ -245,11 +272,12 @@ String runTitle(Run r) {
   return '${_weekdays[d.weekday - 1]} ${d.day} ${_months[d.month - 1]} · $part ${activityWord(r.activity)}';
 }
 
-/// "run", "walk" or "hike".
+/// "run", "walk", "hike" or "ride".
 String activityWord(RunActivity a) => switch (a) {
   RunActivity.run => 'run',
   RunActivity.walk => 'walk',
   RunActivity.hike => 'hike',
+  RunActivity.ride => 'ride',
 };
 
 /// The walking / running parts of an outing (route points from the database).
@@ -542,7 +570,8 @@ class _SplitsSectionState extends State<_SplitsSection> {
     setState(() {
       _splits = computeSplits(
         points.map((p) => (time: p.time, lat: p.lat, lon: p.lon, accuracy: p.accuracy, segment: p.segment, hr: p.hr)),
-        splitM: Units.metresPerUnit, // km or mile splits
+        // km or mile splits; rides every 5 km / 3 miles
+        splitM: widget.run.activity == RunActivity.ride ? Units.rideSplitM : Units.metresPerUnit,
       );
       _walked = g.walkedM >= 20 ? g.walkedPerSplit(Units.metresPerUnit) : const [];
     });
@@ -561,6 +590,10 @@ class _SplitsSectionState extends State<_SplitsSection> {
     final quickest = paces.isEmpty ? 1.0 : paces.reduce((a, b) => a < b ? a : b);
     final hasHr = splits.any((x) => x.avgHr != null);
     final avg = paceSecPerKm(widget.run.distanceM, widget.run.durationS.toDouble());
+    final ride = widget.run.activity == RunActivity.ride;
+    // rides: speed (km/h) per 5 km; the split number is where it ends (5, 10, 15)
+    String paceText(double? p) => ride ? formatSpeed(p, unit: false) : formatPace(p);
+    String mark(KmSplit x) => ride ? Units.toD(x.km * Units.rideSplitM).round().toString() : '${x.km}';
     final muted = text.bodySmall?.copyWith(color: scheme.onSurfaceVariant);
     return Card(
       key: const Key('splits'),
@@ -573,14 +606,17 @@ class _SplitsSectionState extends State<_SplitsSection> {
               children: [
                 Text('Splits', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
                 const Spacer(),
-                if (avg != null) Text('avg ${formatPace(avg)} ${Units.pace}', style: muted),
+                if (avg != null)
+                  Text(ride ? 'avg ${formatSpeed(avg)}' : 'avg ${formatPace(avg)} ${Units.pace}', style: muted),
               ],
             ),
             if (fastest != null)
               Padding(
                 padding: const EdgeInsets.only(top: 2),
                 child: Text(
-                  'Fastest: ${Units.mi ? 'mile' : 'km'} ${fastest.km} in ${formatPace(fastest.pace)}',
+                  ride
+                      ? 'Fastest: up to ${Units.d} ${mark(fastest)} at ${formatSpeed(fastest.pace)}'
+                      : 'Fastest: ${Units.mi ? 'mile' : 'km'} ${fastest.km} in ${formatPace(fastest.pace)}',
                   style: muted,
                 ),
               ),
@@ -599,7 +635,11 @@ class _SplitsSectionState extends State<_SplitsSection> {
                     SizedBox(
                       width: 40,
                       child: Text(
-                        x.partial ? Units.toD(x.distanceM).toStringAsFixed(2) : '${x.km}',
+                        x.partial
+                            ? (ride
+                                  ? Units.toD((x.km - 1) * x.lengthM + x.distanceM).toStringAsFixed(1)
+                                  : Units.toD(x.distanceM).toStringAsFixed(2))
+                            : mark(x),
                         style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                       ),
                     ),
@@ -644,7 +684,7 @@ class _SplitsSectionState extends State<_SplitsSection> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
-                                      formatPace(x.pace),
+                                      paceText(x.pace),
                                       style: const TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.w800,
@@ -965,7 +1005,7 @@ class _GaitCardState extends State<_GaitCard> {
   @override
   Widget build(BuildContext context) {
     final g = _g, run = widget.run;
-    if (g == null) return const SizedBox.shrink();
+    if (g == null || run.activity == RunActivity.ride) return const SizedBox.shrink();
     final isWalk = run.activity == RunActivity.walk;
     final walked = g.walkedM >= 50;
     if (!walked && !isWalk) return const SizedBox.shrink();

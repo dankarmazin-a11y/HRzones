@@ -3,6 +3,12 @@ import 'geo.dart';
 /// Distances with running records.
 const recordDistances = <int, String>{1000: '1 km', 5000: '5 km', 10000: '10 km', 21097: 'Half marathon'};
 
+/// Distances with cycling records.
+const rideRecordDistances = <int, String>{20000: '20 km', 40000: '40 km'};
+
+/// Record distances for an outing: rides have their own.
+Map<int, String> recordDistancesFor({required bool ride}) => ride ? rideRecordDistances : recordDistances;
+
 /// A recorded point as needed for best efforts.
 typedef EffortPoint = ({DateTime time, double lat, double lon, double? accuracy, int segment});
 

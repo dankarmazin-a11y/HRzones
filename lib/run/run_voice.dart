@@ -109,7 +109,7 @@ class RunVoice {
   /// The app was reopened during a run: continue from where it is.
   /// The update interval in metres: [everyM] is "½ / 1 / 2 units", so with
   /// miles chosen 1000 means one mile.
-  double get _every => everyM * Units.metresPerUnit / 1000;
+  double get _every => word == 'Ride' ? Units.rideSplitM : everyM * Units.metresPerUnit / 1000;
 
   void restored(double distanceM, Duration moving) {
     _next = ((distanceM ~/ _every) + 1) * _every;
@@ -126,7 +126,8 @@ class RunVoice {
       [
         '$word complete.',
         '${spokenKm(distanceM)} in ${spokenDuration(moving)}.',
-        if (pace != null && distanceM >= 200) 'Average pace ${spokenPace(pace)}.',
+        if (pace != null && distanceM >= 200)
+          word == 'Ride' ? 'Average speed ${spokenSpeed(pace)}.' : 'Average pace ${spokenPace(pace)}.',
         for (final e in newRecords.entries)
           'New record! Fastest ${e.key == 21097 ? 'half marathon' : '${e.key ~/ 1000} kilometres'}, '
               '${spokenDuration(Duration(seconds: e.value.round()))}.',
@@ -159,9 +160,11 @@ class RunVoice {
         // walks: the steps so far come right after the distance
         if (steps != null && word != 'Run') '$steps steps.',
         if (items.contains(VoiceItem.time)) 'Time ${spokenDuration(moving)}.',
-        if (avg != null && items.contains(VoiceItem.avgPace)) 'Average pace ${spokenPace(avg)}.',
-        if (currentPace != null && items.contains(VoiceItem.currentPace)) 'Current pace ${spokenPace(currentPace)}.',
-        if (lastPart != null && mark > _every && items.contains(VoiceItem.lastSplit))
+        if (avg != null && items.contains(VoiceItem.avgPace))
+          word == 'Ride' ? 'Average speed ${spokenSpeed(avg)}.' : 'Average pace ${spokenPace(avg)}.',
+        if (currentPace != null && items.contains(VoiceItem.currentPace))
+          word == 'Ride' ? 'Speed ${spokenSpeed(currentPace)}.' : 'Current pace ${spokenPace(currentPace)}.',
+        if (lastPart != null && mark > _every && items.contains(VoiceItem.lastSplit) && word != 'Ride')
           'Last ${switch (everyM) {
             500 => 'half ${Units.mi ? 'mile' : 'kilometre'}',
             1000 => Units.mi ? 'mile' : 'kilometre',
@@ -173,6 +176,12 @@ class RunVoice {
       ].join(' '),
     );
   }
+}
+
+/// "27 kilometres per hour" (or miles per hour) from a pace in s/km.
+String spokenSpeed(double secPerKm) {
+  final v = Units.speedOut(1000 / secPerKm).round();
+  return '$v ${Units.mi ? 'miles' : 'kilometres'} per hour';
 }
 
 /// "1 kilometre", "2.5 kilometres", "5.24 kilometres" – or miles.

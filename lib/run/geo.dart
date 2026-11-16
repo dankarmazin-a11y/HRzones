@@ -100,5 +100,12 @@ String formatPace(double? secPerKm) {
   return '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
 }
 
+/// Speed from a pace (s/km): "27.4 km/h" (or mph); "– km/h" when unknown.
+String formatSpeed(double? secPerKm, {bool unit = true}) {
+  final v = secPerKm == null || secPerKm <= 0 ? null : Units.speedOut(1000 / secPerKm);
+  final t = v == null || !v.isFinite ? '–' : v.toStringAsFixed(1);
+  return unit ? '$t ${Units.speed}' : t;
+}
+
 /// "5.24" with two decimals, in km or miles (label: `Units.d`).
 String formatKm(double metres) => Units.toD(metres).toStringAsFixed(2);

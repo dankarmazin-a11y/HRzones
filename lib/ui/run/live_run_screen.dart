@@ -63,6 +63,7 @@ class _LiveRunScreenState extends State<LiveRunScreen> {
                       RunActivity.walk => run.treadmill ? 'Treadmill walk' : 'Walk',
                       RunActivity.hike => 'Hike',
                       RunActivity.run => run.treadmill ? 'Treadmill run' : 'Run',
+                      RunActivity.ride => run.treadmill ? 'Indoor ride' : 'Ride',
                     },
             ),
             actions: [
@@ -158,6 +159,7 @@ class _Numbers extends StatelessWidget {
       switch (run.chosen) {
         RunActivity.walk when run.steps != null => _walkColumn(run, label, stat),
         RunActivity.hike when !run.treadmill => _hikeColumn(run, label, stat),
+        RunActivity.ride when !run.treadmill => _rideColumn(run, label, stat),
         _ => _runColumn(run, label, stat),
       };
 
@@ -185,6 +187,42 @@ class _Numbers extends StatelessWidget {
       const SizedBox(height: 24),
       const _HeartRate(),
       _Cadence(run: run),
+    ],
+  );
+
+  /// Ride: speed is the big number, then distance, moving time, average and top speed.
+  Widget _rideColumn(RunSession run, TextStyle label, Widget Function(String, String, {Key? key}) stat) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      FittedBox(
+        child: Text(
+          formatSpeed(run.currentPace, unit: false),
+          key: const Key('rideSpeed'),
+          style: TimerStyle.digits.copyWith(fontSize: 120),
+        ),
+      ),
+      Text('Speed ${Units.speed}', style: label),
+      const SizedBox(height: 28),
+      Row(
+        children: [
+          stat(formatKm(run.distanceM), Units.mi ? 'Miles' : 'Kilometres', key: const Key('runDistance')),
+          stat(formatDuration(run.moving), 'Moving time', key: const Key('runTime')),
+          stat(formatSpeed(run.avgPace, unit: false), 'Avg ${Units.speed}', key: const Key('rideAvgSpeed')),
+        ],
+      ),
+      const SizedBox(height: 16),
+      Row(
+        children: [
+          stat(
+            run.maxSpeedMs == null ? '–' : Units.speedOut(run.maxSpeedMs!).toStringAsFixed(1),
+            'Top ${Units.speed}',
+            key: const Key('rideTopSpeed'),
+          ),
+          stat(run.climbM == null ? '–' : '${run.climbM!.round()} m', 'Climbed', key: const Key('rideClimb')),
+        ],
+      ),
+      const SizedBox(height: 24),
+      const _HeartRate(),
     ],
   );
 

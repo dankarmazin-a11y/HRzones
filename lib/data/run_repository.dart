@@ -212,6 +212,7 @@ class RunRepository {
     final pts = await points(run.id);
     final bests = bestEfforts(
       pts.map((p) => (time: p.time, lat: p.lat, lon: p.lon, accuracy: p.accuracy, segment: p.segment)),
+      distances: recordDistancesFor(ride: run.activity == RunActivity.ride).keys,
     );
     await (db.update(
       db.runs,
@@ -229,7 +230,7 @@ class RunRepository {
               ..orderBy([(r) => OrderingTerm.asc(r.startedAt)]))
             .get();
     final best = <int, RunRecord>{};
-    RunRecord? longest, mostSteps, biggestClimb;
+    RunRecord? longest, mostSteps, biggestClimb, topSpeed;
     for (final r in rows) {
       if (r.id == excludeId || (before != null && !r.startedAt.isBefore(before))) continue;
       for (final e in (await bestsFor(r)).entries) {
@@ -241,19 +242,31 @@ class RunRepository {
       if (st != null && st > 0 && (mostSteps == null || st > mostSteps.value)) {
         mostSteps = RunRecord(run: r, value: st.toDouble());
       }
+      final top = r.maxSpeedMs;
+      if (top != null && top > 0 && (topSpeed == null || top > topSpeed.value)) {
+        topSpeed = RunRecord(run: r, value: top);
+      }
       final climb = r.elevGainM;
       if (climb != null && climb > 0 && (biggestClimb == null || climb > biggestClimb.value)) {
         biggestClimb = RunRecord(run: r, value: climb);
       }
     }
-    return RunRecords(fastest: best, longest: longest, mostSteps: mostSteps, biggestClimb: biggestClimb);
+    return RunRecords(
+      fastest: best,
+      longest: longest,
+      mostSteps: mostSteps,
+      biggestClimb: biggestClimb,
+      topSpeed: topSpeed,
+    );
   }
 
   /// Changes whether an outing was a run, a walk or a hike (the owner's fix
   /// when the app guessed wrong).
-  Future<void> setActivity(String id, RunActivity activity) => (db.update(
-    db.runs,
-  )..where((r) => r.id.equals(id))).write(RunsCompanion(activity: Value(activity), updatedAt: Value(DateTime.now())));
+  Future<void> setActivity(String id, RunActivity activity) =>
+      (db.update(db.runs)..where((r) => r.id.equals(id))).write(
+        // best efforts are worked out again: rides use other distances
+        RunsCompanion(activity: Value(activity), bestsJson: const Value(null), updatedAt: Value(DateTime.now())),
+      );
 }
 
 /// A record and the run it was set in.
@@ -267,7 +280,7 @@ class RunRecord {
 }
 
 class RunRecords {
-  const RunRecords({required this.fastest, required this.longest, this.mostSteps, this.biggestClimb});
+  const RunRecords({required this.fastest, required this.longest, this.mostSteps, this.biggestClimb, this.topSpeed});
 
   /// Distance in metres → fastest time.
   final Map<int, RunRecord> fastest;
@@ -276,6 +289,9 @@ class RunRecords {
   /// Most steps in one outing (walks) and the biggest climb in metres (hikes).
   final RunRecord? mostSteps;
   final RunRecord? biggestClimb;
+
+  /// Top speed in m/s (rides).
+  final RunRecord? topSpeed;
 }
 
 String encodeBests(Map<int, double> b) => jsonEncode({for (final e in b.entries) '${e.key}': e.value});
