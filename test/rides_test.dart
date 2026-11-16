@@ -5,6 +5,7 @@ import 'package:hrzones/beep/beeper.dart';
 import 'package:hrzones/data/database.dart';
 import 'package:hrzones/data/exercise_repository.dart';
 import 'package:hrzones/data/run_repository.dart';
+import 'package:hrzones/data/shoe_repository.dart';
 import 'package:hrzones/hr/hr_monitor.dart';
 import 'package:hrzones/run/geo.dart';
 import 'package:hrzones/run/run_session.dart';
@@ -117,6 +118,60 @@ void main() {
     await ride.discard();
   });
 
+  test('bikes: own default, km from rides, service due at 3,000 km, serviced resets', () async {
+    final db = memoryDb();
+    final gear = ShoeRepository(db);
+    final runs = RunRepository(db);
+    final shoe = await gear.save(name: 'Pegasus');
+    final bike = await gear.save(name: 'Road bike', startKm: 2900, kind: GearKind.bike);
+    expect((await gear.defaultShoe())!.id, shoe, reason: 'shoes keep their default');
+    expect((await gear.defaultShoe(kind: GearKind.bike))!.id, bike, reason: 'first bike is the bike default');
+    expect((await gear.all()).map((x) => x.shoe.id), [shoe]);
+    var b = (await gear.all(kind: GearKind.bike)).single;
+    expect(b.shoe.limitKm, defaultServiceKm);
+    expect(b.counted, 0, reason: 'km already on it count as serviced');
+    expect(b.wornOut, isFalse);
+    final ride = await runs.logRun(startedAt: t0, durationS: 3600, distanceM: 3100000 / 1000, shoeId: bike);
+    expect(ride, isNotEmpty);
+    await runs.logRun(startedAt: t0, durationS: 36000, distanceM: 3000000, shoeId: bike);
+    b = (await gear.all(kind: GearKind.bike)).single;
+    expect(b.km, closeTo(2900 + 3.1 + 3000, 0.01));
+    expect(b.wornOut, isTrue, reason: 'service due');
+    await gear.markServiced(bike);
+    b = (await gear.all(kind: GearKind.bike)).single;
+    expect(b.counted, 0);
+    expect(b.wornOut, isFalse);
+    // a second bike made default only changes the bike default
+    final gravel = await gear.save(name: 'Gravel', kind: GearKind.bike);
+    await gear.setDefault(gravel);
+    expect((await gear.defaultShoe())!.id, shoe);
+    expect((await gear.defaultShoe(kind: GearKind.bike))!.id, gravel);
+  });
+
+  test('speed alert: "Speed up" when slower than the set speed, never while fast enough', () async {
+    var clock = t0;
+    final gps = FakeLocation();
+    final beeper = SilentBeeper();
+    final ride = RunSession(
+      runs: RunRepository(memoryDb()),
+      hr: HrMonitor(beeper: beeper),
+      location: gps,
+      clock: () => clock,
+    )..voice = RunVoice(beeper.speak);
+    ride.rideSpeedAlert = 20 / 3.6;
+    await ride.start(activity: RunActivity.ride);
+    var m = 0.0;
+    for (var s = 1; s <= 240; s++) {
+      clock = t0.add(Duration(seconds: s));
+      m += s <= 120 ? 8 : 4; // 28.8 km/h, then 14.4 km/h
+      gps.emit(GeoFix(time: clock, lat: lat0 + m / 111195, lon: lon0, accuracy: 5));
+      await Future<void>.delayed(Duration.zero);
+      if (s == 120) expect(beeper.spoken.where((t) => t.contains('Speed up')), isEmpty);
+    }
+    expect(beeper.spoken.any((t) => t.startsWith('Speed 14 kilometres per hour. Speed up.')), isTrue);
+    await ride.discard();
+  });
+
   testWidgets('live screen: tap a small number to make it the big one (remembered per activity)', (tester) async {
     final s = (await tester.runAsync(testServices))!;
     await tester.pumpWidget(HrZonesApp(services: s));
@@ -149,6 +204,26 @@ void main() {
     expect(find.byKey(const Key('walkingOptions')), findsNothing);
     expect(find.byKey(const Key('paceAlertRow')), findsNothing);
     expect(find.byKey(const Key('autoPauseRide')), findsOneWidget);
+    await tester.ensureVisible(find.byKey(const Key('addBikeChip')));
+    await tester.tap(find.byKey(const Key('addBikeChip')));
+    await settle(tester);
+    await tester.enterText(find.byKey(const Key('shoeName')), 'Road bike');
+    expect(find.text('Service every'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('saveShoe')));
+    await settle(tester);
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+    await settle(tester);
+    final bikes = (await tester.runAsync(() => s.shoes.all(kind: GearKind.bike)))!;
+    expect(bikes.single.shoe.name, 'Road bike');
+    expect(find.byKey(Key('runBike_${bikes.single.shoe.id}')), findsOneWidget);
+    expect(find.byKey(const Key('speedAlertRow')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('speedAlertRow')));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('speedPlus')));
+    await tester.tap(find.byKey(const Key('speedSave')));
+    await settle(tester);
+    expect(s.run.rideSpeedAlert! * 3.6, closeTo(21, 0.01));
+    expect(find.text('Beep below 21 km/h'), findsOneWidget);
     expect(find.byKey(const Key('rideScreenOn')), findsOneWidget);
     await tearDownApp(tester, s);
   });

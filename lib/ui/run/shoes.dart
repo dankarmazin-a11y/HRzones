@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 
 import '../../app_services.dart';
+import '../../data/database.dart' show GearKind;
 import '../../data/shoe_repository.dart';
 import '../number_input.dart';
 import '../theme/emblems.dart';
@@ -16,23 +17,32 @@ String _km(double km) {
 double _shown(double km) => double.parse(Units.toD(km * 1000).toStringAsFixed(1));
 double _stored(num v) => Units.fromD(v.toDouble()) / 1000;
 
-/// Run tab: your shoes with their km; tap for the shoes screen.
+String _gearTitle(GearKind kind) => kind == GearKind.bike ? 'Bikes' : 'Shoes';
+
+/// Run tab: your shoes (or bikes) with their km; tap for the shoes screen.
 class ShoesCard extends StatelessWidget {
-  const ShoesCard({super.key});
+  const ShoesCard({super.key, this.kind = GearKind.shoe, this.hideWhenEmpty = false});
+
+  final GearKind kind;
+
+  /// Run tab: no bikes card until there's a bike.
+  final bool hideWhenEmpty;
 
   @override
   Widget build(BuildContext context) {
     final s = Services.of(context);
     final text = Theme.of(context).textTheme;
     return StreamBuilder<List<ShoeKm>>(
-      stream: s.shoes.watchAll(),
+      stream: s.shoes.watchAll(kind: kind),
       builder: (context, snap) {
         final active = (snap.data ?? const <ShoeKm>[]).where((x) => !x.shoe.retired).toList();
+        if (hideWhenEmpty && active.isEmpty) return const SizedBox.shrink();
+        final bike = kind == GearKind.bike;
         return Card(
-          key: const Key('shoesCard'),
+          key: Key(bike ? 'bikesCard' : 'shoesCard'),
           child: InkWell(
             borderRadius: BorderRadius.circular(12),
-            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ShoesScreen())),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ShoesScreen(kind: kind))),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
               child: Column(
@@ -40,12 +50,17 @@ class ShoesCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Expanded(child: Text('Shoes', style: text.titleMedium)),
+                      Expanded(child: Text(_gearTitle(kind), style: text.titleMedium)),
                       const Icon(Icons.chevron_right),
                     ],
                   ),
                   if (active.isEmpty)
-                    Text('Add your running shoes to count their ${Units.mi ? 'miles' : 'km'}.', style: text.bodySmall)
+                    Text(
+                      bike
+                          ? 'Add your bike to count its ${Units.mi ? 'miles' : 'km'} and get a service reminder.'
+                          : 'Add your running shoes to count their ${Units.mi ? 'miles' : 'km'}.',
+                      style: text.bodySmall,
+                    )
                   else
                     for (final x in active.take(3)) ShoeBar(shoe: x),
                 ],
@@ -79,7 +94,7 @@ class ShoeBar extends StatelessWidget {
               if (shoe.shoe.isDefault) const Icon(Icons.star, size: 16),
               Expanded(child: Text(shoe.shoe.name, style: text.bodyLarge)),
               Text(
-                '${_km(shoe.km)} / ${_km(shoe.shoe.limitKm)} ${Units.d}',
+                shoe.isBike ? '${_km(shoe.km)} ${Units.d}' : '${_km(shoe.km)} / ${_km(shoe.shoe.limitKm)} ${Units.d}',
                 style: text.bodyMedium?.copyWith(color: worn ? Colors.orange.shade800 : null),
               ),
             ],
@@ -91,7 +106,18 @@ class ShoeBar extends StatelessWidget {
             borderRadius: BorderRadius.circular(3),
             color: worn ? Colors.orange : scheme.primary,
           ),
-          if (worn)
+          if (shoe.isBike)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                worn
+                    ? 'Service due – ${_km(shoe.counted)} ${Units.d} since the last one'
+                    : '${_km(shoe.shoe.limitKm - shoe.counted)} ${Units.d} to the next service',
+                key: Key('service_${shoe.shoe.id}'),
+                style: text.bodySmall?.copyWith(color: worn ? Colors.orange.shade800 : null),
+              ),
+            )
+          else if (worn)
             Padding(
               padding: const EdgeInsets.only(top: 2),
               child: Text('Time for new shoes?', style: text.bodySmall?.copyWith(color: Colors.orange.shade800)),
@@ -102,23 +128,26 @@ class ShoeBar extends StatelessWidget {
   }
 }
 
-/// All shoes: add, edit, choose the default, retire, delete.
+/// All shoes (or bikes): add, edit, choose the default, retire, delete.
 class ShoesScreen extends StatelessWidget {
-  const ShoesScreen({super.key});
+  const ShoesScreen({super.key, this.kind = GearKind.shoe});
+
+  final GearKind kind;
 
   @override
   Widget build(BuildContext context) {
     final s = Services.of(context);
+    final bike = kind == GearKind.bike;
     return Scaffold(
-      appBar: AppBar(title: const Text('Shoes')),
+      appBar: AppBar(title: Text(_gearTitle(kind))),
       floatingActionButton: FloatingActionButton.extended(
-        key: const Key('addShoe'),
+        key: Key(bike ? 'addBike' : 'addShoe'),
         icon: const Icon(Icons.add),
-        label: const Text('Add shoes'),
-        onPressed: () => editShoe(context),
+        label: Text(bike ? 'Add bike' : 'Add shoes'),
+        onPressed: () => editShoe(context, null, kind),
       ),
       body: StreamBuilder<List<ShoeKm>>(
-        stream: s.shoes.watchAll(),
+        stream: s.shoes.watchAll(kind: kind),
         builder: (context, snap) {
           final list = snap.data ?? const <ShoeKm>[];
           if (list.isEmpty) {
@@ -126,8 +155,12 @@ class ShoesScreen extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  'Add the shoes you run in. Every run adds its distance, and you get a reminder when they reach '
-                  'their replacement distance (about ${Units.mi ? '430 miles' : '700 km'} for most running shoes).',
+                  bike
+                      ? 'Add the bike you ride. Every ride adds its distance, and you get a reminder when it is '
+                            'time for a service (every ${Units.mi ? '1,900 miles' : '3,000 km'} unless you change it).'
+                      : 'Add the shoes you run in. Every run adds its distance, and you get a reminder when they '
+                            'reach their replacement distance (about ${Units.mi ? '430 miles' : '700 km'} for most '
+                            'running shoes).',
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -148,11 +181,13 @@ class ShoesScreen extends StatelessWidget {
                     ),
                     subtitle: x.shoe.retired
                         ? const Text('Retired')
-                        : (x.shoe.isDefault ? const Text('Used for new runs') : null),
-                    onTap: () => editShoe(context, x),
+                        : (x.shoe.isDefault ? Text(bike ? 'Used for new rides' : 'Used for new runs') : null),
+                    onTap: () => editShoe(context, x, kind),
                     trailing: PopupMenuButton<String>(
                       onSelected: (v) async {
                         switch (v) {
+                          case 'serviced':
+                            await s.shoes.markServiced(x.shoe.id);
                           case 'default':
                             await s.shoes.setDefault(x.shoe.id);
                           case 'retire':
@@ -162,8 +197,10 @@ class ShoesScreen extends StatelessWidget {
                         }
                       },
                       itemBuilder: (_) => [
+                        if (bike && !x.shoe.retired)
+                          const PopupMenuItem(value: 'serviced', child: Text('Serviced today')),
                         if (!x.shoe.isDefault && !x.shoe.retired)
-                          const PopupMenuItem(value: 'default', child: Text('Use for new runs')),
+                          PopupMenuItem(value: 'default', child: Text(bike ? 'Use for new rides' : 'Use for new runs')),
                         PopupMenuItem(value: 'retire', child: Text(x.shoe.retired ? 'Back in use' : 'Retire')),
                         const PopupMenuItem(value: 'delete', child: Text('Delete')),
                       ],
@@ -178,22 +215,25 @@ class ShoesScreen extends StatelessWidget {
   }
 }
 
-/// Add or edit a pair: name, km they already have, replacement km.
-Future<void> editShoe(BuildContext context, [ShoeKm? existing]) async {
+/// Add or edit a pair (or a bike): name, km they already have, replacement
+/// (or service) km.
+Future<void> editShoe(BuildContext context, [ShoeKm? existing, GearKind kind = GearKind.shoe]) async {
   final s = Services.of(context);
+  final k = existing?.shoe.kind ?? kind;
   final result = await showDialog<(String, double, double)>(
     context: context,
-    builder: (_) => _ShoeDialog(existing: existing),
+    builder: (_) => _ShoeDialog(existing: existing, kind: k),
   );
   if (result == null) return;
   final (name, startKm, limitKm) = result;
-  await s.shoes.save(id: existing?.shoe.id, name: name, startKm: startKm, limitKm: limitKm);
+  await s.shoes.save(id: existing?.shoe.id, name: name, startKm: startKm, limitKm: limitKm, kind: k);
 }
 
 class _ShoeDialog extends StatefulWidget {
-  const _ShoeDialog({this.existing});
+  const _ShoeDialog({this.existing, required this.kind});
 
   final ShoeKm? existing;
+  final GearKind kind;
 
   @override
   State<_ShoeDialog> createState() => _ShoeDialogState();
@@ -202,7 +242,8 @@ class _ShoeDialog extends StatefulWidget {
 class _ShoeDialogState extends State<_ShoeDialog> {
   late final _name = TextEditingController(text: widget.existing?.shoe.name ?? '');
   late double _start = widget.existing?.shoe.startKm ?? 0;
-  late double _limit = widget.existing?.shoe.limitKm ?? 700;
+  late double _limit = widget.existing?.shoe.limitKm ?? (_bike ? defaultServiceKm : 700);
+  bool get _bike => widget.kind == GearKind.bike;
 
   @override
   void dispose() {
@@ -213,7 +254,11 @@ class _ShoeDialogState extends State<_ShoeDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(widget.existing == null ? 'Add shoes' : 'Edit shoes'),
+      title: Text(
+        _bike
+            ? (widget.existing == null ? 'Add bike' : 'Edit bike')
+            : (widget.existing == null ? 'Add shoes' : 'Edit shoes'),
+      ),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -224,18 +269,21 @@ class _ShoeDialogState extends State<_ShoeDialog> {
               controller: _name,
               autofocus: widget.existing == null,
               textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(labelText: 'Name', hintText: 'e.g. Nike Pegasus 41'),
+              decoration: InputDecoration(
+                labelText: 'Name',
+                hintText: _bike ? 'e.g. Road bike' : 'e.g. Nike Pegasus 41',
+              ),
             ),
             const SizedBox(height: 12),
             Row(
               children: [
-                Expanded(child: Text('${Units.mi ? 'Miles' : 'Km'} already on them')),
+                Expanded(child: Text('${Units.mi ? 'Miles' : 'Km'} already on ${_bike ? 'it' : 'them'}')),
                 EditableNumber(
                   key: const Key('shoeStartKm'),
                   value: _shown(_start),
-                  title: '${Units.mi ? 'Miles' : 'Km'} already on them',
+                  title: '${Units.mi ? 'Miles' : 'Km'} already on ${_bike ? 'it' : 'them'}',
                   decimal: true,
-                  max: 5000,
+                  max: _bike ? 200000 : 5000,
                   suffix: Units.d,
                   display: '${_km(_start)} ${Units.d}',
                   onChanged: (v) => setState(() => _start = _stored(v)),
@@ -244,13 +292,13 @@ class _ShoeDialogState extends State<_ShoeDialog> {
             ),
             Row(
               children: [
-                const Expanded(child: Text('Replace at')),
+                Expanded(child: Text(_bike ? 'Service every' : 'Replace at')),
                 EditableNumber(
                   key: const Key('shoeLimitKm'),
                   value: _shown(_limit),
-                  title: 'Replace at (${Units.d})',
+                  title: '${_bike ? 'Service every' : 'Replace at'} (${Units.d})',
                   min: 30,
-                  max: 5000,
+                  max: _bike ? 20000 : 5000,
                   suffix: Units.d,
                   display: '${_km(_limit)} ${Units.d}',
                   onChanged: (v) => setState(() => _limit = _stored(v)),
@@ -276,38 +324,45 @@ class _ShoeDialogState extends State<_ShoeDialog> {
   }
 }
 
-/// Run summary: which shoes (tap to change) and a reminder when worn out.
+/// Run summary: which shoes (or bike for a ride; tap to change) and a
+/// reminder when worn out / due for a service.
 class RunShoeRow extends StatelessWidget {
-  const RunShoeRow({super.key, required this.runId, required this.shoeId});
+  const RunShoeRow({super.key, required this.runId, required this.shoeId, this.kind = GearKind.shoe});
 
   final String runId;
   final String? shoeId;
+  final GearKind kind;
 
   @override
   Widget build(BuildContext context) {
     final s = Services.of(context);
     return StreamBuilder<List<ShoeKm>>(
-      stream: s.shoes.watchAll(),
+      stream: s.shoes.watchAll(kind: kind),
       builder: (context, snap) {
         final all = snap.data ?? const <ShoeKm>[];
         final shoe = all.where((x) => x.shoe.id == shoeId).firstOrNull;
         if (all.isEmpty) return const SizedBox.shrink();
+        final bike = kind == GearKind.bike;
         return ListTile(
-          key: const Key('runShoe'),
+          key: Key(bike ? 'runBike' : 'runShoe'),
           contentPadding: EdgeInsets.zero,
-          leading: const Emblem(EmblemKind.shoe),
-          title: Text(shoe == null ? 'Which shoes?' : shoe.shoe.name),
+          leading: Emblem(bike ? EmblemKind.bike : EmblemKind.shoe),
+          title: Text(shoe == null ? (bike ? 'Which bike?' : 'Which shoes?') : shoe.shoe.name),
           subtitle: shoe == null
               ? null
               : Text(
-                  shoe.wornOut
+                  bike
+                      ? (shoe.wornOut
+                            ? '${_km(shoe.km)} ${Units.d} – service due'
+                            : '${_km(shoe.km)} ${Units.d} · service in ${_km(shoe.shoe.limitKm - shoe.counted)} ${Units.d}')
+                      : shoe.wornOut
                       ? '${_km(shoe.km)} ${Units.d} – time for new shoes?'
                       : '${_km(shoe.km)} of ${_km(shoe.shoe.limitKm)} ${Units.d}',
                   style: shoe.wornOut ? TextStyle(color: Colors.orange.shade800) : null,
                 ),
           trailing: const Icon(Icons.edit_outlined, size: 18),
           onTap: () async {
-            final picked = await pickShoe(context, current: shoeId);
+            final picked = await pickShoe(context, current: shoeId, kind: kind);
             if (picked != null) await s.shoes.setRunShoe(runId, picked.isEmpty ? null : picked);
           },
         );
@@ -316,10 +371,11 @@ class RunShoeRow extends StatelessWidget {
   }
 }
 
-/// Choose shoes ('' = none). Null when cancelled.
-Future<String?> pickShoe(BuildContext context, {String? current}) async {
+/// Choose shoes or a bike ('' = none). Null when cancelled.
+Future<String?> pickShoe(BuildContext context, {String? current, GearKind kind = GearKind.shoe}) async {
   final s = Services.of(context);
-  final list = (await s.shoes.all()).where((x) => !x.shoe.retired || x.shoe.id == current).toList();
+  final bike = kind == GearKind.bike;
+  final list = (await s.shoes.all(kind: kind)).where((x) => !x.shoe.retired || x.shoe.id == current).toList();
   if (!context.mounted) return null;
   return showModalBottomSheet<String>(
     context: context,
@@ -327,7 +383,7 @@ Future<String?> pickShoe(BuildContext context, {String? current}) async {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const ListTile(title: Text('Shoes')),
+          ListTile(title: Text(_gearTitle(kind))),
           ListTile(
             title: const Text('None'),
             trailing: current == null ? const Icon(Icons.check) : null,
@@ -342,10 +398,10 @@ Future<String?> pickShoe(BuildContext context, {String? current}) async {
             ),
           ListTile(
             leading: const Icon(Icons.add),
-            title: const Text('Add shoes'),
+            title: Text(bike ? 'Add bike' : 'Add shoes'),
             onTap: () async {
               Navigator.pop(c);
-              await editShoe(context);
+              await editShoe(context, null, kind);
             },
           ),
         ],

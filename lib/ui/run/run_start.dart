@@ -23,6 +23,7 @@ import '../../units/units.dart';
 import 'pace_alert.dart';
 import '../../run/run_plan.dart';
 import '../../data/shoe_repository.dart';
+import 'shoes.dart' show editShoe;
 
 /// Start a run: the "Ready to run" sheet (heart-rate zone), location
 /// permission, a vibration, then the live run screen.
@@ -314,6 +315,8 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
   bool _treadmill = false;
   RunActivity _activity = RunActivity.run;
   List<ShoeKm> _shoes = const [];
+  List<ShoeKm> _bikes = const [];
+  String? _bikeId;
   String? _shoeId;
 
   @override
@@ -338,6 +341,9 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
     final shoes = (await s.shoes.all()).where((x) => !x.shoe.retired).toList();
     if (initial) _shoeId = shoes.where((x) => x.shoe.isDefault).firstOrNull?.shoe.id;
     _shoes = shoes;
+    final bikes = (await s.shoes.all(kind: GearKind.bike)).where((x) => !x.shoe.retired).toList();
+    if (initial) _bikeId = bikes.where((x) => x.shoe.isDefault).firstOrNull?.shoe.id;
+    _bikes = bikes;
     if (!mounted) return;
     setState(() {
       _presets = presets;
@@ -468,6 +474,7 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
                     ],
                     if (!_treadmill && _activity == RunActivity.run) const PaceAlertRow(),
                     if (!_treadmill && _activity == RunActivity.ride) ...[
+                      const SpeedAlertRow(),
                       SwitchListTile(
                         key: const Key('autoPauseRide'),
                         contentPadding: EdgeInsets.zero,
@@ -513,6 +520,34 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
                         ],
                       ),
                     ],
+                    if (_activity == RunActivity.ride) ...[
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          const Icon(Icons.directions_bike, size: 20),
+                          for (final x in _bikes)
+                            ChoiceChip(
+                              key: Key('runBike_${x.shoe.id}'),
+                              label: Text(x.shoe.name),
+                              selected: _bikeId == x.shoe.id,
+                              onSelected: (on) => setState(() => _bikeId = on ? x.shoe.id : null),
+                            ),
+                          if (_bikes.isEmpty)
+                            ActionChip(
+                              key: const Key('addBikeChip'),
+                              avatar: const Icon(Icons.add, size: 18),
+                              label: const Text('Add your bike'),
+                              onPressed: () async {
+                                await editShoe(context, null, GearKind.bike);
+                                await _load();
+                              },
+                            ),
+                        ],
+                      ),
+                    ],
                     const RunVoiceSettings(compact: true),
                   ],
                 ),
@@ -537,7 +572,7 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
                         RunSetup(
                           preset: on ? _presets.where((p) => p.id == _selected).firstOrNull : null,
                           treadmill: _treadmill,
-                          shoeId: _activity == RunActivity.ride ? null : _shoeId,
+                          shoeId: _activity == RunActivity.ride ? _bikeId : _shoeId,
                           activity: _activity,
                         ),
                       ),

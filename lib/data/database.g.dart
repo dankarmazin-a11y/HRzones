@@ -7091,7 +7091,25 @@ class $ShoesTable extends Shoes with TableInfo<$ShoesTable, Shoe> {
     defaultValue: const Constant(false),
   );
   @override
-  List<GeneratedColumn> get $columns => [id, updatedAt, name, startKm, limitKm, retired, isDefault];
+  late final GeneratedColumnWithTypeConverter<GearKind, int> kind = GeneratedColumn<int>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  ).withConverter<GearKind>($ShoesTable.$converterkind);
+  static const VerificationMeta _servicedKmMeta = const VerificationMeta('servicedKm');
+  @override
+  late final GeneratedColumn<double> servicedKm = GeneratedColumn<double>(
+    'serviced_km',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, updatedAt, name, startKm, limitKm, retired, isDefault, kind, servicedKm];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -7124,6 +7142,9 @@ class $ShoesTable extends Shoes with TableInfo<$ShoesTable, Shoe> {
     if (data.containsKey('is_default')) {
       context.handle(_isDefaultMeta, isDefault.isAcceptableOrUnknown(data['is_default']!, _isDefaultMeta));
     }
+    if (data.containsKey('serviced_km')) {
+      context.handle(_servicedKmMeta, servicedKm.isAcceptableOrUnknown(data['serviced_km']!, _servicedKmMeta));
+    }
     return context;
   }
 
@@ -7140,6 +7161,10 @@ class $ShoesTable extends Shoes with TableInfo<$ShoesTable, Shoe> {
       limitKm: attachedDatabase.typeMapping.read(DriftSqlType.double, data['${effectivePrefix}limit_km'])!,
       retired: attachedDatabase.typeMapping.read(DriftSqlType.bool, data['${effectivePrefix}retired'])!,
       isDefault: attachedDatabase.typeMapping.read(DriftSqlType.bool, data['${effectivePrefix}is_default'])!,
+      kind: $ShoesTable.$converterkind.fromSql(
+        attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}kind'])!,
+      ),
+      servicedKm: attachedDatabase.typeMapping.read(DriftSqlType.double, data['${effectivePrefix}serviced_km']),
     );
   }
 
@@ -7147,6 +7172,8 @@ class $ShoesTable extends Shoes with TableInfo<$ShoesTable, Shoe> {
   $ShoesTable createAlias(String alias) {
     return $ShoesTable(attachedDatabase, alias);
   }
+
+  static JsonTypeConverter2<GearKind, int, int> $converterkind = const EnumIndexConverter<GearKind>(GearKind.values);
 }
 
 class Shoe extends DataClass implements Insertable<Shoe> {
@@ -7163,6 +7190,13 @@ class Shoe extends DataClass implements Insertable<Shoe> {
 
   /// Picked automatically for new runs.
   final bool isDefault;
+
+  /// Shoes or a bike ([GearKind], stored by index – only add at the end).
+  final GearKind kind;
+
+  /// Bikes: km at the last service (null = [startKm]); [limitKm] is the
+  /// service interval.
+  final double? servicedKm;
   const Shoe({
     required this.id,
     required this.updatedAt,
@@ -7171,6 +7205,8 @@ class Shoe extends DataClass implements Insertable<Shoe> {
     required this.limitKm,
     required this.retired,
     required this.isDefault,
+    required this.kind,
+    this.servicedKm,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -7182,6 +7218,12 @@ class Shoe extends DataClass implements Insertable<Shoe> {
     map['limit_km'] = Variable<double>(limitKm);
     map['retired'] = Variable<bool>(retired);
     map['is_default'] = Variable<bool>(isDefault);
+    {
+      map['kind'] = Variable<int>($ShoesTable.$converterkind.toSql(kind));
+    }
+    if (!nullToAbsent || servicedKm != null) {
+      map['serviced_km'] = Variable<double>(servicedKm);
+    }
     return map;
   }
 
@@ -7194,6 +7236,8 @@ class Shoe extends DataClass implements Insertable<Shoe> {
       limitKm: Value(limitKm),
       retired: Value(retired),
       isDefault: Value(isDefault),
+      kind: Value(kind),
+      servicedKm: servicedKm == null && nullToAbsent ? const Value.absent() : Value(servicedKm),
     );
   }
 
@@ -7207,6 +7251,8 @@ class Shoe extends DataClass implements Insertable<Shoe> {
       limitKm: serializer.fromJson<double>(json['limitKm']),
       retired: serializer.fromJson<bool>(json['retired']),
       isDefault: serializer.fromJson<bool>(json['isDefault']),
+      kind: $ShoesTable.$converterkind.fromJson(serializer.fromJson<int>(json['kind'])),
+      servicedKm: serializer.fromJson<double?>(json['servicedKm']),
     );
   }
   @override
@@ -7220,6 +7266,8 @@ class Shoe extends DataClass implements Insertable<Shoe> {
       'limitKm': serializer.toJson<double>(limitKm),
       'retired': serializer.toJson<bool>(retired),
       'isDefault': serializer.toJson<bool>(isDefault),
+      'kind': serializer.toJson<int>($ShoesTable.$converterkind.toJson(kind)),
+      'servicedKm': serializer.toJson<double?>(servicedKm),
     };
   }
 
@@ -7231,6 +7279,8 @@ class Shoe extends DataClass implements Insertable<Shoe> {
     double? limitKm,
     bool? retired,
     bool? isDefault,
+    GearKind? kind,
+    Value<double?> servicedKm = const Value.absent(),
   }) => Shoe(
     id: id ?? this.id,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -7239,6 +7289,8 @@ class Shoe extends DataClass implements Insertable<Shoe> {
     limitKm: limitKm ?? this.limitKm,
     retired: retired ?? this.retired,
     isDefault: isDefault ?? this.isDefault,
+    kind: kind ?? this.kind,
+    servicedKm: servicedKm.present ? servicedKm.value : this.servicedKm,
   );
   Shoe copyWithCompanion(ShoesCompanion data) {
     return Shoe(
@@ -7249,6 +7301,8 @@ class Shoe extends DataClass implements Insertable<Shoe> {
       limitKm: data.limitKm.present ? data.limitKm.value : this.limitKm,
       retired: data.retired.present ? data.retired.value : this.retired,
       isDefault: data.isDefault.present ? data.isDefault.value : this.isDefault,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      servicedKm: data.servicedKm.present ? data.servicedKm.value : this.servicedKm,
     );
   }
 
@@ -7261,13 +7315,15 @@ class Shoe extends DataClass implements Insertable<Shoe> {
           ..write('startKm: $startKm, ')
           ..write('limitKm: $limitKm, ')
           ..write('retired: $retired, ')
-          ..write('isDefault: $isDefault')
+          ..write('isDefault: $isDefault, ')
+          ..write('kind: $kind, ')
+          ..write('servicedKm: $servicedKm')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, updatedAt, name, startKm, limitKm, retired, isDefault);
+  int get hashCode => Object.hash(id, updatedAt, name, startKm, limitKm, retired, isDefault, kind, servicedKm);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -7278,7 +7334,9 @@ class Shoe extends DataClass implements Insertable<Shoe> {
           other.startKm == this.startKm &&
           other.limitKm == this.limitKm &&
           other.retired == this.retired &&
-          other.isDefault == this.isDefault);
+          other.isDefault == this.isDefault &&
+          other.kind == this.kind &&
+          other.servicedKm == this.servicedKm);
 }
 
 class ShoesCompanion extends UpdateCompanion<Shoe> {
@@ -7289,6 +7347,8 @@ class ShoesCompanion extends UpdateCompanion<Shoe> {
   final Value<double> limitKm;
   final Value<bool> retired;
   final Value<bool> isDefault;
+  final Value<GearKind> kind;
+  final Value<double?> servicedKm;
   final Value<int> rowid;
   const ShoesCompanion({
     this.id = const Value.absent(),
@@ -7298,6 +7358,8 @@ class ShoesCompanion extends UpdateCompanion<Shoe> {
     this.limitKm = const Value.absent(),
     this.retired = const Value.absent(),
     this.isDefault = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.servicedKm = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ShoesCompanion.insert({
@@ -7308,6 +7370,8 @@ class ShoesCompanion extends UpdateCompanion<Shoe> {
     this.limitKm = const Value.absent(),
     this.retired = const Value.absent(),
     this.isDefault = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.servicedKm = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : name = Value(name);
   static Insertable<Shoe> custom({
@@ -7318,6 +7382,8 @@ class ShoesCompanion extends UpdateCompanion<Shoe> {
     Expression<double>? limitKm,
     Expression<bool>? retired,
     Expression<bool>? isDefault,
+    Expression<int>? kind,
+    Expression<double>? servicedKm,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -7328,6 +7394,8 @@ class ShoesCompanion extends UpdateCompanion<Shoe> {
       if (limitKm != null) 'limit_km': limitKm,
       if (retired != null) 'retired': retired,
       if (isDefault != null) 'is_default': isDefault,
+      if (kind != null) 'kind': kind,
+      if (servicedKm != null) 'serviced_km': servicedKm,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -7340,6 +7408,8 @@ class ShoesCompanion extends UpdateCompanion<Shoe> {
     Value<double>? limitKm,
     Value<bool>? retired,
     Value<bool>? isDefault,
+    Value<GearKind>? kind,
+    Value<double?>? servicedKm,
     Value<int>? rowid,
   }) {
     return ShoesCompanion(
@@ -7350,6 +7420,8 @@ class ShoesCompanion extends UpdateCompanion<Shoe> {
       limitKm: limitKm ?? this.limitKm,
       retired: retired ?? this.retired,
       isDefault: isDefault ?? this.isDefault,
+      kind: kind ?? this.kind,
+      servicedKm: servicedKm ?? this.servicedKm,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -7378,6 +7450,12 @@ class ShoesCompanion extends UpdateCompanion<Shoe> {
     if (isDefault.present) {
       map['is_default'] = Variable<bool>(isDefault.value);
     }
+    if (kind.present) {
+      map['kind'] = Variable<int>($ShoesTable.$converterkind.toSql(kind.value));
+    }
+    if (servicedKm.present) {
+      map['serviced_km'] = Variable<double>(servicedKm.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -7394,6 +7472,8 @@ class ShoesCompanion extends UpdateCompanion<Shoe> {
           ..write('limitKm: $limitKm, ')
           ..write('retired: $retired, ')
           ..write('isDefault: $isDefault, ')
+          ..write('kind: $kind, ')
+          ..write('servicedKm: $servicedKm, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -12506,6 +12586,8 @@ typedef $$ShoesTableCreateCompanionBuilder = ShoesCompanion Function({
   Value<double> limitKm,
   Value<bool> retired,
   Value<bool> isDefault,
+  Value<GearKind> kind,
+  Value<double?> servicedKm,
   Value<int> rowid,
 });
 typedef $$ShoesTableUpdateCompanionBuilder = ShoesCompanion Function({
@@ -12516,6 +12598,8 @@ typedef $$ShoesTableUpdateCompanionBuilder = ShoesCompanion Function({
   Value<double> limitKm,
   Value<bool> retired,
   Value<bool> isDefault,
+  Value<GearKind> kind,
+  Value<double?> servicedKm,
   Value<int> rowid,
 });
 
@@ -12545,6 +12629,12 @@ class $$ShoesTableFilterComposer extends Composer<_$AppDatabase, $ShoesTable> {
 
   ColumnFilters<bool> get isDefault =>
       $composableBuilder(column: $table.isDefault, builder: (column) => ColumnFilters(column));
+
+  ColumnWithTypeConverterFilters<GearKind, GearKind, int> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => ColumnWithTypeConverterFilters(column));
+
+  ColumnFilters<double> get servicedKm =>
+      $composableBuilder(column: $table.servicedKm, builder: (column) => ColumnFilters(column));
 }
 
 class $$ShoesTableOrderingComposer extends Composer<_$AppDatabase, $ShoesTable> {
@@ -12574,6 +12664,12 @@ class $$ShoesTableOrderingComposer extends Composer<_$AppDatabase, $ShoesTable> 
 
   ColumnOrderings<bool> get isDefault =>
       $composableBuilder(column: $table.isDefault, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get servicedKm =>
+      $composableBuilder(column: $table.servicedKm, builder: (column) => ColumnOrderings(column));
 }
 
 class $$ShoesTableAnnotationComposer extends Composer<_$AppDatabase, $ShoesTable> {
@@ -12597,6 +12693,11 @@ class $$ShoesTableAnnotationComposer extends Composer<_$AppDatabase, $ShoesTable
   GeneratedColumn<bool> get retired => $composableBuilder(column: $table.retired, builder: (column) => column);
 
   GeneratedColumn<bool> get isDefault => $composableBuilder(column: $table.isDefault, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<GearKind, int> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<double> get servicedKm => $composableBuilder(column: $table.servicedKm, builder: (column) => column);
 }
 
 class $$ShoesTableTableManager
@@ -12631,6 +12732,8 @@ class $$ShoesTableTableManager
                 Value<double> limitKm = const Value.absent(),
                 Value<bool> retired = const Value.absent(),
                 Value<bool> isDefault = const Value.absent(),
+                Value<GearKind> kind = const Value.absent(),
+                Value<double?> servicedKm = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ShoesCompanion(
                 id: id,
@@ -12640,6 +12743,8 @@ class $$ShoesTableTableManager
                 limitKm: limitKm,
                 retired: retired,
                 isDefault: isDefault,
+                kind: kind,
+                servicedKm: servicedKm,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -12651,6 +12756,8 @@ class $$ShoesTableTableManager
                 Value<double> limitKm = const Value.absent(),
                 Value<bool> retired = const Value.absent(),
                 Value<bool> isDefault = const Value.absent(),
+                Value<GearKind> kind = const Value.absent(),
+                Value<double?> servicedKm = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ShoesCompanion.insert(
                 id: id,
@@ -12660,6 +12767,8 @@ class $$ShoesTableTableManager
                 limitKm: limitKm,
                 retired: retired,
                 isDefault: isDefault,
+                kind: kind,
+                servicedKm: servicedKm,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
