@@ -24,6 +24,7 @@ import 'pace_alert.dart';
 import '../../run/run_plan.dart';
 import '../../data/shoe_repository.dart';
 import 'shoes.dart' show editShoe;
+import 'bike_sensors_sheet.dart';
 
 /// Start a run: the "Ready to run" sheet (heart-rate zone), location
 /// permission, a vibration, then the live run screen.
@@ -521,6 +522,7 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
                       ),
                     ],
                     if (_activity == RunActivity.ride) ...[
+                      const BikeSensorsRow(),
                       const SizedBox(height: 4),
                       Wrap(
                         spacing: 8,

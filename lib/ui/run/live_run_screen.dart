@@ -190,7 +190,33 @@ class _Numbers extends StatelessWidget {
     final climb = run.climbM == null
         ? null
         : _Stat('climb', '${run.climbM!.round()} m', 'Climbed', const Key('hikeClimb'));
+    // Bluetooth bike sensors (rides): watts, W/kg, pedal turns per minute
+    final b = ride ? run.bike : null;
+    final power = b == null || !b.hasPower
+        ? null
+        : _Stat('power', run.powerW == null ? '–' : '${run.powerW}', 'Watts', const Key('ridePower'));
+    final wkg = run.wattsPerKg == null
+        ? null
+        : _Stat('wkg', run.wattsPerKg!.toStringAsFixed(1), 'W/kg', const Key('rideWkg'));
+    final rpm = b == null || !b.hasCadence
+        ? null
+        : _Stat(
+            'cadence',
+            run.bikeCadence == null ? '–' : '${run.bikeCadence!.round()}',
+            'Cadence rpm',
+            const Key('rideCadence'),
+          );
+    final wheel = t && b != null && b.hasSpeed;
     return switch (run.chosen) {
+      RunActivity.ride when t => [
+        if (wheel)
+          _Stat('speed', formatSpeed(run.currentPace, unit: false), 'Speed ${Units.speed}', const Key('rideSpeed')),
+        time,
+        if (wheel) distance,
+        ?power,
+        ?rpm,
+        ?wkg,
+      ],
       _ when t => [time, ?steps],
       RunActivity.run => [
         distance,
@@ -216,6 +242,9 @@ class _Numbers extends StatelessWidget {
           'Top ${Units.speed}',
           const Key('rideTopSpeed'),
         ),
+        ?power,
+        ?rpm,
+        ?wkg,
         ?climb,
       ],
     };
@@ -487,13 +516,17 @@ class _Controls extends StatelessWidget {
   /// Treadmill: the distance from the treadmill's display.
   Future<void> _finishTreadmill(BuildContext context) async {
     final nav = Navigator.of(context);
+    // indoor ride with a speed sensor: its distance, ready to confirm
+    final measured = run.riding && run.distanceM > 0 ? double.parse(Units.toD(run.distanceM).toStringAsFixed(2)) : null;
     final km = await promptNumber(
       context,
-      title: 'Distance (${Units.d}) – from the treadmill',
-      initial: Units.mi ? 3 : 5,
+      title: run.riding
+          ? 'Distance (${Units.d})${measured != null ? ' – from the speed sensor' : ' – from the trainer'}'
+          : 'Distance (${Units.d}) – from the treadmill',
+      initial: measured ?? (Units.mi ? 3 : 5),
       decimal: true,
       min: 0,
-      max: 100,
+      max: 300,
       suffix: Units.d,
     );
     if (km == null) return;
