@@ -4,6 +4,7 @@ import '../../app_services.dart';
 import '../../hr/zones.dart';
 import '../../run/geo.dart';
 import '../../units/units.dart';
+import '../number_input.dart';
 
 /// "Pace alert" row: off, or the target pace range. Tap to change.
 class PaceAlertRow extends StatefulWidget {
@@ -154,4 +155,94 @@ class _PaceInputDialogState extends State<_PaceInputDialog> {
       FilledButton(onPressed: () => Navigator.pop(context, _controller.text), child: const Text('OK')),
     ],
   );
+}
+
+/// Rides: beep and say "Speed up" when slower than a speed (km/h or mph).
+class SpeedAlertRow extends StatefulWidget {
+  const SpeedAlertRow({super.key});
+
+  @override
+  State<SpeedAlertRow> createState() => _SpeedAlertRowState();
+}
+
+class _SpeedAlertRowState extends State<SpeedAlertRow> {
+  @override
+  Widget build(BuildContext context) {
+    final s = Services.of(context);
+    final min = s.run.rideSpeedAlert;
+    return ListTile(
+      key: const Key('speedAlertRow'),
+      contentPadding: EdgeInsets.zero,
+      leading: const Icon(Icons.speed),
+      title: const Text('Speed alert'),
+      subtitle: Text(
+        min == null
+            ? 'Off – tap to beep when you ride slower than a speed'
+            : 'Beep below ${Units.speedOut(min).round()} ${Units.speed}',
+      ),
+      trailing: min == null
+          ? const Icon(Icons.chevron_right)
+          : IconButton(
+              key: const Key('speedAlertOff'),
+              tooltip: 'Turn off',
+              icon: const Icon(Icons.close),
+              onPressed: () async {
+                await s.setRideSpeedAlert(null);
+                setState(() {});
+              },
+            ),
+      onTap: () async {
+        final v = await pickMinSpeed(context, min);
+        if (v == null) return;
+        await s.setRideSpeedAlert(v);
+        if (mounted) setState(() {});
+      },
+    );
+  }
+}
+
+/// Asks for the slowest speed (± 1 km/h or mph, or type it); returns m/s.
+Future<double?> pickMinSpeed(BuildContext context, double? currentMs) async {
+  var shown = currentMs == null ? (Units.speed == 'mph' ? 12 : 20) : Units.speedOut(currentMs).round();
+  final picked = await showDialog<int>(
+    context: context,
+    builder: (c) => StatefulBuilder(
+      builder: (c, setState) => AlertDialog(
+        title: const Text('Beep when slower than'),
+        content: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconButton(
+              key: const Key('speedMinus'),
+              onPressed: shown > 1 ? () => setState(() => shown--) : null,
+              icon: const Icon(Icons.remove),
+            ),
+            TextButton(
+              key: const Key('speedValue'),
+              onPressed: () async {
+                final v = await promptNumber(c, title: 'Speed (${Units.speed})', initial: shown, min: 1, max: 80);
+                if (v != null) setState(() => shown = v.round());
+              },
+              child: Text('$shown ${Units.speed}', style: Theme.of(c).textTheme.headlineSmall),
+            ),
+            IconButton(
+              key: const Key('speedPlus'),
+              onPressed: shown < 80 ? () => setState(() => shown++) : null,
+              icon: const Icon(Icons.add),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Cancel')),
+          FilledButton(
+            key: const Key('speedSave'),
+            onPressed: () => Navigator.pop(c, shown),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    ),
+  );
+  if (picked == null) return null;
+  return picked * Units.metresPerUnit / 3600;
 }

@@ -292,6 +292,10 @@ class RunSession extends ChangeNotifier {
   /// [HrRange] holds seconds per km: min = fastest, max = slowest.
   HrRange? paceAlert;
 
+  /// Rides: beep and say "Speed up" when slower than this (m/s; setting
+  /// `rideSpeedAlert`; null = off).
+  double? rideSpeedAlert;
+
   /// While walking: beep when slower than this (s/km, setting `walkPaceAlert`;
   /// null = no pace beeps while walking – a walk break never beeps "speed up").
   int? walkPaceAlert;
@@ -814,7 +818,11 @@ class RunSession extends ChangeNotifier {
   }
 
   void _checkPace(double? pace) {
-    if (riding) return; // rides: speed alerts come later (part 3)
+    if (riding) {
+      final min = rideSpeedAlert;
+      _checkPaceRange(min == null || min <= 0 ? null : HrRange(min: 1, max: (1000 / min).round()), pace);
+      return;
+    }
     if (_liveGait == Gait.walk) {
       final slowest = walkPaceAlert;
       // walking: only "too slow" (slower than the walk pace), never "speed up" to a running pace
@@ -851,7 +859,11 @@ class RunSession extends ChangeNotifier {
       return; // slowing down to a walk – no "speed up"
     }
     hr.beeper.play(tooSlow ? SoundEvent.paceSlow : SoundEvent.paceFast);
-    voice?.paceAlert(tooFast: !tooSlow, pace: pace);
+    if (riding) {
+      voice?.speedAlert(pace);
+    } else {
+      voice?.paceAlert(tooFast: !tooSlow, pace: pace);
+    }
   }
 
   /// Moves the "Still running?" notification to 20 min after the last

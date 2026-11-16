@@ -373,6 +373,7 @@ class _RunVoiceSettingsState extends State<RunVoiceSettings> {
             },
           ),
           const PaceAlertRow(),
+          const SpeedAlertRow(),
           SwitchListTile(
             key: const Key('settingsAutoDetectWalk'),
             contentPadding: EdgeInsets.zero,

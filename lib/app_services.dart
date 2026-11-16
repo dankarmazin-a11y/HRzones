@@ -85,6 +85,12 @@ class AppServices {
     await db.setSetting('runPaceAlert', range == null ? '' : '${range.min}-${range.max}');
   }
 
+  /// Rides: beep when slower than [minMs] m/s (setting `rideSpeedAlert`; null = off).
+  Future<void> setRideSpeedAlert(double? minMs) async {
+    run.rideSpeedAlert = minMs;
+    await db.setSetting('rideSpeedAlert', minMs == null ? '' : '$minMs');
+  }
+
   /// While walking: beep when slower than [slowestS] s/km (setting
   /// `walkPaceAlert`; null = no pace beeps while walking).
   Future<void> setWalkPaceAlert(int? slowestS) async {
@@ -431,6 +437,7 @@ class AppServices {
     final pace = (await db.getSetting('runPaceAlert'))?.split('-');
     final pMin = int.tryParse(pace?.firstOrNull ?? ''), pMax = int.tryParse(pace?.lastOrNull ?? '');
     run.paceAlert = pMin != null && pMax != null && pMin < pMax ? HrRange(min: pMin, max: pMax) : null;
+    run.rideSpeedAlert = double.tryParse(await db.getSetting('rideSpeedAlert') ?? '');
     stepGoal.value = await getInt('stepGoal') ?? 8000;
     try {
       bigStats.value = (jsonDecode(await db.getSetting('bigStats') ?? '{}') as Map).cast<String, String>();
