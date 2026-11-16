@@ -468,6 +468,7 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
                     ],
                     if (!_treadmill && _activity == RunActivity.run) const PaceAlertRow(),
                     if (!_treadmill && _activity == RunActivity.ride) ...[
+                      const SpeedAlertRow(),
                       SwitchListTile(
                         key: const Key('autoPauseRide'),
                         contentPadding: EdgeInsets.zero,

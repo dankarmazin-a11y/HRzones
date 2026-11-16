@@ -117,6 +117,30 @@ void main() {
     await ride.discard();
   });
 
+  test('speed alert: "Speed up" when slower than the set speed, never while fast enough', () async {
+    var clock = t0;
+    final gps = FakeLocation();
+    final beeper = SilentBeeper();
+    final ride = RunSession(
+      runs: RunRepository(memoryDb()),
+      hr: HrMonitor(beeper: beeper),
+      location: gps,
+      clock: () => clock,
+    )..voice = RunVoice(beeper.speak);
+    ride.rideSpeedAlert = 20 / 3.6;
+    await ride.start(activity: RunActivity.ride);
+    var m = 0.0;
+    for (var s = 1; s <= 240; s++) {
+      clock = t0.add(Duration(seconds: s));
+      m += s <= 120 ? 8 : 4; // 28.8 km/h, then 14.4 km/h
+      gps.emit(GeoFix(time: clock, lat: lat0 + m / 111195, lon: lon0, accuracy: 5));
+      await Future<void>.delayed(Duration.zero);
+      if (s == 120) expect(beeper.spoken.where((t) => t.contains('Speed up')), isEmpty);
+    }
+    expect(beeper.spoken.any((t) => t.startsWith('Speed 14 kilometres per hour. Speed up.')), isTrue);
+    await ride.discard();
+  });
+
   testWidgets('live screen: tap a small number to make it the big one (remembered per activity)', (tester) async {
     final s = (await tester.runAsync(testServices))!;
     await tester.pumpWidget(HrZonesApp(services: s));
@@ -149,6 +173,14 @@ void main() {
     expect(find.byKey(const Key('walkingOptions')), findsNothing);
     expect(find.byKey(const Key('paceAlertRow')), findsNothing);
     expect(find.byKey(const Key('autoPauseRide')), findsOneWidget);
+    expect(find.byKey(const Key('speedAlertRow')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('speedAlertRow')));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('speedPlus')));
+    await tester.tap(find.byKey(const Key('speedSave')));
+    await settle(tester);
+    expect(s.run.rideSpeedAlert! * 3.6, closeTo(21, 0.01));
+    expect(find.text('Beep below 21 km/h'), findsOneWidget);
     expect(find.byKey(const Key('rideScreenOn')), findsOneWidget);
     await tearDownApp(tester, s);
   });

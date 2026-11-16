@@ -100,6 +100,11 @@ class RunVoice {
     if (spokenAlerts) _say('Pace ${spokenPace(pace)}. ${tooFast ? 'Slow down' : 'Speed up'}.', force: true);
   }
 
+  /// Rides: slower than the speed alert.
+  void speedAlert(double pace) {
+    if (spokenAlerts) _say('Speed ${spokenSpeed(pace)}. Speed up.', force: true);
+  }
+
   void started() {
     _next = _every;
     _lastMarkTime = Duration.zero;
