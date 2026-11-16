@@ -70,9 +70,12 @@ Every exercise figure is made with these rules, in this order. Code: `mockup3d_t
 17a. **Small movements are made visible:** when the biggest joint moves less than 8 cm between
     the photos (stretches, wrist curls), the movement is stretched to ~12 cm (at most 3×).
 17b. **Added movements** the photos can't show: **shrugs** – the body holds still and the
-    shoulders (with the arms and weight) rise 6 cm; **calf raises** – heels rise 7 cm along the
+    shoulders (with the arms and weight) rise 6 cm; **calf raises** – heels rise 11 cm (owner r10: higher; Smith machine calf raise is standing; never for calf stretches, foam rolling or circles) along the
     shin (standing: the whole body rises, toes stay down; seated/machine: only feet and knees).
 17c. **Alternating** exercises switch sides every round (the pose is mirrored across the body).
+17f. **One working arm** (owner r10): one-arm and alternating exercises move only the arm that moves
+    more in the photos; the other holds its start pose against the torso (both arms used to lift
+    together).
 17d. Photo pairs that are the same picture can't be animated by rules – they keep a still
     figure and are listed for a hand fix.
 18. **Planted feet** are found by the lowest of ankle and toe. **Idle legs:** when no leg muscle works (main or secondary), the legs hold one pose (the
@@ -85,6 +88,10 @@ Every exercise figure is made with these rules, in this order. Code: `mockup3d_t
     - front of the shoulders: front squat (and front rack / Zercher);
     - across the hips: hip thrust, glute bridge;
     - across the palms: everything else (deadlift, row, curl, press, bench, raise, shrug…).
+19b. **A bar resting on the body** (back / front squat, Zercher, hip thrust; owner r10): the arms hold
+    one pose against the torso – the photos' arms flipped the elbows ("bar / arms glitching").
+19c. An **EZ bar** is drawn when the equipment *or the name* says EZ bar. **Band and chain versions**
+    ("with bands", "with chains") are drawn without the bar (owner r10: "no need for bar").
 19a. **The bar is drawn in front of the body** when it is held in the hands, on the front of the
     shoulders or across the hips; a back-squat bar is drawn behind the neck. The nearer plate is
     in front of the body, the farther plate behind it.
@@ -92,7 +99,7 @@ Every exercise figure is made with these rules, in this order. Code: `mockup3d_t
     movement (it never rotates), stays **level**, is 2.2 m long with plates 0.92 m from the
     centre (E-Z bar: 1.25 m with small plates and the zig-zag bend in the middle) (Ø 45 cm, 6 cm thick: real discs – darker rim, lighter face, centre
     hole, drawn as a stack so they have thickness).
-21. **One grip width** for the whole movement (average of the photos; back squat ≥ 1.6 ×
+21. **One grip width** for the whole movement (average of the photos; **close grip** in the name = at most 0.7 × shoulder width; back squat ≥ 1.6 ×
     shoulder width, front squat 1.05 ×, hip thrust ≥ 1.2 ×). Both hands are placed exactly on
     the bar – no floating, no impossible arm movement.
 22. Dumbbells: in each palm along the shoulder line; kettlebells hang below the hand.
@@ -156,3 +163,8 @@ Every exercise figure is made with these rules, in this order. Code: `mockup3d_t
   playback in the figure page) – re-test when a gym-trained motion model appears.
 - **HyperFrames** (HeyGen, HTML → video): renders existing animation, makes no body movement.
   Noted for App Store preview / launch videos (Phase 6–7).
+31. **Borrowed movements** (owner r10: "use the regular pull-up as reference", "make all skull
+    crushers like this"): a variant of an exercise the owner marked Done plays that exercise's locked
+    movement until the variant is Done itself (`REF` in the template: pull-up / chin variants, triceps
+    dip, skull crushers, incline and close/wide push-ups). Its own equipment is still drawn; a bar runs
+    along the borrowed shoulders, with a level camera and a frame that fits the bar ends.
