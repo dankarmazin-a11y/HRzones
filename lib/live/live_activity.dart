@@ -95,8 +95,13 @@ abstract class LiveActivity {
 
   static const minGap = Duration(seconds: 5);
 
+  /// iPhone: Live Activity (lock screen + Dynamic Island). Android: an ongoing notification held
+  /// by a foreground service that also keeps the workout alive with the screen off
+  /// (`WorkoutService.kt`).
   static LiveActivity create() =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS ? NativeLiveActivity() : NoLiveActivity();
+      !kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android)
+      ? NativeLiveActivity()
+      : NoLiveActivity();
 
   /// A button on the card was tapped (set by AppServices).
   void Function(String action)? onAction;
@@ -180,7 +185,15 @@ class NativeLiveActivity extends LiveActivity {
 
 /// Plain-language summary of [LiveActivity.status] for Settings.
 String liveStatusText(Map<String, Object?>? m) {
-  if (m == null) return 'Only on the iPhone.';
+  if (m == null) return 'Only on the phone app.';
+  if (m['android'] == true) {
+    if (m['enabled'] != true) return 'Notifications are off: phone Settings › Apps › HR Zones › Notifications → on.';
+    if (m['keepsRunning'] != true) {
+      return 'The card shows, but the app needs Location (or Physical activity) allowed to keep '
+          'recording with the screen off.';
+    }
+    return 'Ready. The workout card shows in your notifications and on the lock screen.';
+  }
   if (m['old'] == true) return 'This build has no lock-screen card. Install the latest IPA.';
   if (m['supported'] != true) return 'Needs iOS 16.2 or newer (this iPhone has iOS ${m['ios']}).';
   if (m['extension'] != true) {

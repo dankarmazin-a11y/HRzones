@@ -12,7 +12,7 @@ on:
       ios_runner:
         description: 'macOS machine for the iOS build (try macos-15-intel if the Apple-chip machines are stuck in the queue)'
         type: choice
-        default: macos-26
+        default: macos-15-intel
         options: [macos-26, macos-15, macos-15-intel]
   pull_request:
   push:
@@ -139,7 +139,7 @@ jobs:
       (github.event_name == 'workflow_dispatch' ||
        (github.ref == 'refs/heads/main' && needs.changes.outputs.ios == 'true'))
     needs: [check, changes]
-    runs-on: ${{ inputs.ios_runner || 'macos-26' }}
+    runs-on: ${{ inputs.ios_runner || 'macos-15-intel' }}
     timeout-minutes: 45
     # Only ONE Mac build at a time across the whole repo (a burst of parallel macOS builds got the
     # account suspended in 2026-11). A newer build waits; an older waiting one is dropped.
