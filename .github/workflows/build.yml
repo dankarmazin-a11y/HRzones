@@ -109,9 +109,36 @@ jobs:
         with:
           artifact_name: web-preview
 
+  # Does this push to main change anything the iPhone app is built from? Android-only and docs
+  # pushes skip the (scarce, slow) Mac build – their IPA would be identical.
+  changes:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      ios: ${{ steps.diff.outputs.ios }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: diff
+        run: |
+          BEFORE="${{ github.event.before }}"
+          if ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then echo "ios=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          FILES=$(git diff --name-only "$BEFORE" "${{ github.sha }}")
+          echo "$FILES"
+          # Anything outside android/, docs and Markdown → build the iPhone app.
+          if [ -z "$FILES" ] || echo "$FILES" | grep -qvE '^(android/|docs/)|\.md$'; then
+            echo "ios=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ios=false" >> "$GITHUB_OUTPUT"
+          fi
+
   ios:
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
-    needs: check
+    if: >-
+      always() && needs.check.result == 'success' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.ref == 'refs/heads/main' && needs.changes.outputs.ios == 'true'))
+    needs: [check, changes]
     runs-on: ${{ inputs.ios_runner || 'macos-26' }}
     timeout-minutes: 45
     # Only ONE Mac build at a time across the whole repo (a burst of parallel macOS builds got the
