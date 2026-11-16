@@ -104,6 +104,19 @@ class AppServices {
     await db.setSetting('autoDetectWalk', on ? '1' : '0');
   }
 
+  /// Rides keep the phone's screen on (handlebar mount; setting `rideScreenOn`, default on).
+  bool rideScreenOn = true;
+  Future<void> setRideScreenOn(bool on) async {
+    rideScreenOn = on;
+    await db.setSetting('rideScreenOn', on ? '1' : '0');
+  }
+
+  /// Rides pause by themselves when you stop (setting `autoPauseRide`, default on).
+  Future<void> setAutoPauseRide(bool on) async {
+    run.autoPauseRide = on;
+    await db.setSetting('autoPauseRide', on ? '1' : '0');
+  }
+
   /// Say "Walking." / "Running again." (setting `runVoiceGait`, default off).
   Future<void> setVoiceGait(bool on) async {
     run.voice?.gaitChanges = on;
@@ -320,6 +333,15 @@ class AppServices {
   /// 0 = card hidden).
   final stepGoal = ValueNotifier<int>(8000);
 
+  /// Which number is big on the live screen, per activity ("ride" → "distance";
+  /// setting `bigStats`, JSON).
+  final bigStats = ValueNotifier<Map<String, String>>({});
+
+  Future<void> setBigStat(String activityKey, String statId) async {
+    bigStats.value = {...bigStats.value, activityKey: statId};
+    await db.setSetting('bigStats', jsonEncode(bigStats.value));
+  }
+
   Future<void> setStepGoal(int n) async {
     stepGoal.value = n;
     await db.setSetting('stepGoal', '$n');
@@ -410,9 +432,16 @@ class AppServices {
     final pMin = int.tryParse(pace?.firstOrNull ?? ''), pMax = int.tryParse(pace?.lastOrNull ?? '');
     run.paceAlert = pMin != null && pMax != null && pMin < pMax ? HrRange(min: pMin, max: pMax) : null;
     stepGoal.value = await getInt('stepGoal') ?? 8000;
+    try {
+      bigStats.value = (jsonDecode(await db.getSetting('bigStats') ?? '{}') as Map).cast<String, String>();
+    } catch (_) {
+      bigStats.value = {};
+    }
     run.walkPaceAlert = int.tryParse(await db.getSetting('walkPaceAlert') ?? '');
     run.walkPreset = await presets.byId(await db.getSetting('walkPresetId'));
     run.autoDetect = await db.getSetting('autoDetectWalk') != '0';
+    run.autoPauseRide = await db.getSetting('autoPauseRide') != '0';
+    rideScreenOn = await db.getSetting('rideScreenOn') != '0';
     run.voice!.gaitChanges = await db.getSetting('runVoiceGait') == '1';
     hr.beeper.choices.clear();
     try {
