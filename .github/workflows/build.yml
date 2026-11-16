@@ -114,6 +114,11 @@ jobs:
     needs: check
     runs-on: ${{ inputs.ios_runner || 'macos-26' }}
     timeout-minutes: 45
+    # Only ONE Mac build at a time across the whole repo (a burst of parallel macOS builds got the
+    # account suspended in 2026-11). A newer build waits; an older waiting one is dropped.
+    concurrency:
+      group: ios-build
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
