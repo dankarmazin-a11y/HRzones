@@ -243,8 +243,9 @@ class RunRepository {
         mostSteps = RunRecord(run: r, value: st.toDouble());
       }
       final top = r.maxSpeedMs;
-      if (top != null && top > 0 && (topSpeed == null || top > topSpeed.value))
+      if (top != null && top > 0 && (topSpeed == null || top > topSpeed.value)) {
         topSpeed = RunRecord(run: r, value: top);
+      }
       final climb = r.elevGainM;
       if (climb != null && climb > 0 && (biggestClimb == null || climb > biggestClimb.value)) {
         biggestClimb = RunRecord(run: r, value: climb);
