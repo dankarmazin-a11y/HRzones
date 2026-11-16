@@ -254,7 +254,7 @@ enum RunKind { outdoor, treadmill }
 /// What the outing was: a run, a walk or a hike (stored by index – only add at
 /// the end). Walks and hikes count for the streak but not for running km,
 /// running goals or running records.
-enum RunActivity { run, walk, hike }
+enum RunActivity { run, walk, hike, ride }
 
 extension RunActivityOf on Run {
   /// A run (not a walk or hike): only these count as running km, goals and records.
@@ -321,6 +321,9 @@ class Runs extends Table with SyncColumns {
 
   /// Metres walked (null = not worked out, e.g. older runs).
   RealColumn get walkedM => real().nullable()();
+
+  /// Top speed in m/s over 10 s (rides; null = not measured).
+  RealColumn get maxSpeedMs => real().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -453,7 +456,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 17;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -527,6 +530,7 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(runs, runs.walkedM);
         await m.addColumn(runPoints, runPoints.cadence);
       }
+      if (from >= 7 && from < 17) await m.addColumn(runs, runs.maxSpeedMs);
     },
     beforeOpen: (details) async {
       await _addMissingColumns();

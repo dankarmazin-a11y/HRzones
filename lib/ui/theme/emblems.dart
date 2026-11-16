@@ -20,6 +20,7 @@ enum EmblemKind {
   route,
   walk,
   hike,
+  bike,
 }
 
 /// One emblem, drawn in [color] (default: the current icon colour).
@@ -160,6 +161,13 @@ class _EmblemPainter extends CustomPainter {
         // mountain with a small peak
         line([2.5, 20, 9.5, 8, 13.2, 13.8, 15.6, 10.6, 21.5, 20], close: true);
         line([7.6, 11.2, 9.5, 12.4, 11.2, 11.2]);
+      case EmblemKind.bike:
+        circle(6, 16.5, 3.6);
+        circle(18, 16.5, 3.6);
+        line([6, 16.5, 9.8, 9.2, 15, 9.2, 18, 16.5]);
+        line([9.8, 9.2, 12.4, 16.5, 6, 16.5]);
+        line([13.6, 6.4, 16.4, 6.4]);
+        line([15, 6.4, 15, 9.2]);
       case EmblemKind.abs:
         line([8, 3.5, 16, 3.5, 17.4, 10, 16, 20.5, 8, 20.5, 6.6, 10], close: true);
         line([12, 4, 12, 20]);

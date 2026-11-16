@@ -11,7 +11,7 @@ import '../workout/workout_editor.dart';
 import '../workout/workout_summary_screen.dart';
 import '../theme/emblems.dart';
 
-enum _Show { all, strength, run, walk }
+enum _Show { all, strength, run, walk, ride }
 
 /// Every finished workout – strength and runs – newest first.
 class HistoryScreen extends StatefulWidget {
@@ -73,9 +73,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
               if (_show == _Show.all || _show == _Show.strength)
                 for (final w in list) (w.workout.startedAt, WorkoutTile(item: w)),
               if (_show != _Show.strength)
-                // Run = runs; Walk = walks and hikes
+                // Run = runs; Walk = walks and hikes; Ride = rides
                 for (final r in runs.where(
-                  (r) => _show == _Show.all || (_show == _Show.run) == (r.activity == RunActivity.run),
+                  (r) =>
+                      _show == _Show.all ||
+                      switch (r.activity) {
+                        RunActivity.run => _show == _Show.run,
+                        RunActivity.walk || RunActivity.hike => _show == _Show.walk,
+                        RunActivity.ride => _show == _Show.ride,
+                      },
                 ))
                   (
                     r.startedAt,
@@ -101,6 +107,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       ButtonSegment(
                         value: _Show.walk,
                         label: Text('Walk', key: Key('historyWalk')),
+                      ),
+                      ButtonSegment(
+                        value: _Show.ride,
+                        label: Text('Ride', key: Key('historyRide')),
                       ),
                     ],
                     selected: {_show},

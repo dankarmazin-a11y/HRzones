@@ -34,6 +34,7 @@ class RunRecordsCard extends StatelessWidget {
         if (r == null) return const SizedBox(height: 120);
         final walks = runs.any((x) => x.activity == RunActivity.walk);
         final hikes = runs.any((x) => x.activity == RunActivity.hike);
+        final rides = runs.any((x) => x.activity == RunActivity.ride);
         Widget row(String label, RunRecord? rec, String Function(RunRecord) value, Key key) => ListTile(
           key: key,
           dense: true,
@@ -60,6 +61,7 @@ class RunRecordsCard extends StatelessWidget {
                 row('Longest run', r.longest, (x) => '${formatKm(x.value)} ${Units.d}', const Key('record_longest')),
                 if (walks) _ActivityRecords(activity: RunActivity.walk, row: row),
                 if (hikes) _ActivityRecords(activity: RunActivity.hike, row: row),
+                if (rides) _ActivityRecords(activity: RunActivity.ride, row: row),
               ],
             ),
           ),
@@ -102,7 +104,7 @@ class RunBestsCard extends StatelessWidget {
               children: [
                 Text('Best efforts', style: text.titleMedium),
                 const SizedBox(height: 4),
-                for (final e in recordDistances.entries)
+                for (final e in recordDistancesFor(ride: run.activity == RunActivity.ride).entries)
                   if (bests[e.key] != null)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -146,24 +148,37 @@ class _ActivityRecords extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final walk = activity == RunActivity.walk;
+    final ride = activity == RunActivity.ride;
     return FutureBuilder<RunRecords>(
       future: Services.of(context).runs.records(activity: activity),
       builder: (context, snap) {
         final r = snap.data;
         if (r == null) return const SizedBox.shrink();
-        final name = walk ? 'walk' : 'hike';
+        final name = walk ? 'walk' : (ride ? 'ride' : 'hike');
         return Column(
           key: Key('${name}Records'),
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 10),
-            Text(walk ? 'Walking' : 'Hiking', style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+            Text(
+              walk ? 'Walking' : (ride ? 'Cycling' : 'Hiking'),
+              style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            if (ride)
+              for (final e in rideRecordDistances.entries)
+                row('Fastest ${e.value}', r.fastest[e.key], (x) => _time(x.value), Key('rideRecord_${e.key}')),
             if (walk)
               for (final m in const [1000, 5000, 10000])
                 row('Fastest ${recordDistances[m]} walk', r.fastest[m], (x) => _time(x.value), Key('${name}Record_$m')),
-            if (!walk)
-              row('Biggest climb', r.biggestClimb, (x) => '${x.value.round()} m', const Key('hikeRecord_climb')),
+            if (!walk) row('Biggest climb', r.biggestClimb, (x) => '${x.value.round()} m', Key('${name}Record_climb')),
             row('Longest $name', r.longest, (x) => '${formatKm(x.value)} ${Units.d}', Key('${name}Record_longest')),
+            if (ride)
+              row(
+                'Top speed',
+                r.topSpeed,
+                (x) => '${Units.speedOut(x.value).toStringAsFixed(1)} ${Units.speed}',
+                const Key('rideRecord_speed'),
+              ),
             if (walk)
               row(
                 'Most steps in one walk',

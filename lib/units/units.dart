@@ -93,6 +93,15 @@ class Units {
   /// "/km" / "/mi".
   static String get pace => mi ? '/mi' : '/km';
 
+  /// Speed label: "km/h" or "mph" (rides).
+  static String get speed => mi ? 'mph' : 'km/h';
+
+  /// Metres per second → km/h or mph.
+  static double speedOut(double mps) => mps * 3600 / metresPerUnit;
+
+  /// Ride splits and voice updates: every 5 km, or every 3 miles.
+  static double get rideSplitM => mi ? 3 * metresPerMile : 5000;
+
   /// Seconds per km → seconds per shown unit.
   static double? paceOut(double? secPerKm) => secPerKm == null ? null : secPerKm * metresPerUnit / 1000;
 

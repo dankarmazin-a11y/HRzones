@@ -401,9 +401,13 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
                     SegmentedButton<bool>(
                       showSelectedIcon: false,
                       key: const Key('runKind'),
-                      segments: const [
-                        ButtonSegment(value: false, label: Text('Outdoor'), icon: Icon(Icons.landscape_outlined)),
-                        ButtonSegment(value: true, label: Text('Treadmill'), icon: Icon(Icons.home_outlined)),
+                      segments: [
+                        const ButtonSegment(value: false, label: Text('Outdoor'), icon: Icon(Icons.landscape_outlined)),
+                        ButtonSegment(
+                          value: true,
+                          label: Text(_activity == RunActivity.ride ? 'Indoor' : 'Treadmill'),
+                          icon: const Icon(Icons.home_outlined),
+                        ),
                       ],
                       selected: {_treadmill},
                       onSelectionChanged: (v) => setState(() => _treadmill = v.first),
@@ -463,8 +467,9 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
                         ),
                     ],
                     if (!_treadmill && _activity == RunActivity.run) const PaceAlertRow(),
-                    _WalkingOptions(activity: _activity, presets: _presets, zonesOn: on, treadmill: _treadmill),
-                    if (_shoes.isNotEmpty) ...[
+                    if (_activity != RunActivity.ride)
+                      _WalkingOptions(activity: _activity, presets: _presets, zonesOn: on, treadmill: _treadmill),
+                    if (_shoes.isNotEmpty && _activity != RunActivity.ride) ...[
                       const SizedBox(height: 4),
                       Wrap(
                         spacing: 8,
@@ -506,7 +511,7 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
                         RunSetup(
                           preset: on ? _presets.where((p) => p.id == _selected).firstOrNull : null,
                           treadmill: _treadmill,
-                          shoeId: _shoeId,
+                          shoeId: _activity == RunActivity.ride ? null : _shoeId,
                           activity: _activity,
                         ),
                       ),
@@ -567,6 +572,7 @@ class _ActivityPicker extends StatelessWidget {
         tile(RunActivity.run, EmblemKind.run, 'Run', 'pace first'),
         tile(RunActivity.walk, EmblemKind.walk, 'Walk', 'steps first'),
         tile(RunActivity.hike, EmblemKind.hike, 'Hike', 'climb first'),
+        tile(RunActivity.ride, EmblemKind.bike, 'Ride', 'speed first'),
       ],
     );
   }

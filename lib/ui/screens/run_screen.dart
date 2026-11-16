@@ -158,17 +158,20 @@ class RunTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pace = paceSecPerKm(run.distanceM, run.durationS.toDouble());
+    final ride = run.activity == RunActivity.ride;
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: Emblem(switch (run.activity) {
         RunActivity.walk => EmblemKind.walk,
         RunActivity.hike => EmblemKind.hike,
+        RunActivity.ride => EmblemKind.bike,
         RunActivity.run => run.kind == RunKind.treadmill ? EmblemKind.stopwatch : EmblemKind.run,
       }),
       title: Text('${formatKm(run.distanceM)} ${Units.d}'),
       subtitle: HeartText(
-        '${runTitle(run)}${run.kind == RunKind.treadmill ? ' · treadmill' : ''}\n'
-        '${formatDuration(Duration(seconds: run.durationS))} · ${formatPace(pace)} ${Units.pace}'
+        '${runTitle(run)}${run.kind == RunKind.treadmill ? (ride ? ' · indoor' : ' · treadmill') : ''}\n'
+        '${formatDuration(Duration(seconds: run.durationS))} · '
+        '${ride ? formatSpeed(pace) : '${formatPace(pace)} ${Units.pace}'}'
         '${run.effort == null ? '' : ' · effort ${run.effort}/10'}'
         '${run.avgHr == null ? '' : ' · ♥ ${run.avgHr}'}',
       ),

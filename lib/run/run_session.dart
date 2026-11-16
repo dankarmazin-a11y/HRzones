@@ -229,8 +229,10 @@ class RunSession extends ChangeNotifier {
       // walks and hikes: steps / climb instead of the current pace
       if (_chosen == RunActivity.walk && st != null) ('Steps', '$st'),
       if (_chosen == RunActivity.hike && climbM != null) ('Climbed', '${climbM!.round()} m'),
+      if (!_treadmill && riding) ('Speed', paused || cp == null ? '–' : formatSpeed(cp, unit: false)),
+      if (!_treadmill && riding) ('Avg ${Units.speed}', ap == null ? '–' : formatSpeed(ap, unit: false)),
       if (!_treadmill && _chosen == RunActivity.run) ('Pace', paused || cp == null ? '–' : formatPace(cp)),
-      if (!_treadmill) ('Avg pace', ap == null ? '–' : formatPace(ap)),
+      if (!_treadmill && !riding) ('Avg pace', ap == null ? '–' : formatPace(ap)),
       ('Heart rate', bpm == null ? '–' : '$bpm'),
     ];
     if (_chosen == RunActivity.run && _liveGait == Gait.walk && autoDetect && !paused && detail.isEmpty) {
@@ -403,6 +405,23 @@ class RunSession extends ChangeNotifier {
   /// Average pace (s/km) so far; null for the first 50 m.
   double? get avgPace => distanceM < 50 ? null : paceSecPerKm(distanceM, moving.inMilliseconds / 1000);
 
+  /// A ride (picked at the start): speed instead of pace, no walk detection.
+  bool get riding => _chosen == RunActivity.ride;
+
+  /// Speed now (m/s, over the last 30 s), on average, and the top speed over
+  /// 10 s so far; null when unknown.
+  double? get speedMs {
+    final p = currentPace;
+    return p == null || p <= 0 ? null : 1000 / p;
+  }
+
+  double? get avgSpeedMs => avgPace == null ? null : 1000 / avgPace!;
+  double? get maxSpeedMs => _maxSpeedMs;
+  double? _maxSpeedMs;
+
+  /// Faster than this over 10 s is a GPS glitch, not a ride (108 km/h).
+  static const maxPlausibleSpeedMs = 30.0;
+
   /// Pace over the last 30 s (s/km); null when standing still or no GPS.
   double? get currentPace {
     if (paused || _recent.length < 2) return null;
@@ -567,6 +586,7 @@ class RunSession extends ChangeNotifier {
           ? <int, double>{}
           : bestEfforts(
               _route.map((p) => (time: p.time, lat: p.lat, lon: p.lon, accuracy: p.accuracy, segment: p.segment)),
+              distances: recordDistancesFor(ride: riding).keys,
             );
       // Run or walk: from the route (pace + steps), or the averages on a treadmill.
       final gait = _treadmill ? GaitSummary.empty : analyzeGait(gaitPoints(_route));
@@ -580,7 +600,8 @@ class RunSession extends ChangeNotifier {
       // A hike stays a hike; otherwise what was done wins over what was picked
       // (when detection is on) – too short to tell keeps the pick – and the owner is told.
       final enough = _treadmill ? this.distanceM >= 200 : gait.totalM >= 200;
-      _activity = _chosen == RunActivity.hike || !autoDetect || !enough ? _chosen : detected;
+      // a ride is a ride (walking pace on a bike would read as a walk)
+      _activity = _chosen == RunActivity.hike || riding || !autoDetect || !enough ? _chosen : detected;
       // Mostly walking and steep (over 30 m climbed per km): a hike.
       if (_activity == RunActivity.walk && autoDetect && !_treadmill && this.distanceM >= 1000) {
         final climb = _hasBaro ? _gainM : elevationGainLoss([for (final p in _route) ?p.altitude]).climb;
@@ -592,6 +613,7 @@ class RunSession extends ChangeNotifier {
               RunActivity.run => 'You picked ${_word(_chosen)}, but you mostly ran – saved as a run.',
               RunActivity.hike => 'You walked and climbed a lot – saved as a hike.',
               RunActivity.walk => 'You mostly walked – saved as a walk.',
+              RunActivity.ride => null,
             };
       // Faster than every earlier outing of the same kind (the first one at a distance isn't a record).
       final before = await runs.records(before: _startedAt, excludeId: id, activity: _activity);
@@ -645,6 +667,7 @@ class RunSession extends ChangeNotifier {
     _pausedAt = row.pausedAt;
     _pausedMs = row.pausedS * 1000;
     _presetId = row.hrPresetId;
+    _maxSpeedMs = row.maxSpeedMs;
     _chosen = row.activity;
     voice?.word = _word(_chosen);
     _liveGait = _chosen == RunActivity.run ? Gait.run : Gait.walk;
@@ -735,6 +758,7 @@ class RunSession extends ChangeNotifier {
     RunActivity.run => 'Run',
     RunActivity.walk => 'Walk',
     RunActivity.hike => 'Hike',
+    RunActivity.ride => 'Ride',
   };
 
   /// The heart-rate range for walking or running (null = none).
@@ -747,7 +771,7 @@ class RunSession extends ChangeNotifier {
   /// Walking or running now, from the pace over the last 30 s and the steps
   /// per minute; switches after [gaitSwitchAfter] of the other.
   void _updateGait(double? pace) {
-    if (!autoDetect || paused) return;
+    if (!autoDetect || paused || riding) return;
     final g = classifyGait(paceS: pace, cadence: cadence);
     if (g == Gait.still || g == _liveGait) {
       if (g == _liveGait) _gaitCandidate = null;
@@ -769,6 +793,7 @@ class RunSession extends ChangeNotifier {
   }
 
   void _checkPace(double? pace) {
+    if (riding) return; // rides: speed alerts come later (part 3)
     if (_liveGait == Gait.walk) {
       final slowest = walkPaceAlert;
       // walking: only "too slow" (slower than the walk pace), never "speed up" to a running pace
@@ -915,6 +940,11 @@ class RunSession extends ChangeNotifier {
       steps: steps,
     );
     _updateGait(pace);
+    final short = _shortPace;
+    if (short != null && short.isFinite && short > 0) {
+      final v = 1000 / short;
+      if (v <= maxPlausibleSpeedMs && (_maxSpeedMs == null || v > _maxSpeedMs!)) _maxSpeedMs = v;
+    }
     _checkPace(pace);
     _advancePlan();
     if (!wasGood) notifyListeners();
@@ -968,6 +998,7 @@ class RunSession extends ChangeNotifier {
         avgCadence: Value(_avgCadence()),
         elevGainM: Value(_hasBaro ? _gainM : null),
         elevLossM: Value(_hasBaro ? _lossM : null),
+        maxSpeedMs: Value(_maxSpeedMs),
         // while recording: what was picked (so a restart keeps it); at the end: the decision
         activity: Value(endedAt == null ? _chosen : _activity),
         walkedM: Value(_walkedM),
@@ -1019,6 +1050,7 @@ class RunSession extends ChangeNotifier {
     _liveGait = Gait.run;
     _gaitCandidate = null;
     _runRange = null;
+    _maxSpeedMs = null;
     _activity = RunActivity.run;
     _walkedM = null;
     _lastMoveAt = null;
