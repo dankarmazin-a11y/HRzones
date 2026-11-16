@@ -13,6 +13,7 @@ import '../workout/workout_editor.dart';
 import '../workout/active_workout_screen.dart';
 import '../run/run_start.dart';
 import '../guide/get_started.dart';
+import '../battery_guide.dart';
 
 class WorkoutsScreen extends StatelessWidget {
   const WorkoutsScreen({super.key});
@@ -296,6 +297,8 @@ Future<void> startEmptyWorkout(BuildContext context) async {
   if (!await _confirmReplace(context) || !context.mounted) return;
   await Services.of(context).askNotificationsOnce();
   if (!context.mounted) return;
+  await askBatteryOnce(context);
+  if (!context.mounted) return;
   if (!await _pickPlaceIfHybrid(context) || !context.mounted) return;
   // Heart-rate zone preset for this workout (only asked if presets exist).
   final choice = await pickPreset(context, PresetUse.strength);
@@ -307,6 +310,8 @@ Future<void> startEmptyWorkout(BuildContext context) async {
 Future<void> startTemplateWorkout(BuildContext context, TemplateWithSlots t, {TrainingPlace? place}) async {
   if (!await _confirmReplace(context) || !context.mounted) return;
   await Services.of(context).askNotificationsOnce();
+  if (!context.mounted) return;
+  await askBatteryOnce(context);
   if (!context.mounted) return;
   if (!await _pickPlaceIfHybrid(context, known: place) || !context.mounted) return;
   await Services.of(context).session.startFromTemplate(t);

@@ -6,6 +6,7 @@ import '../hr/ble_hr_source.dart';
 import '../hr/heart_rate_source.dart';
 import '../hr/hr_monitor.dart';
 import '../hr/simulated_hr_source.dart';
+import '../platform/phone_system.dart';
 
 /// Profile section: which heart-rate source the app listens to.
 class HrSourceSection extends StatelessWidget {
@@ -53,17 +54,25 @@ class HrSourceSection extends StatelessWidget {
           bluetoothSupported
               ? 'Works with chest straps and arm bands (Polar, Garmin, Wahoo, Coros…) and watches in '
                     '"broadcast heart rate" mode. Start monitoring with the ♥ button in a workout.'
-              : 'Bluetooth straps work in the iPhone app (not in the web preview).',
+              : 'Bluetooth straps work in the phone app (not in the web preview).',
           style: text.bodySmall,
         ),
         const SizedBox(height: 8),
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.headphones),
-          title: const Text('AirPods / Apple Watch (Apple Health)'),
-          subtitle: const Text('Needs the paid Apple Developer account – planned for the beta'),
-          enabled: false,
-        ),
+        if (isAndroidApp)
+          Text(
+            'AirPods and Apple Watch heart rate only work on iPhone. On Android use a Bluetooth strap '
+            'or a watch that can broadcast its heart rate.',
+            key: const Key('androidHrNote'),
+            style: text.bodySmall,
+          )
+        else
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.headphones),
+            title: const Text('AirPods / Apple Watch (Apple Health)'),
+            subtitle: const Text('Needs the paid Apple Developer account – planned for the beta'),
+            enabled: false,
+          ),
       ],
     );
   }

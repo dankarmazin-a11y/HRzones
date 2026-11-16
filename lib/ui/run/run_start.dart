@@ -25,6 +25,8 @@ import '../../run/run_plan.dart';
 import '../../data/shoe_repository.dart';
 import 'shoes.dart' show editShoe;
 import 'bike_sensors_sheet.dart';
+import '../../platform/phone_system.dart';
+import '../battery_guide.dart';
 
 /// Start a run: the "Ready to run" sheet (heart-rate zone), location
 /// permission, a vibration, then the live run screen.
@@ -60,6 +62,16 @@ Future<void> startRun(BuildContext context, {Run? ghostOf, RunPlan? plan}) async
   final access = choice.treadmill ? LocationAccess.granted : await s.run.location.ensureAccess();
   if (!context.mounted) return;
   if (access == LocationAccess.granted) {
+    // Android: steps / cadence need "Physical activity"; the workout card needs notifications;
+    // Samsung & co. must not stop the app with the screen off (asked once).
+    // (Skipped where there is no native side: iPhone, web, tests.)
+    if (isAndroidApp && PhoneSystem.hasNative) {
+      await PhoneSystem.activity();
+      await s.askNotificationsOnce(force: await s.db.getSetting('notifyAsked') != '1');
+      if (!context.mounted) return;
+      await askBatteryOnce(context);
+      if (!context.mounted) return;
+    }
     final preset = s.zonesEnabled.value ? choice.preset : null;
     await Navigator.of(context).push(
       MaterialPageRoute(
@@ -82,10 +94,12 @@ Future<void> startRun(BuildContext context, {Run? ghostOf, RunPlan? plan}) async
       title: const Text('Location needed'),
       content: Text(switch (access) {
         LocationAccess.serviceOff =>
-          'Location Services are off. Turn them on in the iPhone Settings › Privacy & Security › Location Services.',
+          isAndroidApp
+              ? 'Location is off. Turn it on in the quick settings (swipe down from the top) or phone Settings › Location.'
+              : 'Location Services are off. Turn them on in the iPhone Settings › Privacy & Security › Location Services.',
         _ =>
           'HR Zones needs your location to record the route, distance and pace. '
-              'In Settings › HR Zones › Location choose "While Using the App".',
+              '${isAndroidApp ? 'In $appSettingsPath › Permissions › Location choose "Allow only while using the app".' : 'In Settings › HR Zones › Location choose "While Using the App".'}',
       }),
       actions: [
         TextButton(onPressed: () => Navigator.pop(c), child: const Text('Not now')),

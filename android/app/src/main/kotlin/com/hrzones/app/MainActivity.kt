@@ -7,6 +7,7 @@ class MainActivity : FlutterActivity() {
   private var beeper: BeeperPlugin? = null
   private var live: LiveActivityPlugin? = null
   private var motion: MotionPlugin? = null
+  private var system: SystemPlugin? = null
 
   override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
     super.configureFlutterEngine(flutterEngine)
@@ -14,7 +15,13 @@ class MainActivity : FlutterActivity() {
     val messenger = flutterEngine.dartExecutor.binaryMessenger
     beeper = BeeperPlugin(applicationContext, messenger)
     live = LiveActivityPlugin(applicationContext, messenger)
-    motion = MotionPlugin(applicationContext, messenger, this)
+    motion = MotionPlugin(applicationContext, messenger)
+    system = SystemPlugin(applicationContext, messenger, this)
+  }
+
+  override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+    super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    system?.onPermissionResult(requestCode)
   }
 
   override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
@@ -24,6 +31,8 @@ class MainActivity : FlutterActivity() {
     live = null
     motion?.dispose()
     motion = null
+    system?.dispose()
+    system = null
     super.cleanUpFlutterEngine(flutterEngine)
   }
 }
