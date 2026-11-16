@@ -26,7 +26,7 @@ The owner is not a developer. Explain steps plainly, keep instructions short, an
 - **Beeps:** 3 high beeps above range, 2 low beeps below; 5 s grace period, configurable cooldown (default 10 s); mixes over music (AVAudioSession .playback + .mixWithOthers); must keep working with the screen locked (UIBackgroundModes: audio).
 
 ## Build & install (no Mac)
-- GitHub Actions (`.github/workflows/`) builds on `macos-26` runners and uploads an unsigned, ad-hoc-signed `.ipa` artifact.
+- GitHub Actions (`.github/workflows/`) builds on `macos-15-intel` runners (default since 2026-11-16; `macos-26` kept getting no machine) and uploads an unsigned, ad-hoc-signed `.ipa` artifact.
 - The owner installs it from Windows with **Sideloadly** using a **free Apple ID** (app expires every 7 days; Developer Mode is on).
 - **Known limitation (Phase 0 result, 2026-11-01):** Sideloadly + free Apple ID strips the HealthKit entitlement → "Missing com.apple.developer.healthkit entitlement". Everything else (build, install, beeps) works. HealthKit/AirPods HR waits for the paid account; then switch distribution to TestFlight from CI.
 - There is no Mac or simulator: CI is the compiler. After pushing, check the Actions run (`gh api repos/dankarmazin-a11y/hrzones/actions/runs`) and fix failures yourself.
