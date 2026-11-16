@@ -118,15 +118,15 @@ function traits(ex){
   const walk=false;
   const legsMain=all.some(x=>LEGS.includes(x)), armsMain=all.some(x=>ARMS.includes(x)), core=all.some(x=>ABS.includes(x));
   const isolationName=/seated|machine|leg extension|leg curl|leg press|preacher|lying|bench|calf press|curl|pushdown|extension|kickback|fly|raise|shrug|wrist/.test(n);
-  const calves=m.mus.includes('calves');
+  const calves=m.mus.includes('calves')&&!/stretch|smr|circle|achilles/.test(n); // stretches / foam rolling / circles don't rise on the toes
   ex.tr={uni,isStatic,walk,legsMain,armsMain,core,calves,
     torsoIdle:!core&&(!legsMain||(isolationName&&!/squat|deadlift|lunge|step|clean|snatch|jerk|swing|thrust|bridge|good morning/.test(n))&&!calves),
     armsIdle:!armsMain&&!/press|row|pull|push|curl|raise|fly|throw|swing|clean|snatch|jerk/.test(n),
     hammer:/hammer|neutral/.test(n),goblet:/goblet|pullover|two[- ]hand|dumbbell swing|plate|medicine ball|ball slam/.test(n)&&/dumbbell|kettlebell/.test(m.eq),oneHand:/one[- ]arm|single[- ]arm|one[- ]hand|concentration/.test(n)||(!!m.uni&&/dumbbell|kettlebell/.test(m.eq)&&!/lunge|split|step|walk/.test(n)),
     carryWeights:/farmer|suitcase|carry/.test(n),
     alternating:/alternat/.test(n), shrug:/shrug/.test(n)&&!/calf-machine/.test(n),
-    calfSeated:/seated|leg press|calf press|donkey|machine/.test(n),
-    rolling:/rollout|ab roller|wheel|fallout|slide|bodysaw/.test(n), ez:m.eq==='e-z curl bar'};
+    calfSeated:/seated|leg press|calf press|donkey|machine/.test(n)&&!/smith/.test(n), // smith machine calf raise is standing
+    rolling:/rollout|ab roller|wheel|fallout|slide|bodysaw/.test(n), ez:barKind(m)==='ez'};
   return ex.tr;}
 // hanging is decided by the name only: arms overhead also happen lying down or pressing
 function isHanging(ex,F){return /pull-?up|chin-?up|hanging|muscle[- ]?up|toes[- ]to[- ]bar|knees[- ]to[- ]elbows/i.test(META[ex.id].name);}
@@ -279,6 +279,17 @@ function pose0(ex,t){const tr=traits(ex);if(tr.isStatic)t=1; // timed holds stan
       const fo=V.norm(V.sub(ref['toe_'+s],ref['an_'+s])),he=V.sub(ref['heel_'+s],ref['an_'+s]);
       o['toe_'+s]=V.add(o['an_'+s],V.mul(fo,V.len(V.sub(ref['toe_'+s],ref['an_'+s]))));o['heel_'+s]=V.add(o['an_'+s],he);}
   }
+  // owner r10: a bar resting on the body (back / front squat, Zercher, hip thrust): the arms hold one
+  // pose against the torso – the hands just keep it there (the photos' arms flipped the elbows)
+  const place=barKind(META[ex.id])?barPlace(META[ex.id].name):null;
+  const holdArm=s=>{const A=bodyAxes(a),B=bodyAxes(o);for(const k of ['el_'+s,'wr_'+s]){const v=V.sub(a[k],a.neck);
+      o[k]=V.add(o.neck,V.add(V.add(V.mul(B.lr,V.dot(v,A.lr)),V.mul(B.up,V.dot(v,A.up))),V.mul(B.fwd,V.dot(v,A.fwd))));}};
+  if(place&&place!=='hands'&&!ex.hang){holdArm('l');holdArm('r');}
+  // owner r10: one-arm and alternating exercises – only the working arm moves; the other holds its
+  // start pose against the torso (both arms used to lift together)
+  if((tr.oneHand||tr.alternating)&&!ex.hang&&!tr.isStatic){
+    const mv=s=>V.len(V.sub(V.sub(a['wr_'+s],a['sh_'+s]),V.sub(b['wr_'+s],b['sh_'+s])));
+    const idle=mv('l')<mv('r')?'l':'r';if(Math.max(mv('l'),mv('r'))>.08)holdArm(idle);}
   return o;}
 function pose0Amp(ex,t,amp){ex._still=true;const P=pose0(ex,t*amp);ex._still=false;return P;}
 // two-bone reach (shoulder→elbow→wrist, hip→knee→ankle): put the end on target, bend the middle
@@ -308,8 +319,11 @@ function contacts(ex){
   // barbell grip: one fixed width for the whole movement
   const W=F.map(f=>V.len(V.sub(f.wr_l,f.wr_r))/2),sh=F.map(f=>V.len(V.sub(f.sh_l,f.sh_r))/2);
   ex.grip=Math.max(.2,(W[0]+W[1])/2);ex.shw=(sh[0]+sh[1])/2;
+  // owner r10: close grip = hands inside shoulder width
+  if(/close[- ]grip|close and wide/i.test(META[ex.id].name))ex.grip=Math.min(ex.grip,ex.shw*.7);
   return ex.ct=ct;}
-function setArm(P,ex,s,T){const r=reach(P['sh_'+s],P['el_'+s],T,ex.L.arm[0],ex.L.arm[1]);P['el_'+s]=r.mid;P['wr_'+s]=r.end;}
+function setArm(P,ex,s,T){const L=ex.L?ex.L.arm:[V.len(V.sub(P['sh_'+s],P['el_'+s])),V.len(V.sub(P['el_'+s],P['wr_'+s]))]; // locked / borrowed movements: the pose's own arm
+  const r=reach(P['sh_'+s],P['el_'+s],T,L[0],L[1]);P['el_'+s]=r.mid;P['wr_'+s]=r.end;}
 // Small movements in the photos (a stretch, a wrist curl) are made bigger so they can be seen:
 // the movement is stretched until the biggest joint moves ~12 cm (at most 3×).
 function ampOf(ex){if(ex.amp!==undefined)return ex.amp;ex.amp=1;const tr=traits(ex);if(tr.isStatic||tr.shrug||tr.calves)return 1;
@@ -331,6 +345,21 @@ function bake(id){const ex=D3[id],m=META[id];ex.id=id;if(!ex.box)ex.box=frameBox
   const fr=side=>{const out=[];for(let i=0;i<=N;i++){ex.altSide=side;const P=pose(ex,i/N);ex.altSide=false;const o={};for(const k in P)o[k]=P[k].map(x=>Math.round(x*1000)/1000);out.push(o);}return out;};
   const b={ver:1,f:fr(false),box:ex.box,zc:ex.zc||0,elev:ex.elev||0,props:props(ex),grip:ex.grip||.25,shw:ex.shw||.2,bd:barDir(ex),hang:!!ex.hang,lying:!!ex.lying};
   if(tr.alternating)b.f2=fr(true);return b;}
+// owner r10 ("use the regular pull-up as reference", "make all skull crushers like this"): variants
+// of an exercise the owner already approved (Done) borrow its locked movement until they are Done
+// themselves. The variant's own equipment is still drawn (EZ bar, bar…).
+const REF={'Weighted_Pull_Ups':'Pullups','V-Bar_Pullup':'Pullups','Wide-Grip_Rear_Pull-Up':'Pullups',
+  'Gironda_Sternum_Chins':'Chin-Up','Side_To_Side_Chins':'Chin-Up',
+  'Dips_-_Triceps_Version':'Parallel_Bar_Dip','EZ-Bar_Skullcrusher':'Band_Skull_Crusher',
+  'Decline_Close-Grip_Bench_To_Skull_Crusher':'Band_Skull_Crusher',
+  'Incline_Push-Up':'Incline_Push-Up_Medium','Incline_Push-Up_Close-Grip':'Incline_Push-Up_Medium',
+  'Incline_Push-Up_Reverse_Grip':'Incline_Push-Up_Medium','Incline_Push-Up_Wide':'Incline_Push-Up_Medium',
+  'Pushups_Close_and_Wide_Hand_Positions':'Pushups','Suspended_Push-Up':'Pushups'};
+function applyRefs(){for(const [id,ref] of Object.entries(REF)){const ex=D3[id];if(!ex||(R[id]&&R[id].v==='done'))continue;
+  const b=R[ref]&&R[ref].v==='done'&&R[ref].baked;if(b&&ex.borrowed!==ref){applyBaked(id,b);ex.borrowed=ref;
+    // the borrowed movement may have had no bar: the bar runs along its shoulders, level
+    const f=b.f[Math.floor(b.f.length/2)],l=V.sub(f.sh_l,f.sh_r);ex.bd=V.norm([l[0],0,l[2]]);
+    if(barKind(META[id])){ex.elev=0;ex.id=id;ex.box=frameBox(ex,META[id]);}}}} // a raised camera tilts a bar (rule 12); frame the bar ends // a raised camera tilts a bar (rule 12)
 function applyBaked(id,b){const ex=D3[id];if(!ex)return;
   for(const k of ['zrefs','zref','crunch'])delete ex[k];
   if(!b){if(ex.baked){delete ex.baked;for(const k of ['box','props','bd'])delete ex[k];}return;}
@@ -351,9 +380,9 @@ function pose(ex,t){if(ex.baked)return bakedPose(ex,t);if(ex.seq)return seqPose(
   if(tr.calves&&!ex.hang){
     const shin=s=>V.norm(V.sub(P['kn_'+s],P['an_'+s]));
     if(tr.calfSeated){ // seated / machine: only the feet and knees rise (the ankle turns)
-      for(const sd of ['l','r']){const lift=V.mul(shin(sd),.07*t);for(const k of ['an_','heel_','kn_'])P[k+sd]=V.add(P[k+sd],lift);}}
+      for(const sd of ['l','r']){const lift=V.mul(shin(sd),.11*t);for(const k of ['an_','heel_','kn_'])P[k+sd]=V.add(P[k+sd],lift);}}
     else{ // standing: the whole body rises on the toes, the toes stay on the floor
-      const lift=V.mul(V.norm(V.add(shin('l'),shin('r'))),.07*t);for(const k in P)if(!/^toe_/.test(k))P[k]=V.add(P[k],lift);
+      const lift=V.mul(V.norm(V.add(shin('l'),shin('r'))),.11*t);for(const k in P)if(!/^toe_/.test(k))P[k]=V.add(P[k],lift);
       const ty=Math.max(P.toe_l[1],P.toe_r[1]);for(const k in P)P[k]=[P[k][0],P[k][1]-ty,P[k][2]];}}
   // alternating exercises: every second round the other side does it (mirror across the body)
   if(tr.alternating&&ex.altSide){const c=P.pelvis,lr=barDir(ex),M={};
@@ -396,7 +425,7 @@ function camY(ex,p){return p[1]*Math.cos(ex.elev||0)-(p[2]-(ex.zc||0))*Math.sin(
 function frameBox(ex,m){let lo=1e9,hi=-1e9,x0=1e9,x1=-1e9;ex.box={cx:0,low:0};
   {let zs=0,n=0;for(let i=0;i<=8;i++){const P=pose(ex,i/8);for(const k in P){zs+=P[k][2];n++;}}ex.zc=zs/n;}
   // body plus the barbell ends: the frame is centred on both so the bar never runs off the edge
-  const bar=m&&(m.eq==='barbell'||m.eq==='e-z curl bar'),bh=m&&m.eq==='e-z curl bar'?.62:1.1;
+  const bar=!!barKind(m),bh=barKind(m)==='ez'?.62:1.1;
   for(let i=0;i<=8;i++){const P=pose(ex,i/8);const pts=Object.values(P);
     if(bar){const {c,d}=barbell(P,m.name,ex);pts.push(V.add(c,V.mul(d,bh)),V.sub(c,V.mul(d,bh)));}
     for(const q of pts){const y=camY(ex,q);lo=Math.min(lo,y);hi=Math.max(hi,y);x0=Math.min(x0,q[0]);x1=Math.max(x1,q[0]);}}
@@ -418,6 +447,11 @@ function disc(ctx,S,pxm,c,n,r,thick,base,face){
 // front: on the front of the shoulders (front squat)
 // hips: across the hips (hip thrust, glute bridge)
 // hands: across the palms (everything else)
+// owner r10: an "EZ bar" in the name is drawn as an EZ bar; band / chain versions don't need the bar
+function barKind(m){if(!m)return null;const n=m.name.toLowerCase();
+  if(/with (bands|chains)|- with bands/.test(n))return null;
+  if(m.eq==='e-z curl bar'||/\bez[- ]?bar|e-z bar/.test(n))return 'ez';
+  return m.eq==='barbell'?'bar':null;}
 function barPlace(name){
   const n=name.toLowerCase();
   if(/hip thrust|glute bridge|hip bridge/.test(n))return 'hips';
@@ -478,9 +512,9 @@ function draw3d(cv,id,t,mode){
   // depth order is decided once (middle of the movement) – re-sorting every frame made colours flicker
   // alternating exercises switch sides every round (each side has its own fixed depth order)
   if(!ex.zrefs)ex.zrefs={};const zk=alt?1:0;if(!ex.zrefs[zk]){ex.altSide=alt;ex.zrefs[zk]=pose(ex,.5);ex.altSide=false;}ex.zref=ex.zrefs[zk];const Z=ex.zref,zOf=(a,b,f0,f1)=>{const A=Z[a][2]+(Z[b][2]-Z[a][2])*f0,B=Z[a][2]+(Z[b][2]-Z[a][2])*f1;return (A+B)/2;};
-  if(m.eq==='barbell'||m.eq==='e-z curl bar'){const {c,d}=barbell(P,m.name,ex);const zc=Z.neck[2]+.3;
+  if(barKind(m)){const {c,d}=barbell(P,m.name,ex);const zc=Z.neck[2]+.3;
     // EZ bar: 1.25 m with small plates; barbell: 2.2 m with 45 cm plates
-    const ez=m.eq==='e-z curl bar',half=ez?.62:1.1,po=ez?.5:.92,pr=ez?.15:.225;
+    const ez=barKind(m)==='ez',half=ez?.62:1.1,po=ez?.5:.92,pr=ez?.15:.225;
     // the bar is held in front of the body (hands / front rack / hips) – drawn over it; a back-squat
     // bar sits behind the neck – drawn behind it. The nearer plate is in front, the farther behind.
     const behind=barPlace(m.name)==='back';
@@ -588,12 +622,13 @@ for(const b of document.querySelectorAll('.seg button'))b.addEventListener('clic
 (async()=>{
   try{db=window.claude&&await window.claude.use('db');}catch(e){db=null;}
   if(!db){statusEl.textContent='Answers can\'t be saved here – open the page on claude.ai.';
-    for(const id of [...ALL,...FAILED]){try{const v=localStorage.getItem('rv_'+id);if(v){R[id]=JSON.parse(v);if(R[id].v==='done'&&R[id].baked)applyBaked(id,R[id].baked);}}catch(e){}}show(page);return;}
+    for(const id of [...ALL,...FAILED]){try{const v=localStorage.getItem('rv_'+id);if(v){R[id]=JSON.parse(v);if(R[id].v==='done'&&R[id].baked)applyBaked(id,R[id].baked);}}catch(e){}}applyRefs();show(page);return;}
   col=db.collection('reviews');
   const t=setTimeout(()=>{statusEl.textContent='Can\'t reach the saved answers yet…';},10000);
   col.onSnapshot(snap=>{clearTimeout(t);
     for(const d of snap.docs){const x=d.data()||{};const was=R[d.id]&&R[d.id].baked;R[d.id]={v:x.v||null,n:x.n||'',at:x.at,baked:x.v==='done'?x.baked||null:null};
       if(D3[d.id]&&(!!was!==!!R[d.id].baked||(R[d.id].baked&&!D3[d.id].baked)))applyBaked(d.id,R[d.id].baked);}
+    applyRefs();
     const all=[...ALL,...FAILED],done=all.filter(id=>R[id]&&R[id].v).length,bad=all.filter(id=>R[id]&&R[id].v==='bad').length,lk=all.filter(id=>R[id]&&R[id].v==='done').length;
     statusEl.textContent=`${done} of ${all.length} checked · ${bad} bad · ${lk} done`;
     renderPager();for(const tl of grid.querySelectorAll('.tile')){const ta=tl.querySelector('textarea');if(!ta)continue;setTileState(tl,ta.id.slice(5));}
