@@ -40,8 +40,9 @@ The owner is not a developer. Explain steps plainly, keep instructions short, an
 - **Phase 3 – body & progress:** ~~weight, body fat, circumferences, charts~~ (done early in Profile), muscle heat map, weekly stats, export (JSON/CSV).
 - **Phase 4 – full check (owner, 2026-11-13):** review the whole app for bugs, possible errors and improvements; Android risks; safety rules for AI-written code. See `docs/REVIEW.md`.
 - **Phase 5 – Android (owner said go 2026-11-16, after cycling part 2):** rules + step-by-step game plan in `docs/ANDROID.md` (§L plan, §M how Claude works). After every merge also send the **APK link**.
+- **Phase 5b – Galaxy Watch app (owner, 2026-11-16):** after Android steps 8–9. Native Kotlin Wear OS app (Galaxy Watch 4+): wrist heart rate, zone alerts by vibration, start/stop workouts, heart rate to the phone. Plan in `docs/WATCH.md`.
 - **Gate:** owner uses it for a full month instead of Hevy/NRC → buy Developer account.
-- **Phase 6 – closed beta on iPhone + Android together:** HealthKit + AirPods HR, TestFlight + Google Play closed testing, 20–50 testers.
+- **Phase 6 – closed beta on iPhone + Android together:** HealthKit + AirPods HR, TestFlight + Google Play closed testing, 20–50 testers. **Apple Watch app** here too (needs the paid account + someone with an Apple Watch to test; `docs/WATCH.md` §B).
 - **Phase 7 – public:** cloud sync, design polish, App Store + Google Play.
 
 ### Phase 1 status
