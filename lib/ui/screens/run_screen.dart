@@ -81,6 +81,7 @@ class RunScreen extends StatelessWidget {
               const RunPlansSection(),
               const SizedBox(height: 8),
               const ShoesCard(),
+              const ShoesCard(kind: GearKind.bike, hideWhenEmpty: true),
               const SizedBox(height: 8),
               if (runs.isNotEmpty) ...[
                 _Totals(runs: runs),

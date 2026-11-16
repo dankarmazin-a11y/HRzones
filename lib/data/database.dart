@@ -256,6 +256,9 @@ enum RunKind { outdoor, treadmill }
 /// running goals or running records.
 enum RunActivity { run, walk, hike, ride }
 
+/// Gear counted by km: running shoes or a bike (stored by index – only add at the end).
+enum GearKind { shoe, bike }
+
 extension RunActivityOf on Run {
   /// A run (not a walk or hike): only these count as running km, goals and records.
   bool get isRun => activity == RunActivity.run;
@@ -342,6 +345,13 @@ class Shoes extends Table with SyncColumns {
 
   /// Picked automatically for new runs.
   BoolColumn get isDefault => boolean().withDefault(const Constant(false))();
+
+  /// Shoes or a bike ([GearKind], stored by index – only add at the end).
+  IntColumn get kind => intEnum<GearKind>().withDefault(const Constant(0))();
+
+  /// Bikes: km at the last service (null = [startKm]); [limitKm] is the
+  /// service interval.
+  RealColumn get servicedKm => real().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -456,7 +466,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 18;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -531,6 +541,10 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(runPoints, runPoints.cadence);
       }
       if (from >= 7 && from < 17) await m.addColumn(runs, runs.maxSpeedMs);
+      if (from >= 11 && from < 18) {
+        await m.addColumn(shoes, shoes.kind);
+        await m.addColumn(shoes, shoes.servicedKm);
+      }
     },
     beforeOpen: (details) async {
       await _addMissingColumns();

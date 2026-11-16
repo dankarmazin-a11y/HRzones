@@ -9,21 +9,33 @@ class ShoeKm {
   final Shoe shoe;
   final double km;
 
-  bool get wornOut => km >= shoe.limitKm;
+  bool get isBike => shoe.kind == GearKind.bike;
 
-  /// 0–1 of the replacement km.
-  double get used => shoe.limitKm <= 0 ? 0 : (km / shoe.limitKm).clamp(0.0, 1.0);
+  /// Shoes: km so far. Bikes: km since the last service.
+  double get counted => isBike ? (km - (shoe.servicedKm ?? shoe.startKm)).clamp(0.0, double.infinity) : km;
+
+  /// Shoes: time for new ones. Bikes: time for a service.
+  bool get wornOut => counted >= shoe.limitKm;
+
+  /// 0–1 of the replacement (or service) km.
+  double get used => shoe.limitKm <= 0 ? 0 : (counted / shoe.limitKm).clamp(0.0, 1.0);
 }
+
+/// A bike's service interval unless changed.
+const defaultServiceKm = 3000.0;
 
 class ShoeRepository {
   ShoeRepository(this.db);
 
   final AppDatabase db;
 
-  /// Every pair with its km; active ones first, the default first of all.
-  /// Updates when shoes or runs change (only emits real changes).
-  Stream<List<ShoeKm>> watchAll() =>
-      db.customSelect('SELECT 1', readsFrom: {db.shoes, db.runs}).watch().asyncMap((_) => _withKm()).distinct(_same);
+  /// Every pair (or bike, with [kind]) with its km; active ones first, the
+  /// default first of all. Updates when shoes or runs change (only emits real changes).
+  Stream<List<ShoeKm>> watchAll({GearKind kind = GearKind.shoe}) => db
+      .customSelect('SELECT 1', readsFrom: {db.shoes, db.runs})
+      .watch()
+      .asyncMap((_) => _withKm(kind))
+      .distinct(_same);
 
   static bool _same(List<ShoeKm> a, List<ShoeKm> b) {
     if (a.length != b.length) return false;
@@ -33,8 +45,10 @@ class ShoeRepository {
     return true;
   }
 
-  Future<List<ShoeKm>> _withKm() async {
-    final shoes = await db.select(db.shoes).get();
+  Future<List<ShoeKm>> _withKm([GearKind? kind]) async {
+    final shoes = await (db.select(
+      db.shoes,
+    )..where((s) => kind == null ? const Constant(true) : s.kind.equalsValue(kind))).get();
     final km = <String, double>{};
     for (final r in await (db.select(db.runs)..where((r) => r.shoeId.isNotNull() & r.endedAt.isNotNull())).get()) {
       km[r.shoeId!] = (km[r.shoeId!] ?? 0) + r.distanceM / 1000;
@@ -48,27 +62,34 @@ class ShoeRepository {
     return list;
   }
 
-  Future<List<ShoeKm>> all() => _withKm();
+  Future<List<ShoeKm>> all({GearKind kind = GearKind.shoe}) => _withKm(kind);
 
   Future<ShoeKm?> byId(String? id) async =>
       id == null ? null : (await _withKm()).where((s) => s.shoe.id == id).firstOrNull;
 
-  /// The pair picked automatically for new runs.
-  Future<Shoe?> defaultShoe() =>
-      (db.select(db.shoes)..where((s) => s.isDefault.equals(true) & s.retired.equals(false))).getSingleOrNull();
+  /// The pair (or bike) picked automatically for new runs (rides).
+  Future<Shoe?> defaultShoe({GearKind kind = GearKind.shoe}) => (db.select(
+    db.shoes,
+  )..where((s) => s.isDefault.equals(true) & s.retired.equals(false) & s.kind.equalsValue(kind))).getSingleOrNull();
 
   Future<String> save({
     String? id,
     required String name,
     double startKm = 0,
-    double limitKm = 700,
+    double? limitKm,
     bool? isDefault,
+    GearKind kind = GearKind.shoe,
   }) async {
+    final limit = limitKm ?? (kind == GearKind.bike ? defaultServiceKm : 700);
     final shoeId = id ?? newId();
     await db.transaction(() async {
-      final first = (await db.select(db.shoes).get()).isEmpty;
+      final first = (await (db.select(db.shoes)..where((s) => s.kind.equalsValue(kind))).get()).isEmpty;
       final makeDefault = isDefault ?? (id == null && first);
-      if (makeDefault) await db.update(db.shoes).write(const ShoesCompanion(isDefault: Value(false)));
+      if (makeDefault) {
+        await (db.update(
+          db.shoes,
+        )..where((s) => s.kind.equalsValue(kind))).write(const ShoesCompanion(isDefault: Value(false)));
+      }
       await db
           .into(db.shoes)
           .insertOnConflictUpdate(
@@ -76,7 +97,8 @@ class ShoeRepository {
               id: Value(shoeId),
               name: name,
               startKm: Value(startKm),
-              limitKm: Value(limitKm),
+              limitKm: Value(limit),
+              kind: Value(kind),
               isDefault: makeDefault ? const Value(true) : (id == null ? const Value(false) : const Value.absent()),
               updatedAt: Value(DateTime.now()),
             ),
@@ -86,7 +108,10 @@ class ShoeRepository {
   }
 
   Future<void> setDefault(String id) => db.transaction(() async {
-    await db.update(db.shoes).write(const ShoesCompanion(isDefault: Value(false)));
+    final kind = (await (db.select(db.shoes)..where((s) => s.id.equals(id))).getSingle()).kind;
+    await (db.update(
+      db.shoes,
+    )..where((s) => s.kind.equalsValue(kind))).write(const ShoesCompanion(isDefault: Value(false)));
     await (db.update(db.shoes)..where((s) => s.id.equals(id))).write(const ShoesCompanion(isDefault: Value(true)));
   });
 
@@ -100,6 +125,15 @@ class ShoeRepository {
     await (db.update(db.runs)..where((r) => r.shoeId.equals(id))).write(const RunsCompanion(shoeId: Value(null)));
     await (db.delete(db.shoes)..where((s) => s.id.equals(id))).go();
   });
+
+  /// Bikes: serviced now – the service km count again from here.
+  Future<void> markServiced(String id) async {
+    final x = await byId(id);
+    if (x == null) return;
+    await (db.update(
+      db.shoes,
+    )..where((s) => s.id.equals(id))).write(ShoesCompanion(servicedKm: Value(x.km), updatedAt: Value(DateTime.now())));
+  }
 
   /// Which shoes a run was worn in.
   Future<void> setRunShoe(String runId, String? shoeId) =>

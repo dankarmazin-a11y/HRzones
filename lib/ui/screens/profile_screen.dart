@@ -10,6 +10,7 @@ import '../goals_section.dart';
 import '../measurements_section.dart';
 import '../profile/profile_widgets.dart';
 import '../run/run_records.dart';
+import '../../data/database.dart' show GearKind;
 import '../run/shoes.dart';
 import '../stats/stats_screen.dart';
 import '../streak_card.dart';
@@ -92,7 +93,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(height: 12),
         const MilestonesCard(),
       ],
-      ProfileTab.body => const [MeasurementsSection(), SizedBox(height: 12), ShoesCard()],
+      ProfileTab.body => const [
+        MeasurementsSection(),
+        SizedBox(height: 12),
+        ShoesCard(),
+        SizedBox(height: 12),
+        ShoesCard(kind: GearKind.bike),
+      ],
     };
     return Scaffold(
       appBar: AppBar(

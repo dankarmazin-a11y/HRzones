@@ -218,7 +218,11 @@ class _BodyState extends State<_Body> {
                 : Text('Total ${formatDuration(run.endedAt!.difference(run.startedAt))}'),
           ),
           const SizedBox(height: 8),
-          RunShoeRow(runId: run.id, shoeId: run.shoeId),
+          RunShoeRow(
+            runId: run.id,
+            shoeId: run.shoeId,
+            kind: run.activity == RunActivity.ride ? GearKind.bike : GearKind.shoe,
+          ),
           RunFeelCard(key: ValueKey('feel_${run.id}'), run: run),
           LapsCard(run: run),
           RunCompareCard(key: ValueKey('compare_${run.id}'), run: run),
