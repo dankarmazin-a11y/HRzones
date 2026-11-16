@@ -5,6 +5,8 @@ import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 
 import '../../app_services.dart';
 import '../../live/live_activity.dart';
+import '../../platform/phone_system.dart';
+import '../battery_guide.dart';
 import '../../run/run_voice.dart';
 import '../run/bike_sensors_sheet.dart';
 import '../run/pace_alert.dart';
@@ -108,7 +110,8 @@ class SettingsScreen extends StatelessWidget {
           Text('Running', style: text.titleMedium),
           const RunVoiceSettings(),
           const Divider(height: 32),
-          Text('Lock screen', style: text.titleMedium),
+          const BatterySettingsSection(),
+          Text(isAndroidApp ? 'Workout card' : 'Lock screen', style: text.titleMedium),
           const LockScreenCardCheck(),
           const Divider(height: 32),
           ListTile(
@@ -164,9 +167,9 @@ class _RestAlertsState extends State<_RestAlerts> {
           contentPadding: EdgeInsets.zero,
           secondary: const Icon(Icons.notifications_active_outlined),
           title: const Text('Notification'),
-          subtitle: const Text(
+          subtitle: Text(
             'When the phone is locked or you are in another app: a notification with vibration. '
-            'iPhone asks for permission the first time.',
+            'The $phoneWord asks for permission the first time.',
           ),
           value: session.notifyRestOver,
           onChanged: (v) async {
@@ -174,7 +177,7 @@ class _RestAlertsState extends State<_RestAlerts> {
             final ok = await s.setRestNotify(v);
             if (!ok) {
               messenger.showSnackBar(
-                const SnackBar(content: Text('Notifications are off for HR Zones – allow them in iPhone Settings.')),
+                SnackBar(content: Text('Notifications are off for HR Zones – allow them in $appSettingsPath.')),
               );
             }
             if (mounted) setState(() {});
@@ -598,7 +601,7 @@ Future<void> showThemeSheet(BuildContext context) => showModalBottomSheet<void>(
                 ),
               ),
               const SizedBox(height: 6),
-              Text('Phone = follows the iPhone: light in the day, dark at night.', style: text.bodySmall),
+              Text('Phone = follows the $phoneWord: light in the day, dark at night.', style: text.bodySmall),
             ],
           ),
         ),

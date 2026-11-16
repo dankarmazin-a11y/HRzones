@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 
+import '../platform/phone_system.dart';
 import 'heart_rate_source.dart';
 
 /// Standard Bluetooth Heart Rate Profile (chest straps, arm bands, watches
@@ -39,13 +40,20 @@ FlutterReactiveBle? _ble;
 FlutterReactiveBle get _bleInstance => _ble ??= FlutterReactiveBle();
 
 /// Scans for heart-rate devices (deduplicated by id).
+/// On Android asks for the Bluetooth permission first (error when it is refused).
 Stream<List<HrDevice>> scanHrDevices() {
   final found = <String, HrDevice>{};
-  return _bleInstance.scanForDevices(withServices: [hrService], requireLocationServicesEnabled: false).map((d) {
-    found[d.id] = HrDevice(id: d.id, name: d.name.isEmpty ? 'Heart-rate sensor' : d.name, rssi: d.rssi);
-    return found.values.toList()..sort((a, b) => (b.rssi ?? -999).compareTo(a.rssi ?? -999));
+  return Stream.fromFuture(PhoneSystem.bluetooth()).asyncExpand((allowed) {
+    if (!allowed) return Stream<List<HrDevice>>.error(bluetoothRefused);
+    return _bleInstance.scanForDevices(withServices: [hrService], requireLocationServicesEnabled: false).map((d) {
+      found[d.id] = HrDevice(id: d.id, name: d.name.isEmpty ? 'Heart-rate sensor' : d.name, rssi: d.rssi);
+      return found.values.toList()..sort((a, b) => (b.rssi ?? -999).compareTo(a.rssi ?? -999));
+    });
   });
 }
+
+/// Shown when Android's "Nearby devices" (Bluetooth) permission is off.
+String get bluetoothRefused => 'Bluetooth is not allowed for HR Zones. Allow "Nearby devices" in $appSettingsPath.';
 
 /// Live heart rate from a Bluetooth strap. Reconnects automatically while
 /// started (e.g. strap out of range for a moment).
@@ -78,6 +86,11 @@ class BleHrSource implements HeartRateSource {
   Future<void> start() async {
     if (_started) return;
     _started = true;
+    if (!await PhoneSystem.bluetooth()) {
+      status.value = 'Bluetooth not allowed';
+      _started = false;
+      return;
+    }
     _connect();
   }
 

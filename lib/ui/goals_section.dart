@@ -11,6 +11,7 @@ import 'exercises/exercise_library_screen.dart';
 import 'number_input.dart';
 import '../units/units.dart';
 import 'theme/app_theme.dart';
+import '../platform/phone_system.dart';
 
 /// Goals with progress bars. [limit] shows only the first few (Home).
 class GoalsSection extends StatelessWidget {
@@ -367,7 +368,7 @@ Future<void> addGoal(BuildContext context) async {
             key: const Key('goalSteps'),
             leading: const Icon(Icons.directions_walk),
             title: const Text('Steps a day'),
-            subtitle: const Text('e.g. 8,000 – shown on Home, counted by your iPhone'),
+            subtitle: Text('e.g. 8,000 – shown on Home, counted by your $phoneWord'),
             onTap: () => Navigator.pop(c, 'steps'),
           ),
         ],

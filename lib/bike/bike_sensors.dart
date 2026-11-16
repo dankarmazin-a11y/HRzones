@@ -4,7 +4,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 
-import '../hr/ble_hr_source.dart' show bluetoothSupported;
+import '../hr/ble_hr_source.dart' show bluetoothRefused, bluetoothSupported;
+import '../platform/phone_system.dart';
 
 /// Bluetooth Cycling Speed and Cadence (0x1816 / measurement 0x2A5B) and
 /// Cycling Power (0x1818 / measurement 0x2A63) – standard sensors on bikes,
@@ -252,21 +253,24 @@ FlutterReactiveBle get _bleInstance => _ble ??= FlutterReactiveBle();
 /// Scans for speed/cadence and power sensors (deduplicated by id).
 Stream<List<BikeSensor>> scanBikeSensors() {
   final found = <String, (BikeSensor, int)>{};
-  return _bleInstance
-      .scanForDevices(withServices: [cscService, powerService], requireLocationServicesEnabled: false)
-      .map((d) {
-        final power = d.serviceUuids.contains(powerService);
-        found[d.id] = (
-          BikeSensor(
-            id: d.id,
-            name: d.name.isEmpty ? (power ? 'Power meter' : 'Speed / cadence sensor') : d.name,
-            type: power ? BikeSensorType.power : BikeSensorType.speedCadence,
-          ),
-          d.rssi,
-        );
-        final list = found.values.toList()..sort((a, b) => b.$2.compareTo(a.$2));
-        return [for (final x in list) x.$1];
-      });
+  return Stream.fromFuture(PhoneSystem.bluetooth()).asyncExpand((allowed) {
+    if (!allowed) return Stream<List<BikeSensor>>.error(bluetoothRefused);
+    return _bleInstance
+        .scanForDevices(withServices: [cscService, powerService], requireLocationServicesEnabled: false)
+        .map((d) {
+          final power = d.serviceUuids.contains(powerService);
+          found[d.id] = (
+            BikeSensor(
+              id: d.id,
+              name: d.name.isEmpty ? (power ? 'Power meter' : 'Speed / cadence sensor') : d.name,
+              type: power ? BikeSensorType.power : BikeSensorType.speedCadence,
+            ),
+            d.rssi,
+          );
+          final list = found.values.toList()..sort((a, b) => b.$2.compareTo(a.$2));
+          return [for (final x in list) x.$1];
+        });
+  });
 }
 
 /// One sensor's connection; reconnects every 3 s while open.
@@ -284,7 +288,12 @@ class _BleLink {
   Uuid get _service => sensor.type == BikeSensorType.power ? powerService : cscService;
   Uuid get _char => sensor.type == BikeSensorType.power ? powerMeasurement : cscMeasurement;
 
-  void connect() {
+  Future<void> connect() async {
+    if (!_open) return;
+    if (!await PhoneSystem.bluetooth(ask: false)) {
+      onStatus('Bluetooth not allowed');
+      return;
+    }
     if (!_open) return;
     onStatus('Connecting…');
     _connection?.cancel();
@@ -319,7 +328,7 @@ class _BleLink {
     if (!_open) return;
     onStatus('Reconnecting…');
     _retry?.cancel();
-    _retry = Timer(const Duration(seconds: 3), connect);
+    _retry = Timer(const Duration(seconds: 3), () => connect());
   }
 
   void close() {

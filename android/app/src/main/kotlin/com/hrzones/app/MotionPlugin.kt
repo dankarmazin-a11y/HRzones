@@ -1,7 +1,6 @@
 package com.hrzones.app
 
 import android.Manifest
-import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
 import android.hardware.Sensor
@@ -22,13 +21,12 @@ import io.flutter.plugin.common.MethodChannel
  *   keeps no history, so this returns null for now (the Home card hides itself – never show a
  *   guess; docs/ANDROID.md rule 35). Health Connect comes in a later step.
  *
- * Android 10+ needs the "Physical activity" permission for the step counter; [start] asks for it
- * the first time, like iOS asks for "Motion & Fitness".
+ * Android 10+ needs the "Physical activity" permission for the step counter; Dart asks for it
+ * before a run starts (SystemPlugin "permission" activity). Without it only the barometer runs.
  */
 class MotionPlugin(
   private val context: Context,
   messenger: BinaryMessenger,
-  private val activity: Activity?,
 ) : MethodChannel.MethodCallHandler, SensorEventListener {
   private val channel = MethodChannel(messenger, "hrzones/motion")
   private val sensors = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -82,10 +80,6 @@ class MotionPlugin(
     heightBase = null
     height = null
 
-    if (stepSensor != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && !canCountSteps()) {
-      // Ask once; counting starts with the next run after the answer.
-      activity?.requestPermissions(arrayOf(Manifest.permission.ACTIVITY_RECOGNITION), REQUEST_CODE)
-    }
     val counting = canCountSteps()
     if (counting) {
       // No batching: live steps for the cadence.
@@ -147,7 +141,6 @@ class MotionPlugin(
   override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
   companion object {
-    const val REQUEST_CODE = 7301
     const val CADENCE_WINDOW_MS = 10_000L
     const val SMOOTHING = 0.1
   }

@@ -33,6 +33,7 @@ import 'run/run_session.dart';
 import 'run/run_voice.dart';
 import 'workout/workout_session.dart';
 import 'units/units.dart';
+import 'platform/phone_system.dart';
 
 /// Everything the screens need: database repositories, HR monitor and the
 /// current workout session.
@@ -406,6 +407,8 @@ class AppServices {
     onStep?.call('Loading settings');
     await s._loadSettings();
     s.session.zonesEnabled = s.zonesEnabled.value;
+    // Android: is the native side there (not in tests)? Run start asks extra permissions then.
+    if (db == null) PhoneSystem.hasNative = await PhoneSystem.battery() != null;
     // A new user gets the walk-through; someone who already logged
     // workouts (from before it existed) doesn't.
     if (db == null && await s.db.getSetting('onboarded') != '1') {
