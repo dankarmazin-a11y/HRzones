@@ -4,8 +4,9 @@ import 'package:flutter/services.dart';
 import '../hr/zone_alert_engine.dart';
 import 'sounds.dart';
 
-/// Plays alert beeps. On iOS this is a native module (AVAudioEngine, mixes
-/// over music, keeps working with the screen locked). On web it is a stub.
+/// Plays alert beeps. Native module on iOS (AVAudioEngine, mixes over music,
+/// keeps working with the screen locked) and Android (AudioTrack + TextToSpeech,
+/// `BeeperPlugin.kt`). On web it is a stub.
 ///
 /// Several features keep the audio running at the same time (HR monitor,
 /// live workout timers, interval timer). Each one takes a *hold* with
@@ -82,7 +83,7 @@ class NativeBeeper extends Beeper {
     try {
       await _channel.invokeMethod<void>(method, args);
     } on MissingPluginException {
-      // Platform without the native module (tests, Android for now).
+      // Platform without the native module (tests).
     } on PlatformException catch (e) {
       debugPrint('Beeper.$method failed: ${e.message}');
     }

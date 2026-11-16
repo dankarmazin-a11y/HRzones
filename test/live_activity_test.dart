@@ -68,7 +68,11 @@ void main() {
   });
 
   test('Settings explains why the lock-screen card does not show', () {
-    expect(liveStatusText(null), 'Only on the iPhone.');
+    expect(liveStatusText(null), 'Only on the phone app.');
+    // Android: notification card held by the foreground service.
+    expect(liveStatusText({'android': true, 'enabled': false}), contains('Notifications are off'));
+    expect(liveStatusText({'android': true, 'enabled': true, 'keepsRunning': false}), contains('Location'));
+    expect(liveStatusText({'android': true, 'enabled': true, 'keepsRunning': true}), startsWith('Ready.'));
     expect(liveStatusText({'old': true}), contains('latest IPA'));
     expect(liveStatusText({'supported': false, 'ios': '15.8'}), contains('16.2'));
     expect(liveStatusText({'supported': true, 'extension': false}), contains('Remove app extensions'));
