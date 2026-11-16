@@ -37,7 +37,10 @@ import 'units/units.dart';
 /// current workout session.
 class AppServices {
   AppServices._(this.db, this.hr, this._loadExercises, this.restNotifier, LocationSource? location)
-    : exercises = ExerciseRepository(db),
+    // Tests (which pass their own location source) get the recording stand-in. On the phone:
+    // iOS Live Activity / Android ongoing notification + foreground service.
+    : live = location == null ? LiveActivity.create() : NoLiveActivity(),
+      exercises = ExerciseRepository(db),
       runs = RunRepository(db),
       shoes = ShoeRepository(db),
       runPlans = RunPlanRepository(db),
@@ -69,7 +72,7 @@ class AppServices {
   }
 
   /// The workout card on the lock screen / Dynamic Island (strength or run).
-  final LiveActivity live = LiveActivity.create();
+  final LiveActivity live;
 
   final RunRepository runs;
   final ShoeRepository shoes;
