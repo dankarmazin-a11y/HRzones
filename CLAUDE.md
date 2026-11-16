@@ -8,6 +8,7 @@ One iPhone app for hybrid athletes (strength + running): a Hevy-level strength l
 The owner is not a developer. Explain steps plainly, keep instructions short, and do the technical work yourself (commit, push, read CI logs, fix).
 
 **Owner rules:**
+- **Times in Israel time** (owner, 2026-11-16) when telling the owner when something happens (UTC+2 in winter, UTC+3 in summer).
 - After every change, always send the **web preview link** (https://dankarmazin-a11y.github.io/HRzones/ – updates ~5 min after the PR is merged) and the IPA link.
 - In conversation, **"workout" means any training** – strength or running.
 - **Claude merges its own PRs** (owner, 2026-11-05) unless the owner says otherwise – only after check + web + iOS builds are green (dispatch `build.yml` on the branch for the iOS build before merging).
