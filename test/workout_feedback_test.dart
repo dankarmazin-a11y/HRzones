@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hrzones/app.dart';
+import 'package:hrzones/ui/workout/active_workout_screen.dart' show platePreview;
 import 'package:hrzones/beep/sounds.dart';
 import 'package:hrzones/beep/beeper.dart';
 import 'package:hrzones/workout/workout_session.dart';
@@ -84,6 +85,34 @@ void main() {
     await tester.drag(find.byKey(const Key('soundVolume')), const Offset(-400, 0));
     await settle(tester);
     expect(s.hr.volume, lessThan(0.5));
+    await tearDownApp(tester, s);
+  });
+
+  testWidgets('typing a barbell weight shows its plates above the keyboard', (tester) async {
+    final s = (await tester.runAsync(testServices))!;
+    await tester.runAsync(() async {
+      await s.session.startEmpty();
+      await s.session.addExercises([(await s.exercises.byId('Barbell_Bench_Press'))!]);
+    });
+    await tester.pumpWidget(HrZonesApp(services: s));
+    await settle(tester);
+    await tester.tap(find.byType(RunningWorkoutBar));
+    await settle(tester);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300); // the keyboard is up
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pump();
+    final kg = find.byType(TextField).first;
+    await tester.tap(kg);
+    await tester.pump();
+    await tester.enterText(kg, '72.5');
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+    await tester.pump();
+    expect(platePreview.value?.kg, 72.5);
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50))); // bar + plates settings
+    await tester.pump();
+    expect(find.byKey(const Key('platePreview')), findsOneWidget);
+    expect(find.text('25 · 1.25'), findsOneWidget, reason: '72.5 kg on a 20 kg bar = 26.25 a side');
+    await tester.runAsync(s.session.discard);
     await tearDownApp(tester, s);
   });
 }

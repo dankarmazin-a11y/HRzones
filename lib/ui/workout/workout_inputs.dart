@@ -18,6 +18,11 @@ Future<DateTime?> pickWorkoutStart(BuildContext context, DateTime initial) async
 /// A number cell in a set row: tapping it (or reaching it with Next) selects
 /// the whole value, so typing replaces it. Tapping outside closes the
 /// keyboard.
+/// The barbell weight being typed (owner, 17 Nov): the keyboard bar shows its
+/// plates. Weight in kg; null when no barbell weight field has focus.
+typedef PlateTarget = ({String exerciseId, double kg});
+final platePreview = ValueNotifier<PlateTarget?>(null);
+
 class SetNumberField extends StatefulWidget {
   const SetNumberField({
     super.key,
@@ -26,6 +31,7 @@ class SetNumberField extends StatefulWidget {
     required this.onChanged,
     this.decimal = false,
     this.autofocus = false,
+    this.plateFor,
   });
 
   final TextEditingController controller;
@@ -33,6 +39,9 @@ class SetNumberField extends StatefulWidget {
   final ValueChanged<String> onChanged;
   final bool decimal;
   final bool autofocus;
+
+  /// A barbell exercise's weight field: tells [platePreview] what's typed.
+  final String? plateFor;
 
   @override
   State<SetNumberField> createState() => _SetNumberFieldState();
@@ -46,7 +55,22 @@ class _SetNumberFieldState extends State<SetNumberField> {
     super.initState();
     _focus.addListener(() {
       if (_focus.hasFocus) _selectAll();
+      _plates();
     });
+    widget.controller.addListener(_plates);
+  }
+
+  void _plates() {
+    final id = widget.plateFor;
+    if (id == null) return;
+    if (!_focus.hasFocus) {
+      if (platePreview.value?.exerciseId == id) platePreview.value = null;
+      return;
+    }
+    final n = double.tryParse(widget.controller.text.replaceAll(',', '.'));
+    final hinted = double.tryParse(widget.hint.replaceAll(',', '.'));
+    final shown = n ?? hinted;
+    platePreview.value = shown == null || shown <= 0 ? null : (exerciseId: id, kg: Units.fromW(shown));
   }
 
   void _selectAll() {
@@ -59,6 +83,8 @@ class _SetNumberFieldState extends State<SetNumberField> {
 
   @override
   void dispose() {
+    widget.controller.removeListener(_plates);
+    if (widget.plateFor != null && _focus.hasFocus) platePreview.value = null;
     _focus.dispose();
     super.dispose();
   }
@@ -125,6 +151,8 @@ class KeyboardBar extends StatelessWidget {
           height: 44,
           child: Row(
             children: [
+              const SizedBox(width: 8),
+              const Flexible(child: _PlatePreview()),
               const Spacer(),
               TextButton(
                 key: const Key('keyboardNext'),
@@ -181,4 +209,92 @@ Future<String?> askNote(BuildContext context, String title, String initial, {Str
   );
   c.dispose();
   return result;
+}
+
+/// Left of Next / Done while typing a barbell weight: the plates for one side,
+/// in their colours, smallest drawing that still reads ("20 · 5 · 1.25").
+/// Tap = the full plate calculator.
+class _PlatePreview extends StatelessWidget {
+  const _PlatePreview();
+
+  /// Bar + gym plates per exercise, read once (typing must not flicker); cleared
+  /// after the calculator, where they can change.
+  static final _cache = <String, Future<(double, List<double>)>>{};
+
+  Future<(double, List<double>)> _setup(BuildContext context, String exerciseId) =>
+      _cache.putIfAbsent('$exerciseId|${Units.lb}', () => _read(context, exerciseId));
+
+  Future<(double, List<double>)> _read(BuildContext context, String exerciseId) async {
+    final db = Services.of(context).db;
+    final lb = Units.lb;
+    final plates = await db.getSetting(lb ? 'platesLb' : 'plates');
+    final bar = await db.getSetting('${lb ? 'barLb' : 'bar'}.$exerciseId') ?? await db.getSetting(lb ? 'barLb' : 'bar');
+    final barW = double.tryParse(bar?.split('|').last ?? '') ?? (lb ? 45 : 20);
+    final list = plates == null || plates.isEmpty
+        ? (lb ? allPlatesLb : standardPlates)
+        : ([for (final p in plates.split(',')) ?double.tryParse(p)]..sort((a, b) => b.compareTo(a)));
+    return (barW, list);
+  }
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<PlateTarget?>(
+    valueListenable: platePreview,
+    builder: (context, target, _) {
+      if (target == null) return const SizedBox.shrink();
+      return FutureBuilder<(double, List<double>)>(
+        key: ValueKey(target.exerciseId), // keeps the last result while typing
+        future: _setup(context, target.exerciseId),
+        builder: (context, snap) {
+          final setup = snap.data;
+          if (setup == null) return const SizedBox.shrink();
+          final lb = Units.lb;
+          final result = platesPerSide(Units.toW(target.kg), bar: setup.$1, plates: setup.$2);
+          if (result.perSide.isEmpty) return const SizedBox.shrink();
+          final biggest = lb ? 45.0 : 25.0;
+          return InkWell(
+            key: const Key('platePreview'),
+            borderRadius: BorderRadius.circular(8),
+            onTap: () async {
+              await showCalculators(context, weightKg: target.kg, exerciseId: target.exerciseId);
+              _cache.clear();
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(width: 12, height: 4, child: ColoredBox(color: Color(0xFFA9B1BA))),
+                  for (final p in result.perSide)
+                    Container(
+                      width: 5,
+                      height: 10 + 22 * (p / biggest).clamp(0.0, 1.0),
+                      margin: const EdgeInsets.only(right: 1),
+                      decoration: BoxDecoration(
+                        color: plateColor(p, lb: lb),
+                        border: Border.all(color: const Color(0xFF1D1D1D), width: 0.8),
+                      ),
+                    ),
+                  const SizedBox(width: 3, height: 10, child: ColoredBox(color: Color(0xFF7D8791))),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      result.perSide.map(formatKg).join(' · '),
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF141B2B),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                        fontFeatures: [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
 }

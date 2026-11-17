@@ -465,11 +465,16 @@ class _SetRowState extends State<SetRow> {
       if (p != null && (value(p) == null || value(p) == old)) f(p);
     }
 
-    Widget field(TextEditingController c, String hint, ValueChanged<String> onChanged, {bool decimal = false}) =>
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 3),
-          child: SetNumberField(controller: c, hint: hint, onChanged: onChanged, decimal: decimal),
-        );
+    Widget field(
+      TextEditingController c,
+      String hint,
+      ValueChanged<String> onChanged, {
+      bool decimal = false,
+      String? plateFor,
+    }) => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 3),
+      child: SetNumberField(controller: c, hint: hint, onChanged: onChanged, decimal: decimal, plateFor: plateFor),
+    );
 
     String hintOf(num? v) => v == null ? '' : (v is double ? formatKg(v) : '$v');
     String weightHint(double? kg) => kg == null ? '' : formatW(kg);
@@ -481,6 +486,10 @@ class _SetRowState extends State<SetRow> {
         session.setWeight(x, n == null ? null : Units.fromW(n)); // typed in kg or lb, stored in kg
       }),
       decimal: true,
+      // barbells: the keyboard bar shows the plates for what's typed
+      plateFor: const {'barbell', 'e-z curl bar'}.contains(widget.entry.exercise.equipment)
+          ? widget.entry.exercise.id
+          : null,
     );
     Widget secondsCell() => running
         ? Center(
