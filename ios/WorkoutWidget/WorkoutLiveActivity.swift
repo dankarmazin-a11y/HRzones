@@ -230,7 +230,7 @@ private struct CardButtons: View {
           }
           .buttonStyle(.borderedProminent)
           .controlSize(.large)
-          .tint(a == "skipRest" ? .gray : color)
+          .tint(color) // owner (17 Nov): every card button in the theme colour
         }
       }
     }

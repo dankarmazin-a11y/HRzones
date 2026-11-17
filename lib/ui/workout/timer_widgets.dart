@@ -106,12 +106,19 @@ class _TimerBarState extends State<TimerBar> {
     final collapsed = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        LinearProgressIndicator(
-          key: const Key('timerBarProgress'),
-          value: progress ?? 1,
-          minHeight: 6,
-          color: theme.bright,
-          backgroundColor: white.withValues(alpha: 0.18),
+        // just inside the rounded corners, with rounded ends (owner, 17 Nov)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: LinearProgressIndicator(
+              key: const Key('timerBarProgress'),
+              value: progress ?? 1,
+              minHeight: 6,
+              color: theme.bright,
+              backgroundColor: white.withValues(alpha: 0.18),
+            ),
+          ),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(18, 10, 10, 10),
@@ -353,7 +360,15 @@ class _FullScreenTimerState extends State<FullScreenTimer> {
                   style: text.titleLarge?.copyWith(color: Colors.white70),
                 ),
               ),
-              TimerMuteButton(beeper: session.hr.beeper, size: 32),
+              // same look as the Skip / Done button next to it (owner, 17 Nov)
+              ValueListenableBuilder<bool>(
+                valueListenable: session.hr.beeper.muted,
+                builder: (context, muted, _) => FilledButton(
+                  key: const Key('timerMute'),
+                  onPressed: () => session.hr.beeper.muted.value = !muted,
+                  child: Icon(muted ? Icons.volume_off : Icons.volume_up),
+                ),
+              ),
               const SizedBox(width: 8),
               if (t != null && t.countsDown) ...[
                 OutlinedButton(onPressed: () => session.adjustTimer(-15), child: const Text('−15')),
