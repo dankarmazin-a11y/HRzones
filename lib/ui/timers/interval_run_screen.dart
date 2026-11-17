@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../../workout/interval_runner.dart';
 import '../../workout/stats.dart';
+import '../../app_services.dart';
+import '../../beep/beeper.dart';
 import '../timer_style.dart';
 
 /// Full-screen interval timer: big digits, green = work, blue = rest.
@@ -37,8 +39,11 @@ class _IntervalRunScreenState extends State<IntervalRunScreen> {
     });
   }
 
+  Beeper? _beeper;
+
   @override
   void dispose() {
+    _beeper?.muted.value = false; // mute is for this timer only
     _close?.cancel();
     widget.runner.removeListener(_closeWhenDone);
     keepScreenOn(false);
@@ -53,14 +58,14 @@ class _IntervalRunScreenState extends State<IntervalRunScreen> {
       listenable: r,
       builder: (context, _) {
         final step = r.current;
-        final color = r.finished || r.gettingReady
-            ? TimerStyle.neutralBackground
-            : (step!.work ? TimerStyle.workBackground : TimerStyle.restBackground);
+        final tc = TimerColors.of(context);
+        _beeper = Services.of(context).hr.beeper;
+        final color = r.finished || r.gettingReady ? tc.neutral : (step!.work ? tc.work : tc.rest);
         final accent = r.finished
             ? Colors.white
             : r.gettingReady
-            ? TimerStyle.readyAccent
-            : (step!.work ? TimerStyle.workAccent : TimerStyle.restAccent);
+            ? tc.readyAccent
+            : (step!.work ? tc.workAccent : tc.restAccent);
         final label = r.finished ? 'Done' : (r.gettingReady ? 'Get ready' : step!.label);
         final white = Theme.of(context).textTheme.apply(bodyColor: Colors.white, displayColor: Colors.white);
         return Scaffold(
@@ -125,19 +130,13 @@ class _IntervalRunScreenState extends State<IntervalRunScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        IconButton.filled(
+                        TimerMuteButton(beeper: Services.of(context).hr.beeper),
+                        TimerRoundButton(
                           key: const Key('pauseIntervals'),
-                          iconSize: 48,
-                          style: IconButton.styleFrom(backgroundColor: Colors.white24),
-                          icon: Icon(r.paused ? Icons.play_arrow : Icons.pause, color: Colors.white),
+                          icon: r.paused ? Icons.play_arrow : Icons.pause,
                           onPressed: r.togglePause,
                         ),
-                        IconButton.filled(
-                          iconSize: 48,
-                          style: IconButton.styleFrom(backgroundColor: Colors.white24),
-                          icon: const Icon(Icons.skip_next, color: Colors.white),
-                          onPressed: r.skip,
-                        ),
+                        TimerRoundButton(icon: Icons.skip_next, onPressed: r.skip),
                       ],
                     )
                   else

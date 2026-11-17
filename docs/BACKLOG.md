@@ -59,6 +59,9 @@ polish later.
    zones (age / max HR), weekly target, units – sets everything up on first launch.
 15. ✅ **Ready-made ab workouts with a follow-along timer** (like YouTube ab videos):
    exercise + countdown + "next up", pictures, rest between.
+16. **Button style check (owner, 17 Nov)**: a mockup with every button in the app side by side
+   (round timer buttons, pills, chips, filled / outlined, icon buttons) to make sure they follow
+   one style language and line up; then fix the odd ones out.
 
 ## Suggested order
 A1–A4 (bugs) → B11, B8, B5 (quick wins) → B7, B9, B10 → B6 (lock-screen buttons) →

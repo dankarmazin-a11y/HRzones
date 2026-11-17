@@ -129,6 +129,25 @@ class SettingsScreen extends StatelessWidget {
           Text('Sounds', style: text.titleMedium),
           Text('Pick the sound for each moment. Tap ▷ to hear it.', style: text.bodySmall),
           const SizedBox(height: 4),
+          // owner (17 Nov): one volume for all the app's sounds (beeps, ding, voice)
+          ListenableBuilder(
+            listenable: s.hr,
+            builder: (context, _) => Row(
+              children: [
+                const Icon(Icons.volume_up),
+                const SizedBox(width: 8),
+                Text('Volume ${(s.hr.volume * 100).round()}%'),
+                Expanded(
+                  child: Slider(
+                    key: const Key('soundVolume'),
+                    value: s.hr.volume,
+                    onChanged: s.hr.setVolume,
+                    onChangeEnd: (_) => s.hr.beeper.play(SoundEvent.restOver), // hear it
+                  ),
+                ),
+              ],
+            ),
+          ),
           for (final e in SoundEvent.values) _SoundRow(event: e),
         ],
       ),

@@ -11,6 +11,7 @@ import '../../workout/ab_workouts.dart';
 import '../../workout/interval_runner.dart';
 import '../../workout/stats.dart';
 import '../exercises/exercise_avatar.dart';
+import '../../beep/beeper.dart';
 import '../timer_style.dart';
 import '../theme/emblems.dart';
 
@@ -198,8 +199,11 @@ class _FollowAlongScreenState extends State<FollowAlongScreen> {
     if (_voice) _s.hr.beeper.speak(text, voice: _s.run.voice?.kind ?? 'default');
   }
 
+  Beeper? _beeper;
+
   @override
   void dispose() {
+    _beeper?.muted.value = false; // mute is for this timer only
     _close?.cancel();
     keepScreenOn(false);
     runner.removeListener(_onStep);
@@ -240,9 +244,9 @@ class _FollowAlongScreenState extends State<FollowAlongScreen> {
         final step = r.current;
         final work = step?.work ?? false;
         final next = _nextMove();
-        final bg = r.finished
-            ? TimerStyle.neutralBackground
-            : (work ? TimerStyle.workBackground : TimerStyle.restBackground);
+        final tc = TimerColors.of(context);
+        _beeper = Services.of(context).hr.beeper;
+        final bg = r.finished ? tc.neutral : (work ? tc.work : tc.rest);
         final white = Theme.of(context).textTheme.apply(bodyColor: Colors.white, displayColor: Colors.white);
         final moveNo = step == null ? 0 : plan.moves.take(r.index + 1).whereType<AbMove>().length;
         final moveCount = plan.moves.whereType<AbMove>().length;
@@ -307,7 +311,7 @@ class _FollowAlongScreenState extends State<FollowAlongScreen> {
                     LinearProgressIndicator(
                       value: r.stepTotal == 0 ? 0 : r.remaining / r.stepTotal,
                       minHeight: 8,
-                      color: work ? TimerStyle.workAccent : TimerStyle.restAccent,
+                      color: work ? tc.workAccent : tc.restAccent,
                       backgroundColor: Colors.white24,
                     ),
                   const SizedBox(height: 8),
@@ -326,18 +330,17 @@ class _FollowAlongScreenState extends State<FollowAlongScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        IconButton.filled(
+                        TimerMuteButton(beeper: Services.of(context).hr.beeper, size: 44),
+                        TimerRoundButton(
                           key: const Key('pauseAbWorkout'),
-                          iconSize: 44,
-                          style: IconButton.styleFrom(backgroundColor: Colors.white24),
-                          icon: Icon(r.paused ? Icons.play_arrow : Icons.pause, color: Colors.white),
+                          size: 44,
+                          icon: r.paused ? Icons.play_arrow : Icons.pause,
                           onPressed: r.togglePause,
                         ),
-                        IconButton.filled(
+                        TimerRoundButton(
                           key: const Key('skipAbStep'),
-                          iconSize: 44,
-                          style: IconButton.styleFrom(backgroundColor: Colors.white24),
-                          icon: const Icon(Icons.skip_next, color: Colors.white),
+                          size: 44,
+                          icon: Icons.skip_next,
                           onPressed: r.skip,
                         ),
                       ],

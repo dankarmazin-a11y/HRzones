@@ -57,7 +57,14 @@ struct WorkoutLiveActivity: Widget {
           Clock(state: context.state).monospacedDigit().frame(maxWidth: 52)
         }
       } minimal: {
-        Image(systemName: icon(context.attributes)).foregroundStyle(accent(context.state))
+        // With music playing iOS shows this small form: the countdown while a timer runs
+        if let end = context.state.countdownEnd, end > Date() {
+          Text(timerInterval: Date()...end, countsDown: true)
+            .monospacedDigit().font(.caption2.bold()).minimumScaleFactor(0.6)
+            .frame(maxWidth: 40).foregroundStyle(accent(context.state))
+        } else {
+          Image(systemName: icon(context.attributes)).foregroundStyle(accent(context.state))
+        }
       }
     }
   }
@@ -178,7 +185,9 @@ private struct LockScreenView: View {
           .font(.system(size: 30, weight: .heavy, design: .rounded))
           .foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.6)
         if !state.detail.isEmpty {
-          Text(state.detail).font(.subheadline).foregroundStyle(.white.opacity(0.85)).lineLimit(1)
+          // owner (17 Nov): the set and weight bold white – grey on dark was hard to read
+          Text(state.detail).font(.title3.weight(.bold)).foregroundStyle(.white).lineLimit(1)
+            .minimumScaleFactor(0.7)
         }
       }
       if let end = state.countdownEnd, end > Date() {
@@ -198,8 +207,9 @@ private struct LockScreenView: View {
         }
       }
     }
-    .padding(.horizontal, 18)
-    .padding(.vertical, 14)
+    // owner (17 Nov): more room around the edges (the clock touched them)
+    .padding(.horizontal, 24)
+    .padding(.vertical, 20)
   }
 }
 
@@ -215,10 +225,11 @@ private struct CardButtons: View {
         ForEach(actions, id: \.self) { a in
           Button(intent: WorkoutCardIntent(action: a)) {
             Label(title(a), systemImage: symbol(a))
-              .font(.headline)
-              .frame(maxWidth: .infinity)
+              .font(.title3.bold())
+              .frame(maxWidth: .infinity, minHeight: 34)
           }
           .buttonStyle(.borderedProminent)
+          .controlSize(.large)
           .tint(a == "skipRest" ? .gray : color)
         }
       }

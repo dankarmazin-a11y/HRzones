@@ -41,6 +41,49 @@ class WorkoutSummary {
     return out;
   }
 
+  // ── End-of-workout stats (owner, 17 Nov) ─────────────────────────────
+  Iterable<LoggedSet> get _working => workout.exercises
+      .where((e) => !e.exercise.id.startsWith(intervalExercisePrefix))
+      .expand((e) => e.sets)
+      .where((s) => s.done && s.type != SetType.warmup);
+
+  /// Reps done (both sides of a one-sided set count).
+  int get reps => _working.fold(0, (n, s) => n + (s.reps ?? 0));
+
+  /// Time inside sets: timed sets fully, other sets about [secondsPerRep] a rep.
+  static const secondsPerRep = 3;
+  Duration get working {
+    var secs = 0;
+    for (final e in workout.exercises) {
+      for (final s in e.sets.where((s) => s.done)) {
+        secs += s.reps != null && s.reps! > 0 ? s.reps! * secondsPerRep : (s.durationS ?? 0);
+      }
+    }
+    final d = Duration(seconds: secs);
+    return d > duration ? duration : d;
+  }
+
+  /// Time between sets.
+  Duration get resting => duration - working;
+
+  /// The heaviest working set (weight, then reps); null without weights.
+  LoggedSet? get heaviestSet {
+    LoggedSet? best;
+    for (final s in _working) {
+      final w = s.weightKg ?? 0;
+      if (w <= 0) continue;
+      if (best == null || w > best.weightKg! || (w == best.weightKg! && (s.reps ?? 0) > (best.reps ?? 0))) best = s;
+    }
+    return best;
+  }
+
+  /// Rough energy used: from the average heart rate when a strap was on
+  /// (Keytel et al. 2005, the average of the men's and women's formulas),
+  /// otherwise MET 5 (weight training, vigorous) × body weight × hours.
+  /// Null without a body weight.
+  double? calories({double? weightKg, int age = 30}) =>
+      strengthCalories(durationS: duration.inSeconds, weightKg: weightKg, avgHr: avgHr, age: age);
+
   String exerciseName(String id) {
     for (final e in workout.exercises) {
       if (e.exercise.id == id) return e.exercise.name;
@@ -76,4 +119,16 @@ class WorkoutSummary {
       maxHr: maxHr,
     );
   }
+}
+
+double? strengthCalories({required int durationS, double? weightKg, int? avgHr, int age = 30}) {
+  if (weightKg == null || weightKg <= 0 || durationS <= 0) return null;
+  final minutes = durationS / 60;
+  if (avgHr != null && avgHr > 60) {
+    final men = (-55.0969 + 0.6309 * avgHr + 0.1988 * weightKg + 0.2017 * age) / 4.184;
+    final women = (-20.4022 + 0.4472 * avgHr - 0.1263 * weightKg + 0.074 * age) / 4.184;
+    final perMin = (men + women) / 2;
+    if (perMin > 0) return perMin * minutes;
+  }
+  return 5.0 * weightKg * durationS / 3600;
 }

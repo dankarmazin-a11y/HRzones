@@ -108,6 +108,28 @@ class WorkoutSummaryScreen extends StatelessWidget {
               _Stat(label: 'Sets', value: '${s.setCount}'),
               if (s.avgHr != null) _Stat(label: 'Avg HR', value: '${s.avgHr}'),
               if (s.maxHr != null) _Stat(label: 'Max HR', value: '${s.maxHr}'),
+              // owner (17 Nov): calories and the rest of the picture
+              FutureBuilder<double?>(
+                key: const Key('summaryCalories'),
+                future: Services.of(context).body.latest('weight'),
+                builder: (context, snap) {
+                  final kcal = s.calories(weightKg: snap.data, age: Services.of(context).hr.age);
+                  return _Stat(
+                    label: kcal == null ? 'kcal (add weight)' : 'Calories',
+                    value: kcal == null ? '–' : '${kcal.round()} kcal',
+                  );
+                },
+              ),
+              if (s.reps > 0) _Stat(label: 'Reps', value: '${s.reps}'),
+              _Stat(label: 'Working', value: formatDuration(s.working)),
+              _Stat(label: 'Resting', value: formatDuration(s.resting)),
+              if (s.heaviestSet != null)
+                _Stat(
+                  label: 'Heaviest set',
+                  value:
+                      '${formatWeight(s.heaviestSet!.weightKg!)}'
+                      '${s.heaviestSet!.reps != null ? ' × ${s.heaviestSet!.reps}' : ''}',
+                ),
             ],
           ),
           if (s.records.isNotEmpty) ...[

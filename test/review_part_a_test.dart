@@ -22,19 +22,21 @@ Future<String> logBench(AppServices s, double kg, int reps) async {
 }
 
 void main() {
-  test('tapping the set number cycles number → F → W → D', () async {
+  test('tapping the set number switches number ↔ F; W / D go back to a number', () async {
     final s = await testServices();
     await s.session.startEmpty();
     await s.session.addExercises([(await s.exercises.byId('Barbell_Bench_Press'))!]);
     final set = s.session.active!.exercises.single.sets.single;
     final seen = <SetType>[set.type];
-    for (var i = 0; i < 4; i++) {
+    for (var i = 0; i < 3; i++) {
       s.session.cycleSetType(set);
       seen.add(set.type);
     }
-    expect(seen, [SetType.normal, SetType.failure, SetType.warmup, SetType.drop, SetType.normal]);
+    expect(seen, [SetType.normal, SetType.failure, SetType.normal, SetType.failure]);
     s.session.setSetType(set, SetType.drop); // long-press menu
     expect(set.type, SetType.drop);
+    s.session.cycleSetType(set);
+    expect(set.type, SetType.normal, reason: 'a tap on D goes back to a number');
     await s.session.discard();
     await s.close();
   });

@@ -58,8 +58,17 @@ abstract class Beeper {
   /// Plays the sound for [event] with the user's choice.
   Future<void> play(SoundEvent event) => preview(event, choices[event] ?? SoundChoice.classic);
 
+  /// Mute button on a full-screen timer: no sounds while it's on (vibration
+  /// stays). Switched off again when that timer closes.
+  final muted = ValueNotifier<bool>(false);
+
   /// Plays [event] as [choice] (also used to preview a choice).
-  Future<void> preview(SoundEvent event, SoundChoice choice) => switch (choice) {
+  Future<void> preview(SoundEvent event, SoundChoice choice) async {
+    if (muted.value) return;
+    return _preview(event, choice);
+  }
+
+  Future<void> _preview(SoundEvent event, SoundChoice choice) => switch (choice) {
     SoundChoice.classic => event.classicDing ? ding() : beep(frequency: event.frequency, count: event.count),
     SoundChoice.high => beep(frequency: 1200, count: event.count),
     SoundChoice.low => beep(frequency: 500, count: event.count),

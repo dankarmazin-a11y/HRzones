@@ -793,12 +793,14 @@ class WorkoutSession extends ChangeNotifier {
     _changed();
   }
 
-  /// Tap order of the set types: number → F → W → D → number. (The stored
-  /// enum order is different and must not change.)
+  /// Order of the set types in the long-press menu. (The stored enum order is
+  /// different and must not change.)
   static const setTypeCycle = [SetType.normal, SetType.failure, SetType.warmup, SetType.drop];
 
+  /// Tapping the set number (owner, 17 Nov): number ↔ F. A warm-up or drop set
+  /// goes back to a number; the long-press menu has all the types.
   void cycleSetType(LoggedSet s) {
-    s.type = setTypeCycle[(setTypeCycle.indexOf(s.type) + 1) % setTypeCycle.length];
+    s.type = s.type == SetType.normal ? SetType.failure : SetType.normal;
     _changed();
   }
 

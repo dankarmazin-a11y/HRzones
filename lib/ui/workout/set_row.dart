@@ -639,10 +639,19 @@ class _SetRowState extends State<SetRow> {
           ];
 
     final allDone = _sides.every((x) => x.done), someDone = _sides.any((x) => x.done);
+    final tint = allDone
+        ? Colors.green.withValues(alpha: 0.18)
+        : (running ? Colors.teal.withValues(alpha: 0.18) : (someDone ? Colors.green.withValues(alpha: 0.08) : null));
     return Container(
-      color: allDone
-          ? Colors.green.withValues(alpha: 0.18)
-          : (running ? Colors.teal.withValues(alpha: 0.18) : (someDone ? Colors.green.withValues(alpha: 0.08) : null)),
+      key: tint == null ? null : Key('setTint_${widget.index}'),
+      // owner (17 Nov): rounded, and the green fades out towards the ✓ – no stripe
+      decoration: tint == null
+          ? null
+          : BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(colors: [tint, tint, tint.withValues(alpha: 0)], stops: const [0, 0.35, 1]),
+            ),
+      margin: const EdgeInsets.symmetric(vertical: 2), // always – a row doesn't jump when ticked
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: partner == null
           ? Row(children: children)

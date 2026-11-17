@@ -179,7 +179,7 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
     }
     let utterance = AVSpeechUtterance(string: text)
     utterance.voice = englishVoice(voice)
-    utterance.volume = 1.0
+    utterance.volume = max(0.1, volume) // one volume for all the app's sounds (Settings › Sounds)
     speech.speak(utterance)
   }
 

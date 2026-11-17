@@ -53,7 +53,7 @@ class _TimerBarState extends State<TimerBar> {
       fontFamily: 'Inter',
       color: white,
       fontWeight: FontWeight.w900,
-      fontSize: big ? 76 : 17,
+      fontSize: big ? 76 : 26, // owner (17 Nov): the small bar 1.5× bigger
       height: 1,
       letterSpacing: big ? -3 : -0.3,
       fontFeatures: const [FontFeature.tabularFigures()],
@@ -66,7 +66,7 @@ class _TimerBarState extends State<TimerBar> {
         fontFamily: 'Inter',
         color: theme.bright,
         fontWeight: FontWeight.w800,
-        fontSize: big ? 13 : 11.5,
+        fontSize: big ? 13 : 17,
         letterSpacing: big ? 1.2 : 0,
       ),
     );
@@ -87,7 +87,7 @@ class _TimerBarState extends State<TimerBar> {
         borderRadius: BorderRadius.circular(9),
         onTap: onTap,
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: big ? 0 : 11, vertical: big ? 13 : 6),
+          padding: EdgeInsets.symmetric(horizontal: big ? 0 : 16, vertical: big ? 13 : 9),
           child: Text(
             text,
             textAlign: TextAlign.center,
@@ -95,25 +95,41 @@ class _TimerBarState extends State<TimerBar> {
               fontFamily: 'Inter',
               color: main ? theme.onBright : white,
               fontWeight: FontWeight.w800,
-              fontSize: big ? 14 : 12,
+              fontSize: big ? 14 : 17,
             ),
           ),
         ),
       ),
     );
 
-    final collapsed = Row(
+    // owner (17 Nov): the progress line runs across the top, edge to edge
+    final collapsed = Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Flexible(
-          flex: 0,
-          child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 110), child: label),
+        LinearProgressIndicator(
+          key: const Key('timerBarProgress'),
+          value: progress ?? 1,
+          minHeight: 6,
+          color: theme.bright,
+          backgroundColor: white.withValues(alpha: 0.18),
         ),
-        const SizedBox(width: 8),
-        Text(formatDuration(Duration(seconds: shown)), style: digits),
-        const SizedBox(width: 12),
-        Expanded(child: bar(4)),
-        const SizedBox(width: 10),
-        pill(_buttonLabel(t.kind), session.stopTimer),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 10, 10, 10),
+          child: Row(
+            children: [
+              Flexible(
+                flex: 0,
+                child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 140), child: label),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(formatDuration(Duration(seconds: shown)), style: digits),
+              ),
+              const SizedBox(width: 10),
+              pill(_buttonLabel(t.kind), session.stopTimer),
+            ],
+          ),
+        ),
       ],
     );
     final expanded = Column(
@@ -178,7 +194,8 @@ class _TimerBarState extends State<TimerBar> {
           color: bg,
           elevation: 8,
           shadowColor: Colors.black54,
-          borderRadius: BorderRadius.circular(big ? 16 : 10),
+          borderRadius: BorderRadius.circular(big ? 16 : 14),
+          clipBehavior: Clip.antiAlias, // the top progress line follows the rounded corners
           child: InkWell(
             key: const Key('timerBar'),
             borderRadius: BorderRadius.circular(big ? 16 : 10),
@@ -187,7 +204,7 @@ class _TimerBarState extends State<TimerBar> {
               duration: const Duration(milliseconds: 180),
               curve: Curves.easeOut,
               child: Padding(
-                padding: big ? const EdgeInsets.fromLTRB(16, 0, 16, 16) : const EdgeInsets.fromLTRB(14, 8, 8, 8),
+                padding: big ? const EdgeInsets.fromLTRB(16, 0, 16, 16) : EdgeInsets.zero,
                 child: big ? expanded : collapsed,
               ),
             ),
@@ -252,6 +269,7 @@ class _FullScreenTimerState extends State<FullScreenTimer> {
 
   @override
   void dispose() {
+    widget.session.hr.beeper.muted.value = false; // mute is for this timer only
     _close?.cancel();
     widget.session.removeListener(_closeWhenDone);
     keepScreenOn(false);
@@ -266,10 +284,9 @@ class _FullScreenTimerState extends State<FullScreenTimer> {
       listenable: widget.session,
       builder: (context, _) {
         final kind = widget.session.timer?.kind;
+        final tc = TimerColors.of(context);
         return Scaffold(
-          backgroundColor: kind == TimerKind.setTimer
-              ? TimerStyle.workBackground
-              : (kind == TimerKind.rest ? TimerStyle.restBackground : TimerStyle.neutralBackground),
+          backgroundColor: kind == TimerKind.setTimer ? tc.work : (kind == TimerKind.rest ? tc.rest : tc.neutral),
           body: SafeArea(
             child: RotatedBox(
               // The app is portrait-only, so turn the content sideways instead.
@@ -287,7 +304,8 @@ class _FullScreenTimerState extends State<FullScreenTimer> {
     final t = session.timer;
     final text = Theme.of(context).textTheme;
     final isSet = t?.kind == TimerKind.setTimer;
-    final accent = isSet ? TimerStyle.workAccent : TimerStyle.restAccent;
+    final tc = TimerColors.of(context);
+    final accent = isSet ? tc.workAccent : tc.restAccent;
     final shown = t == null ? 0 : (t.countsDown ? t.remaining : t.elapsed);
     final next = session.nextUpLabel;
 
@@ -335,6 +353,8 @@ class _FullScreenTimerState extends State<FullScreenTimer> {
                   style: text.titleLarge?.copyWith(color: Colors.white70),
                 ),
               ),
+              TimerMuteButton(beeper: session.hr.beeper, size: 32),
+              const SizedBox(width: 8),
               if (t != null && t.countsDown) ...[
                 OutlinedButton(onPressed: () => session.adjustTimer(-15), child: const Text('−15')),
                 const SizedBox(width: 8),
