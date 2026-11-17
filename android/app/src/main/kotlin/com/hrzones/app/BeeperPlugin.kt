@@ -6,6 +6,7 @@ import android.media.AudioFocusRequest
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
@@ -206,7 +207,9 @@ class BeeperPlugin(private val context: Context, messenger: BinaryMessenger) : M
     englishVoice(engine, kind)?.let { engine.voice = it }
     duck()
     utteranceId += 1
-    engine.speak(text, TextToSpeech.QUEUE_ADD, null, "hrz$utteranceId")
+    // One volume for all the app's sounds (Settings › Sounds), like iOS; never fully silent.
+    val params = Bundle().apply { putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, volume.coerceIn(0.1f, 1f)) }
+    engine.speak(text, TextToSpeech.QUEUE_ADD, params, "hrz$utteranceId")
   }
 
   private val progress =
