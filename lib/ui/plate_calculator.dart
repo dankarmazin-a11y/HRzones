@@ -233,12 +233,12 @@ class _PlateCalculatorState extends State<PlateCalculator> {
 
 /// Plate colours (owner picks, 2026-11-13): the pound colours for both –
 /// 45 lb blue, 35 yellow, 25 green, 10 white, 5 red, 2.5 black – and kilo
-/// plates take the colour of their pound twin (20 kg ≈ 45 lb …); 25 kg has
-/// no twin and is purple.
+/// plates take the colour of their pound twin (20 kg ≈ 45 lb …); 25 kg is red
+/// like the official (IWF) colours (owner, 2026-11-17 – was purple).
 Color plateColor(double w, {bool lb = false}) {
   const blue = Color(0xFF3E63DD), yellow = Color(0xFFFFC53D), green = Color(0xFF30A46C);
   const white = Color(0xFFF4F4F5), red = Color(0xFFE5484D), black = Color(0xFF2B2E33);
-  const purple = Color(0xFF8E4EC6), steel = Color(0xFFA9B1BA);
+  const steel = Color(0xFFA9B1BA);
   if (lb) {
     return switch (w) {
       45 => blue,
@@ -251,7 +251,7 @@ Color plateColor(double w, {bool lb = false}) {
     };
   }
   return switch (w) {
-    25 => purple,
+    25 => red,
     20 => blue,
     15 => yellow,
     10 => green,
