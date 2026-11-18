@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart' show Ticker;
 import 'package:flutter/services.dart';
 
 import '../../workout/stats.dart';
@@ -70,13 +71,15 @@ class _TimerBarState extends State<TimerBar> {
         letterSpacing: big ? 1.2 : 0,
       ),
     );
-    Widget bar(double h) => ClipRRect(
+    Widget bar(double h, {Key? key}) => ClipRRect(
       borderRadius: BorderRadius.circular(3),
-      child: LinearProgressIndicator(
-        value: progress ?? 1,
-        minHeight: h,
+      child: SmoothTimerLine(
+        key: key,
+        timer: t,
+        fallback: progress,
+        height: h,
         color: theme.bright,
-        backgroundColor: white.withValues(alpha: 0.18),
+        background: white.withValues(alpha: 0.18),
       ),
     );
     Widget pill(String text, VoidCallback onTap, {bool main = false, Key? key}) => Material(
@@ -109,16 +112,7 @@ class _TimerBarState extends State<TimerBar> {
         // just inside the rounded corners, with rounded ends (owner, 17 Nov)
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(3),
-            child: LinearProgressIndicator(
-              key: const Key('timerBarProgress'),
-              value: progress ?? 1,
-              minHeight: 6,
-              color: theme.bright,
-              backgroundColor: white.withValues(alpha: 0.18),
-            ),
-          ),
+          child: bar(6, key: const Key('timerBarProgress')),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(18, 10, 10, 10),
@@ -484,6 +478,76 @@ Future<void> showTimerSheet(BuildContext context, WorkoutSession session) {
           },
         ),
       ),
+    ),
+  );
+}
+
+/// The timer's progress line, redrawn every frame so it glides instead of
+/// jumping once a second (owner, 18 Nov). Tests switch [smooth] off (a line
+/// that never stops moving would keep `pumpAndSettle` busy forever).
+class SmoothTimerLine extends StatefulWidget {
+  const SmoothTimerLine({
+    super.key,
+    required this.timer,
+    required this.fallback,
+    required this.height,
+    required this.color,
+    required this.background,
+  });
+
+  static bool smooth = true;
+
+  final RunningTimer timer;
+
+  /// The once-a-second value (stopwatch: null = full line).
+  final double? fallback;
+  final double height;
+  final Color color;
+  final Color background;
+
+  @override
+  State<SmoothTimerLine> createState() => _SmoothTimerLineState();
+}
+
+class _SmoothTimerLineState extends State<SmoothTimerLine> with SingleTickerProviderStateMixin {
+  Ticker? _ticker;
+
+  bool get _moving => SmoothTimerLine.smooth && widget.timer.countsDown && widget.timer.total > 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _sync();
+  }
+
+  @override
+  void didUpdateWidget(SmoothTimerLine old) {
+    super.didUpdateWidget(old);
+    _sync();
+  }
+
+  void _sync() {
+    if (_moving) {
+      _ticker ??= createTicker((_) => setState(() {}));
+      if (!_ticker!.isActive) _ticker!.start();
+    } else {
+      _ticker?.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    _ticker?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => RepaintBoundary(
+    child: LinearProgressIndicator(
+      value: _moving ? widget.timer.fractionLeft : (widget.fallback ?? 1),
+      minHeight: widget.height,
+      color: widget.color,
+      backgroundColor: widget.background,
     ),
   );
 }

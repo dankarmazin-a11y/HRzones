@@ -22,6 +22,9 @@ struct WorkoutCardIntent: LiveActivityIntent {
     await MainActor.run {
       NotificationCenter.default.post(name: liveActionNotification, object: nil, userInfo: ["action": action])
     }
+    // Between sets the app is asleep (no timer holds the audio). Keep it awake
+    // a moment so the Flutter side can tick the set and update the card.
+    try? await Task.sleep(nanoseconds: 2_000_000_000)
     return .result()
   }
 }

@@ -542,6 +542,10 @@ class _SetRowState extends State<SetRow> {
             SizedBox(
               width: _setW,
               child: InkWell(
+                key: Key('setNumber_${s.id}'),
+                // no grey box flashing behind the number when tapped (owner, 18 Nov)
+                splashFactory: NoSplash.splashFactory,
+                highlightColor: Colors.transparent,
                 // Set types (warm-up/drop/failure) are hidden for beginners.
                 onTap: Services.of(context).level.value.showsAdvancedSetOptions
                     ? () {

@@ -25,13 +25,25 @@ abstract final class TimerStyle {
   );
 }
 
-/// Keeps the screen on while a full-screen timer is open. Never fails (no
-/// plugin in tests / some platforms).
+/// Keeps the screen on while a full-screen timer (or a ride) is open. Holds
+/// are counted: the screen is let go only when the last one closes, and the
+/// app never touches the setting unless it asked for it first (owner,
+/// 18 Nov – the phone's own "keep the screen on" got mixed up).
 Future<void> keepScreenOn(bool on) async {
+  if (on) {
+    if (++screenHolds > 1) return;
+  } else {
+    if (screenHolds == 0) return;
+    if (--screenHolds > 0) return;
+  }
   try {
     await WakelockPlus.toggle(enable: on);
   } catch (_) {}
 }
+
+/// Screens that currently keep the screen on (see [keepScreenOn]).
+@visibleForTesting
+int screenHolds = 0;
 
 /// Full-screen timer colours from the user's theme (owner, 17 Nov: they didn't
 /// follow it): work = the theme's dark ink with the bright colour, rest = a

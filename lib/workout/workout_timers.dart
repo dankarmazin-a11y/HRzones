@@ -32,6 +32,13 @@ class RunningTimer {
 
   bool get countsDown => kind != TimerKind.stopwatch;
 
+  /// Share of the countdown still left, to the millisecond (smooth line).
+  double get fractionLeft {
+    if (total <= 0) return 1;
+    final left = total * 1000 - (DateTime.now().difference(startedAt) - _paused).inMilliseconds;
+    return (left / (total * 1000)).clamp(0.0, 1.0);
+  }
+
   String get label => switch (kind) {
     TimerKind.rest => switchSides ? 'Switch sides' : 'Rest',
     TimerKind.setTimer =>

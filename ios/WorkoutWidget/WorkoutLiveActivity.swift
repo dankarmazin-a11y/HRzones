@@ -8,7 +8,7 @@ import WidgetKit
 struct WorkoutLiveActivity: Widget {
   var body: some WidgetConfiguration {
     ActivityConfiguration(for: WorkoutAttributes.self) { context in
-      LockScreenView(attributes: context.attributes, state: context.state)
+      LockScreenView(attributes: context.attributes, state: context.state, stale: context.isStale)
         .activityBackgroundTint(Color.black.opacity(0.38))  // glass: the system blurs the wallpaper behind
         .activitySystemActionForegroundColor(.white)
     } dynamicIsland: { context in
@@ -162,9 +162,13 @@ private struct Metrics: View {
 private struct LockScreenView: View {
   let attributes: WorkoutAttributes
   let state: WorkoutAttributes.ContentState
+  /// The countdown ran out (staleDate) while the app was asleep: no more
+  /// "Rest 0:00" + "Skip rest" – the rest is over, so offer "Set done".
+  var stale = false
 
   var body: some View {
-    let actions = state.actions ?? []
+    let over = stale || (state.countdownEnd.map { $0 <= Date() } ?? false)
+    let actions = (state.actions ?? []).map { over && $0 == "skipRest" ? "completeSet" : $0 }
     VStack(alignment: .leading, spacing: 6) {
       // Name ··· clock
       HStack(spacing: 8) {
@@ -226,6 +230,7 @@ private struct CardButtons: View {
           Button(intent: WorkoutCardIntent(action: a)) {
             Label(title(a), systemImage: symbol(a))
               .font(.title3.bold())
+              .lineLimit(1).minimumScaleFactor(0.7)
               .frame(maxWidth: .infinity, minHeight: 34)
           }
           .buttonStyle(.borderedProminent)
@@ -240,7 +245,7 @@ private struct CardButtons: View {
     switch a {
     case "completeSet": return "Set done"
     case "startSet": return "Start"
-    case "skipRest": return "Skip rest"
+    case "skipRest": return "Skip" // "Skip rest" was cut off ("Skip r…")
     default: return a
     }
   }
