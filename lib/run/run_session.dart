@@ -737,8 +737,12 @@ class RunSession extends ChangeNotifier {
       );
       voice?.finished(this.distanceM, moving, newRecords: newRecords);
       live?.end(kind: 'run');
-      if (_hrStartedByRun) await hr.stop();
       hr.onAlert = null;
+      // Heart-rate recovery: one more minute of heart rate (owner, 19 Nov).
+      if (!hr.startRecovery(ownerId: id, save: (d) => runs.setHrRecovery(id, d), stopAfter: _hrStartedByRun) &&
+          _hrStartedByRun) {
+        await hr.stop();
+      }
       await notifier?.cancelRunIdle();
       _reset();
       notifyListeners();

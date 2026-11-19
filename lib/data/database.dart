@@ -144,6 +144,9 @@ class Workouts extends Table with SyncColumns {
   IntColumn get avgHr => integer().nullable()();
   IntColumn get maxHr => integer().nullable()();
 
+  /// v20: beats the heart rate dropped in the minute after the workout.
+  IntColumn get hrRecovery => integer().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -288,6 +291,9 @@ class Runs extends Table with SyncColumns {
   TextColumn get hrPresetId => text().nullable()();
   IntColumn get avgHr => integer().nullable()();
   IntColumn get maxHr => integer().nullable()();
+
+  /// v20: beats the heart rate dropped in the minute after the run.
+  IntColumn get hrRecovery => integer().nullable()();
   TextColumn get notes => text().withDefault(const Constant(''))();
 
   /// Fastest time per record distance inside this run, JSON {"1000": 251.3,
@@ -558,6 +564,8 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(shoes, shoes.servicedKm);
       }
       if (from >= 5 && from < 20) await m.addColumn(hrPresets, hrPresets.beepWhen);
+      if (from < 20) await m.addColumn(workouts, workouts.hrRecovery);
+      if (from >= 7 && from < 20) await m.addColumn(runs, runs.hrRecovery);
     },
     beforeOpen: (details) async {
       await _addMissingColumns();

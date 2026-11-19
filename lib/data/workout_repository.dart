@@ -324,6 +324,28 @@ class WorkoutRepository {
   }
 
   Future<void> delete(String id) => (db.delete(db.workouts)..where((w) => w.id.equals(id))).go();
+
+  /// Heart-rate recovery after the workout (beats dropped in 1 minute).
+  Future<void> setHrRecovery(String id, int drop) =>
+      (db.update(db.workouts)..where((w) => w.id.equals(id))).write(WorkoutsCompanion(hrRecovery: Value(drop)));
+
+  Future<int?> hrRecoveryOf(String id) async =>
+      (await (db.select(db.workouts)..where((w) => w.id.equals(id))).getSingleOrNull())?.hrRecovery;
+
+  /// Average heart-rate recovery of the last [n] workouts and runs that have one.
+  Future<double?> hrRecoveryAverage({int n = 10}) async {
+    final rows = await db
+        .customSelect(
+          'SELECT hr_recovery, ended_at FROM workouts WHERE hr_recovery IS NOT NULL '
+          'UNION ALL SELECT hr_recovery, ended_at FROM runs WHERE hr_recovery IS NOT NULL '
+          'ORDER BY ended_at DESC LIMIT ?',
+          variables: [Variable.withInt(n)],
+          readsFrom: {db.workouts, db.runs},
+        )
+        .get();
+    if (rows.isEmpty) return null;
+    return rows.map((r) => r.read<int>('hr_recovery')).reduce((a, b) => a + b) / rows.length;
+  }
 }
 
 /// Best set of one exercise (see [WorkoutRepository.bestLifts]).

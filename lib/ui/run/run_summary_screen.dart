@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../hr_recovery_card.dart';
 import '../theme/app_theme.dart';
 import '../../app_services.dart';
 import '../../data/database.dart';
@@ -243,6 +244,7 @@ class _BodyState extends State<_Body> {
             shoeId: run.shoeId,
             kind: run.activity == RunActivity.ride ? GearKind.bike : GearKind.shoe,
           ),
+          HrRecoveryCard(ownerId: run.id, stored: Future.value(run.hrRecovery)),
           RunFeelCard(key: ValueKey('feel_${run.id}'), run: run),
           LapsCard(run: run),
           RunCompareCard(key: ValueKey('compare_${run.id}'), run: run),

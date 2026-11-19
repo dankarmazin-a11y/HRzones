@@ -117,8 +117,8 @@ class HrMonitor extends ChangeNotifier {
     _sessionCount++;
     if (_sessionMax == null || r.bpm > _sessionMax!) _sessionMax = r.bpm;
     if (_intervalMax == null || r.bpm > _intervalMax!) _intervalMax = r.bpm;
-    final alert = engine.onReading(r.bpm, r.time);
-    if (engine.justBack && backChime) beeper.play(SoundEvent.zoneBack);
+    final alert = recovery.value?.done == false ? null : engine.onReading(r.bpm, r.time);
+    if (engine.justBack && backChime && alert == null) beeper.play(SoundEvent.zoneBack);
     if (alert != null) {
       _lastAlert = alert;
       _lastAlertAt = r.time;
@@ -133,6 +133,7 @@ class HrMonitor extends ChangeNotifier {
   int? get sessionMax => _sessionMax;
 
   void resetSession() {
+    cancelRecovery(); // a new workout or run starts
     _sessionSum = 0;
     _sessionCount = 0;
     _sessionMax = null;
@@ -155,6 +156,57 @@ class HrMonitor extends ChangeNotifier {
     _age = age;
     _zones = HrZones.fromAge(age);
     _settingsChanged();
+  }
+
+  /// Heart-rate recovery after a workout or run (owner, 19 Nov; setting
+  /// `hrRecoveryCheck`, default on): how many beats the heart rate drops in
+  /// the minute after finishing. Needs a heart-rate signal; zone beeps are
+  /// quiet meanwhile.
+  bool recoveryCheck = true;
+  final recovery = ValueNotifier<HrRecovery?>(null);
+  Timer? _recoveryTimer;
+  bool _recoveryStopAfter = false;
+  static const recoveryTime = Duration(seconds: 60);
+
+  /// Starts measuring for [ownerId] (a workout or run). False (nothing
+  /// started) without a signal or when switched off. [save] gets the drop;
+  /// [stopAfter] switches monitoring off at the end (it was the workout's).
+  bool startRecovery({required String ownerId, required Future<void> Function(int drop) save, bool stopAfter = false}) {
+    final start = bpm;
+    if (!recoveryCheck || !_running || start == null) return false;
+    cancelRecovery();
+    _recoveryStopAfter = stopAfter;
+    final began = DateTime.now();
+    recovery.value = HrRecovery(ownerId: ownerId, startBpm: start, startedAt: began);
+    var secs = 0;
+    _recoveryTimer = Timer.periodic(const Duration(seconds: 1), (t) async {
+      final r = recovery.value;
+      if (r == null) return t.cancel();
+      final left = recoveryTime.inSeconds - ++secs;
+      if (left > 0) {
+        recovery.value = r.copyWith(secondsLeft: left, bpm: bpm);
+        return;
+      }
+      t.cancel();
+      final end = bpm;
+      final drop = end == null ? null : start - end;
+      recovery.value = r.copyWith(secondsLeft: 0, bpm: end, drop: drop, done: true);
+      if (drop != null) await save(drop);
+      if (_recoveryStopAfter) await stop();
+      _recoveryStopAfter = false;
+    });
+    return true;
+  }
+
+  /// A new workout or run started: stop measuring, keep monitoring on.
+  void cancelRecovery() {
+    _recoveryTimer?.cancel();
+    _recoveryTimer = null;
+    // It was the finished workout's monitoring: off (the new one turns it on again if it wants it).
+    if (_recoveryStopAfter) unawaited(stop());
+    _recoveryStopAfter = false;
+    final r = recovery.value;
+    if (r != null && !r.done) recovery.value = null;
   }
 
   /// A soft chime when the heart rate is back in the zone after a beep.
@@ -209,12 +261,55 @@ class HrMonitor extends ChangeNotifier {
 
   @override
   void dispose() {
+    _recoveryTimer?.cancel();
     _ticker?.cancel();
     _sub?.cancel();
     source.dispose();
     super.dispose();
   }
 }
+
+/// The minute after a workout: heart rate at the end, now, and the drop.
+class HrRecovery {
+  const HrRecovery({
+    required this.ownerId,
+    required this.startBpm,
+    required this.startedAt,
+    this.bpm,
+    this.secondsLeft = 60,
+    this.drop,
+    this.done = false,
+  });
+
+  final String ownerId;
+  final int startBpm;
+  final DateTime startedAt;
+  final int? bpm;
+  final int secondsLeft;
+
+  /// Beats dropped in the minute (null while measuring or without a signal).
+  final int? drop;
+  final bool done;
+
+  HrRecovery copyWith({int? bpm, int? secondsLeft, int? drop, bool? done}) => HrRecovery(
+    ownerId: ownerId,
+    startBpm: startBpm,
+    startedAt: startedAt,
+    bpm: bpm ?? this.bpm,
+    secondsLeft: secondsLeft ?? this.secondsLeft,
+    drop: drop ?? this.drop,
+    done: done ?? this.done,
+  );
+}
+
+/// How good a 1-minute heart-rate drop is (common rule of thumb: under 12
+/// beats is low; 20+ good; 30+ very good).
+String hrRecoveryWord(int drop) => switch (drop) {
+  < 12 => 'low',
+  < 20 => 'fair',
+  < 30 => 'good',
+  _ => 'very good',
+};
 
 /// Makes the [HrMonitor] available to every screen.
 class HrScope extends InheritedNotifier<HrMonitor> {

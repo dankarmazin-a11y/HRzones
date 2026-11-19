@@ -160,6 +160,75 @@ class ZonesScreen extends StatelessWidget {
         ],
       ),
       Slider(value: m.volume, onChanged: m.setVolume),
+      const Divider(height: 32),
+      const HrWorkoutOptions(),
     ];
+  }
+}
+
+/// On/off options of the heart-rate ideas (owner, 19 Nov) that work during
+/// workouts: rest by heart rate, and the recovery minute after finishing.
+class HrWorkoutOptions extends StatefulWidget {
+  const HrWorkoutOptions({super.key});
+
+  @override
+  State<HrWorkoutOptions> createState() => _HrWorkoutOptionsState();
+}
+
+class _HrWorkoutOptionsState extends State<HrWorkoutOptions> {
+  @override
+  Widget build(BuildContext context) {
+    final s = Services.of(context);
+    final text = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('During workouts', style: text.titleMedium),
+        SwitchListTile(
+          key: const Key('recoveryRest'),
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Rest until your heart rate is down'),
+          subtitle: Text(
+            'The rest ends when you\'re under ${s.session.recoveryBpm} bpm, '
+            'or waits up to 3 more minutes for it. Needs a heart-rate strap.',
+          ),
+          value: s.session.recoveryRest,
+          onChanged: (v) async {
+            await s.setRecoveryRest(on: v);
+            setState(() {});
+          },
+        ),
+        if (s.session.recoveryRest)
+          Row(
+            children: [
+              const Text('Ready below: '),
+              EditableNumber(
+                key: const Key('recoveryBpm'),
+                value: s.session.recoveryBpm,
+                title: 'Rest until under (bpm)',
+                min: 60,
+                max: 180,
+                suffix: 'bpm',
+                display: '${s.session.recoveryBpm} bpm',
+                onChanged: (v) async {
+                  await s.setRecoveryRest(bpm: v.round());
+                  setState(() {});
+                },
+              ),
+            ],
+          ),
+        SwitchListTile(
+          key: const Key('hrRecoveryCheck'),
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Heart-rate recovery after a workout'),
+          subtitle: const Text('One more minute of heart rate after you finish: how fast it drops (bigger = fitter)'),
+          value: s.hr.recoveryCheck,
+          onChanged: (v) async {
+            await s.setHrRecoveryCheck(v);
+            setState(() {});
+          },
+        ),
+      ],
+    );
   }
 }

@@ -4,8 +4,14 @@ enum TimerKind { rest, setTimer, countdown, stopwatch }
 
 /// The one timer shown in the bottom bar of a workout.
 class RunningTimer {
-  RunningTimer({required this.kind, required this.total, this.exercise, this.set, this.switchSides = false})
-    : startedAt = DateTime.now();
+  RunningTimer({
+    required this.kind,
+    required this.total,
+    this.exercise,
+    this.set,
+    this.switchSides = false,
+    DateTime? startedAt,
+  }) : startedAt = startedAt ?? DateTime.now();
 
   /// The short pause between the left and right side of a timed hold.
   final bool switchSides;
@@ -20,6 +26,10 @@ class RunningTimer {
 
   /// Set timer → rest → next timed set: continue automatically.
   bool chainNext = false;
+
+  /// Rest by heart rate: the rest was stretched waiting for the heart rate.
+  bool waitingForHr = false;
+  int waitedS = 0;
   final Duration _paused = Duration.zero;
 
   int get elapsed => (DateTime.now().difference(startedAt) - _paused).inSeconds;
@@ -40,7 +50,7 @@ class RunningTimer {
   }
 
   String get label => switch (kind) {
-    TimerKind.rest => switchSides ? 'Switch sides' : 'Rest',
+    TimerKind.rest => switchSides ? 'Switch sides' : (waitingForHr ? 'Rest · ♥ to recover' : 'Rest'),
     TimerKind.setTimer =>
       '${set?.subExercise?.name ?? exercise?.exercise.name ?? 'Set'}'
           '${set?.side == null ? '' : (set!.side == Side.left ? ' · left' : ' · right')}',

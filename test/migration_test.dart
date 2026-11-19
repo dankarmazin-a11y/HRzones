@@ -76,7 +76,9 @@ const _v16Columns = ['runs DROP COLUMN activity', 'runs DROP COLUMN walked_m', '
 const _v17Columns = ['runs DROP COLUMN max_speed_ms'];
 const _v19Columns = ['runs DROP COLUMN avg_power_w', 'runs DROP COLUMN max_power_w'];
 const _v18Columns = ['shoes DROP COLUMN kind', 'shoes DROP COLUMN serviced_km'];
-const _v20Columns = ['hr_presets DROP COLUMN beep_when'];
+const _v20Columns = ['hr_presets DROP COLUMN beep_when', ..._v20Workouts];
+const _v20Workouts = ['workouts DROP COLUMN hr_recovery'];
+const _v20Runs = ['runs DROP COLUMN hr_recovery'];
 const _v4Changes = [
   'exercises DROP COLUMN hidden',
   'template_exercises DROP COLUMN sets_json',
@@ -99,22 +101,33 @@ void main() {
         ..._shoes,
         ..._plans,
         ..._v15,
+        ..._v20Workouts,
       ],
     ),
     (
       'v2 database is upgraded',
       2,
-      [..._v3Columns, ..._v4Changes, ..._v5Changes, ..._v6Columns, ..._v7Changes, ..._shoes, ..._plans, ..._v15],
+      [
+        ..._v3Columns,
+        ..._v4Changes,
+        ..._v5Changes,
+        ..._v6Columns,
+        ..._v7Changes,
+        ..._shoes,
+        ..._plans,
+        ..._v15,
+        ..._v20Workouts,
+      ],
     ),
     (
       'v3 database is upgraded',
       3,
-      [..._v4Changes, ..._v5Changes, ..._v6Columns, ..._v7Changes, ..._shoes, ..._plans, ..._v15],
+      [..._v4Changes, ..._v5Changes, ..._v6Columns, ..._v7Changes, ..._shoes, ..._plans, ..._v15, ..._v20Workouts],
     ),
     (
       'v4 database is upgraded',
       4,
-      [..._v5Changes, ..._v6Columns, ..._v7Changes, ..._v9Columns, ..._shoes, ..._plans, ..._v15],
+      [..._v5Changes, ..._v6Columns, ..._v7Changes, ..._v9Columns, ..._shoes, ..._plans, ..._v15, ..._v20Workouts],
     ),
     (
       'v5 database is upgraded',
@@ -138,6 +151,7 @@ void main() {
         ..._v17Columns,
         ..._v19Columns,
         ..._v20Columns,
+        ..._v20Runs,
       ],
     ),
     (
@@ -155,6 +169,7 @@ void main() {
         ..._v17Columns,
         ..._v19Columns,
         ..._v20Columns,
+        ..._v20Runs,
       ],
     ),
     (
@@ -171,6 +186,7 @@ void main() {
         ..._v17Columns,
         ..._v19Columns,
         ..._v20Columns,
+        ..._v20Runs,
       ],
     ),
     (
@@ -186,6 +202,7 @@ void main() {
         ..._v17Columns,
         ..._v19Columns,
         ..._v20Columns,
+        ..._v20Runs,
       ],
     ),
     (
@@ -200,6 +217,7 @@ void main() {
         ..._v17Columns,
         ..._v19Columns,
         ..._v20Columns,
+        ..._v20Runs,
         ..._v18Columns,
       ],
     ),
@@ -214,24 +232,38 @@ void main() {
         ..._v17Columns,
         ..._v19Columns,
         ..._v20Columns,
+        ..._v20Runs,
         ..._v18Columns,
       ],
     ),
     (
       'v13 database is upgraded',
       13,
-      [..._v14Columns, ..._v15, ..._v16Columns, ..._v17Columns, ..._v19Columns, ..._v20Columns, ..._v18Columns],
+      [
+        ..._v14Columns,
+        ..._v15,
+        ..._v16Columns,
+        ..._v17Columns,
+        ..._v19Columns,
+        ..._v20Columns,
+        ..._v20Runs,
+        ..._v18Columns,
+      ],
     ),
     (
       'v14 database is upgraded',
       14,
-      [..._v15, ..._v16Columns, ..._v17Columns, ..._v19Columns, ..._v20Columns, ..._v18Columns],
+      [..._v15, ..._v16Columns, ..._v17Columns, ..._v19Columns, ..._v20Columns, ..._v20Runs, ..._v18Columns],
     ),
-    ('v15 database is upgraded', 15, [..._v16Columns, ..._v17Columns, ..._v19Columns, ..._v20Columns, ..._v18Columns]),
-    ('v16 database is upgraded', 16, [..._v17Columns, ..._v19Columns, ..._v20Columns, ..._v18Columns]),
-    ('v17 database is upgraded', 17, [..._v18Columns, ..._v19Columns, ..._v20Columns]),
-    ('v18 database is upgraded', 18, [..._v19Columns, ..._v20Columns]),
-    ('v19 database is upgraded', 19, _v20Columns),
+    (
+      'v15 database is upgraded',
+      15,
+      [..._v16Columns, ..._v17Columns, ..._v19Columns, ..._v20Columns, ..._v20Runs, ..._v18Columns],
+    ),
+    ('v16 database is upgraded', 16, [..._v17Columns, ..._v19Columns, ..._v20Columns, ..._v20Runs, ..._v18Columns]),
+    ('v17 database is upgraded', 17, [..._v18Columns, ..._v19Columns, ..._v20Columns, ..._v20Runs]),
+    ('v18 database is upgraded', 18, [..._v19Columns, ..._v20Columns, ..._v20Runs]),
+    ('v19 database is upgraded', 19, [..._v20Columns, ..._v20Runs]),
     ('missing column/table is repaired', 20, [..._v2Columns, 'DROP TABLE goals']),
   ];
   for (final (label, version, drop) in cases) {
@@ -252,7 +284,7 @@ void main() {
       expect(await cols('body_measurements'), contains('kind'));
       expect(await cols('goals'), containsAll(['target', 'distance_m']));
       expect(await cols('exercises'), contains('level'));
-      expect(await cols('workouts'), contains('hr_preset_id'));
+      expect(await cols('workouts'), containsAll(['hr_preset_id', 'hr_recovery']));
       expect(await cols('templates'), contains('hr_preset_id'));
       expect(await cols('hr_presets'), containsAll(['min_bpm', 'beep_when']));
       expect(await cols('interval_presets'), contains('segments_json'));
@@ -278,6 +310,7 @@ void main() {
           'max_speed_ms',
           'avg_power_w',
           'max_power_w',
+          'hr_recovery',
         ]),
       );
       expect(await cols('run_plans'), containsAll(['name', 'spec_json', 'position']));

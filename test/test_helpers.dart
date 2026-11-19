@@ -84,11 +84,17 @@ AppDatabase memoryDb() {
   return AppDatabase(NativeDatabase.memory());
 }
 
-Future<AppServices> testServices({SilentBeeper? beeper, SimulatedHrSource? source}) => AppServices.open(
-  loadExercises: () async => testExercisesJson,
-  db: memoryDb(),
-  hr: HrMonitor(beeper: beeper ?? SilentBeeper(), source: source),
-);
+/// The recovery minute after a workout/run is off in tests (its 1-minute
+/// timer would outlive most tests); `test/hr_recovery_test.dart` covers it.
+Future<AppServices> testServices({SilentBeeper? beeper, SimulatedHrSource? source}) async {
+  final s = await AppServices.open(
+    loadExercises: () async => testExercisesJson,
+    db: memoryDb(),
+    hr: HrMonitor(beeper: beeper ?? SilentBeeper(), source: source),
+  );
+  s.hr.recoveryCheck = false;
+  return s;
+}
 
 Future<void> _pumpABit(WidgetTester tester) async {
   for (var i = 0; i < 5; i++) {

@@ -259,6 +259,25 @@ class AppServices {
     await db.setSetting('sounds', jsonEncode({for (final x in hr.beeper.choices.entries) x.key.name: x.value.name}));
   }
 
+  /// Heart-rate recovery minute after a workout or run (setting `hrRecoveryCheck`, default on).
+  Future<void> setHrRecoveryCheck(bool on) async {
+    hr.recoveryCheck = on;
+    await db.setSetting('hrRecoveryCheck', on ? '1' : '0');
+  }
+
+  /// Rest by heart rate (setting `recoveryRest`, off by default) and its
+  /// target (setting `recoveryBpm`, default 120).
+  Future<void> setRecoveryRest({bool? on, int? bpm}) async {
+    if (on != null) {
+      session.recoveryRest = on;
+      await db.setSetting('recoveryRest', on ? '1' : '0');
+    }
+    if (bpm != null) {
+      session.recoveryBpm = bpm;
+      await db.setSetting('recoveryBpm', '$bpm');
+    }
+  }
+
   /// Light vibration when rest is over (setting `restVibrate`, default on).
   Future<void> setRestVibrate(bool on) async {
     session.vibrateRestOver = on;
@@ -448,6 +467,8 @@ class AppServices {
     zonesEnabled.value = await db.getSetting('zones') != '0';
     lastBackupAt.value = DateTime.tryParse(await db.getSetting('lastBackupAt') ?? '');
     session.vibrateRestOver = await db.getSetting('restVibrate') != '0';
+    session.recoveryRest = await db.getSetting('recoveryRest') == '1';
+    session.recoveryBpm = int.tryParse(await db.getSetting('recoveryBpm') ?? '') ?? 120;
     session.notifyRestOver = await db.getSetting('restNotify') == '1';
     session.idleReminder = await db.getSetting('idleReminder') != '0';
     run.voice!
@@ -499,6 +520,7 @@ class AppServices {
     if (bw != null && bw >= 0 && bw < BeepWhen.values.length) hr.setBeepWhen(BeepWhen.values[bw]);
     hr.setFasterWhenFar(await db.getSetting('beepFaster') != '0');
     hr.setBackChime(await db.getSetting('backChime') != '0');
+    hr.recoveryCheck = await db.getSetting('hrRecoveryCheck') != '0';
     // Saved heart-rate source: "ble|<id>|<name>" or "simulated".
     final src = (await db.getSetting('hrSource'))?.split('|');
     if (src != null && src.length == 3 && src[0] == 'ble' && bluetoothSupported) {

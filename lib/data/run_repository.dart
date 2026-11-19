@@ -204,6 +204,10 @@ class RunRepository {
 
   Future<void> delete(String id) => (db.delete(db.runs)..where((r) => r.id.equals(id))).go();
 
+  /// Heart-rate recovery after the run (beats dropped in 1 minute).
+  Future<void> setHrRecovery(String id, int drop) =>
+      (db.update(db.runs)..where((r) => r.id.equals(id))).write(RunsCompanion(hrRecovery: Value(drop)));
+
   /// Fastest time per record distance inside [run] (worked out from its
   /// points and saved the first time).
   Future<Map<int, double>> bestsFor(Run run) async {

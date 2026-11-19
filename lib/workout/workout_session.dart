@@ -981,6 +981,7 @@ class WorkoutSession extends ChangeNotifier {
       _ticker?.cancel();
       return;
     }
+    recoveryCheck(t);
     if (!t.countsDown || t.remaining > 0) {
       // Just time passing: only the clock widgets need to repaint (once per
       // second), not the whole workout screen – that made scrolling jerky.
@@ -1014,6 +1015,32 @@ class WorkoutSession extends ChangeNotifier {
       }
     }
     notifyListeners();
+  }
+
+  /// Rest by heart rate (owner, 19 Nov; setting `recoveryRest`, off by
+  /// default): with a heart-rate signal the rest ends as soon as the heart
+  /// rate is down to [recoveryBpm] (after at least [recoveryMinRest]); at the
+  /// end of the timer it waits for it, up to [recoveryMaxWait] longer.
+  bool recoveryRest = false;
+  int recoveryBpm = 120;
+  static const recoveryMinRest = 15;
+  static const recoveryMaxWait = 180;
+
+  @visibleForTesting
+  void recoveryCheck(RunningTimer t) {
+    if (!recoveryRest || t.kind != TimerKind.rest || t.switchSides || editMode || templateMode) return;
+    final bpm = hr.running ? hr.bpm : null;
+    if (bpm == null) return;
+    if (bpm <= recoveryBpm) {
+      if (t.elapsed >= recoveryMinRest && t.remaining > 0) t.total = t.elapsed; // recovered: rest is over now
+      return;
+    }
+    // Still too high at the end: wait a little longer (5 s at a time).
+    if (t.remaining <= 1 && t.waitedS < recoveryMaxWait) {
+      t.total += 5;
+      t.waitedS += 5;
+      t.waitingForHr = true;
+    }
   }
 
   /// Next undone set of [e], or the first undone set of the following
@@ -1106,7 +1133,15 @@ class WorkoutSession extends ChangeNotifier {
     _active = null;
     restNotifier?.cancelIdle();
     _releaseAudio();
-    await _stopWorkoutHr();
+    // Heart-rate recovery: one more minute of heart rate (owner, 19 Nov).
+    final measuring =
+        !editMode &&
+        hr.startRecovery(ownerId: w.id, save: (d) => workouts.setHrRecovery(w.id, d), stopAfter: _hrStartedByWorkout);
+    if (measuring) {
+      _hrStartedByWorkout = false;
+    } else {
+      await _stopWorkoutHr();
+    }
     notifyListeners();
     return summary;
   }

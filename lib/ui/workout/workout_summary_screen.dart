@@ -12,6 +12,7 @@ import '../theme/emblems.dart';
 import '../theme/app_theme.dart';
 import '../exercises/exercise_avatar.dart';
 import '../figures/exercise_figure.dart';
+import '../hr_recovery_card.dart';
 
 String formatDate(DateTime d) {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -137,7 +138,10 @@ class WorkoutSummaryScreen extends StatelessWidget {
               );
             },
           ),
+          const SizedBox(height: 12),
+          HrRecoveryCard(ownerId: s.workout.id, stored: Services.of(context).workouts.hrRecoveryOf(s.workout.id)),
           if (s.records.isNotEmpty) ...[const SizedBox(height: 24), _Records(summary: s)],
+          if (_hrByExercise(s).length > 1) ...[const SizedBox(height: 24), _HrByExercise(summary: s)],
           if (s.setsPerMuscle.isNotEmpty) ...[
             const SizedBox(height: 24),
             Text('Muscles worked', style: text.titleMedium),
@@ -396,4 +400,77 @@ class RecordFigure extends StatelessWidget {
       fallback: ExerciseAvatar(exercise: exercise, radius: size / 2),
     ),
   );
+}
+
+/// Peak heart rate per exercise (sets with a heart-rate reading), highest first.
+List<(String, int)> _hrByExercise(WorkoutSummary s) {
+  final out = <(String, int)>[];
+  for (final e in s.workout.exercises) {
+    final peaks = [for (final x in e.sets) ?x.maxHr];
+    if (peaks.isEmpty) continue;
+    out.add((e.exercise.name, peaks.reduce((a, b) => a > b ? a : b)));
+  }
+  return out..sort((a, b) => b.$2.compareTo(a.$2));
+}
+
+/// Owner (19 Nov, idea 10): which exercises pushed the heart rate hardest.
+class _HrByExercise extends StatelessWidget {
+  const _HrByExercise({required this.summary});
+
+  final WorkoutSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final t = AppTheme.of(context);
+    final list = _hrByExercise(summary);
+    final top = list.first.$2;
+    return Column(
+      key: const Key('hrByExercise'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Heart rate by exercise', style: text.titleMedium),
+        const SizedBox(height: 8),
+        for (final (i, (name, bpm)) in list.take(6).indexed)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 5,
+                  child: Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: i == 0 ? text.bodyMedium?.copyWith(fontWeight: FontWeight.w800) : text.bodyMedium,
+                  ),
+                ),
+                Expanded(
+                  flex: 4,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: bpm / top,
+                      minHeight: 8,
+                      color: i == 0 ? AppColors.heart : AppColors.heart.withValues(alpha: 0.45),
+                      backgroundColor: t.track,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 52,
+                  child: Text(
+                    '♥ $bpm',
+                    textAlign: TextAlign.right,
+                    style: text.bodySmall?.copyWith(color: AppColors.heart),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        if (list.length > 1)
+          Text('${list.first.$1} pushed you hardest.', style: text.bodySmall?.copyWith(color: t.muted)),
+      ],
+    );
+  }
 }
