@@ -7,9 +7,10 @@ import '../../workout/training_place.dart';
 import '../number_input.dart';
 import '../theme/app_theme.dart';
 import '../theme/emblems.dart';
+import '../theme/heart_logo.dart';
 import '../../units/units.dart';
 
-/// First launch: a short chat (docs/DESIGN.md "Setup: chat style") – what you
+/// First launch: setup slides (owner, 19 Nov – was a chat) – what you
 /// train, your level, where you train, age (heart-rate zones), workouts per
 /// week and body weight / a goal. The coach asks on the left, your answers
 /// appear on the right; every answer is saved right away; "Skip" keeps the
@@ -23,7 +24,7 @@ class OnboardingScreen extends StatefulWidget {
 
 enum _Focus {
   strength('Strength'),
-  running('Running'),
+  running('Cardio'),
   both('Both – hybrid');
 
   const _Focus(this.label);
@@ -31,8 +32,6 @@ enum _Focus {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  final _scroll = ScrollController();
-
   /// The question being asked (0 = welcome … 7 = all set).
   int _step = 0;
   _Focus? _focus;
@@ -57,23 +56,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _weekly = s.weeklyTarget.value;
   }
 
-  @override
-  void dispose() {
-    _scroll.dispose();
-    super.dispose();
-  }
-
   void _next() {
     FocusScope.of(context).unfocus();
-    setState(() => _step++);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scroll.hasClients) {
-        _scroll.animateTo(
-          _scroll.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
+    setState(() {
+      _forward = true;
+      _step++;
     });
   }
 
@@ -88,83 +75,179 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   String _kg(double v) => '${v.toStringAsFixed(v == v.roundToDouble() ? 0 : 1)} ${Units.w}';
 
-  /// The coach's message for each step.
-  String _question(int step) {
+  /// The text under each slide's headline.
+  String _body(int step) {
     final zones = HrZones.fromAge(_age);
     return switch (step) {
       0 =>
-        'Hi! I\'m your HR Zones coach. I log your strength workouts, track your runs, and beep when your heart '
-            'rate leaves your zone – even with the screen locked and music playing.\n\nA few quick questions?',
-      1 => 'What do you train?',
-      2 => 'What\'s your training level? It decides which exercises and options you see.',
-      3 => 'Where do you train? The exercise list shows what you can do there.',
-      4 => 'How old are you? I use it for your heart-rate zones.',
-      5 =>
-        'Max heart rate about ${zones.maxHr} bpm – your easy zone 2 is ${zones.zones[1].minBpm}–'
-            '${zones.zones[1].maxBpm} bpm.\n\nHow many workouts a week? Runs count too.',
-      6 => 'Your body weight? Optional – for run calories and progress. Add a goal weight to see it on Home.',
-      _ => 'You\'re all set',
+        'Strength log, runs, walks and rides – and a beep when your heart rate leaves your zone, even with the '
+            'screen locked and music playing. A few quick questions?',
+      1 => 'We\'ll put the right things first.',
+      2 => 'It decides which exercises and options you see.',
+      3 => 'The exercise list shows what you can do there.',
+      4 =>
+        'For your heart-rate zones: max heart rate about ${zones.maxHr} bpm, easy zone 2 is '
+            '${zones.zones[1].minBpm}–${zones.zones[1].maxBpm} bpm.',
+      5 => 'Strength and cardio both count toward your weekly streak.',
+      6 => 'Optional – for calories and progress. Add a goal weight to see it on Home.',
+      _ => '',
     };
   }
 
-  /// Your answer bubble for a finished step (null = no bubble).
-  String? _answer(int step) => switch (step) {
-    0 => 'Let\'s go',
-    1 => _focus?.label ?? 'Skip',
-    2 => _level.label,
-    3 => _place.label,
-    4 => '$_age',
-    5 => '$_weekly× a week',
-    6 =>
-      _weight == null
-          ? 'Skip for now'
-          : '${_kg(_weight!)}${_goalWeight == null || _goalWeight == _weight ? '' : ' → goal ${_kg(_goalWeight!)}'}',
-    _ => null,
+  void _back() {
+    if (_step == 0 || _step >= 7) return;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _forward = false;
+      _step--;
+    });
+  }
+
+  /// Slides move left going on, right going back.
+  bool _forward = true;
+
+  /// The big headline on each slide.
+  String _title(int step) => switch (step) {
+    0 => 'Train in your zone.',
+    1 => 'What do you train?',
+    2 => 'Your training level',
+    3 => 'Where do you train?',
+    4 => 'How old are you?',
+    5 => 'Workouts a week?',
+    6 => 'Your body weight',
+    _ => 'You\'re all set',
   };
+
+  /// The picture box at the top of each slide.
+  Widget _art(BuildContext context, int step) {
+    final t = AppTheme.of(context);
+    final text = Theme.of(context).textTheme;
+    Widget box(Color bg, Widget child) => Container(
+      key: Key('slideArt_$step'),
+      height: 170,
+      width: double.infinity,
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(24)),
+      alignment: Alignment.center,
+      child: child,
+    );
+    Widget icons(List<EmblemKind> kinds, Color color) => Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (final k in kinds)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: EmblemIcon(k, size: 56, color: color),
+          ),
+      ],
+    );
+    final soft = t.bright.withValues(alpha: 0.14);
+    return switch (step) {
+      0 => box(t.ink, const HeartLogo(size: 110)),
+      1 => box(soft, icons([EmblemKind.dumbbell, EmblemKind.run, EmblemKind.bike], t.ink)),
+      2 => box(soft, icons([EmblemKind.kettlebell, EmblemKind.plates], t.ink)),
+      3 => box(soft, Icon(_place.icon, size: 72, color: t.ink)),
+      4 => box(
+        AppColors.heart.withValues(alpha: 0.12),
+        Text('$_age', style: text.displayLarge?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -2)),
+      ),
+      5 => box(soft, icons([EmblemKind.calendar], t.ink)),
+      6 => box(soft, Icon(Icons.monitor_weight_outlined, size: 72, color: t.ink)),
+      _ => box(t.ink, icons([EmblemKind.flag], t.bright)),
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
     final t = AppTheme.of(context);
     final text = Theme.of(context).textTheme;
+    final step = _step.clamp(0, 7);
     return Scaffold(
       body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 8, 4),
-              child: Row(
-                children: [
-                  const Emblem(EmblemKind.heart, size: 36),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+        child: GestureDetector(
+          // swipe right = back a slide (answers are already saved)
+          onHorizontalDragEnd: (d) {
+            if ((d.primaryVelocity ?? 0) > 300) _back();
+          },
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 4, 8, 0),
+                child: Row(
+                  children: [
+                    if (step > 0 && step < 7)
+                      IconButton(
+                        key: const Key('onboardingBack'),
+                        tooltip: 'Back',
+                        icon: const Icon(Icons.arrow_back),
+                        onPressed: _back,
+                      )
+                    else
+                      const SizedBox(width: 48, height: 48),
+                    const Spacer(),
+                    if (step < 7)
+                      TextButton(key: const Key('skipOnboarding'), onPressed: _finish, child: const Text('Skip')),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 260),
+                  transitionBuilder: (child, anim) {
+                    final incoming = child.key == ValueKey(step);
+                    final dir = (_forward == incoming) ? 1.0 : -1.0;
+                    return FadeTransition(
+                      opacity: anim,
+                      child: SlideTransition(
+                        position: Tween(begin: Offset(0.25 * dir, 0), end: Offset.zero).animate(anim),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: KeyedSubtree(
+                    key: ValueKey(step),
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                       children: [
-                        Text('HR Zones', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-                        Text('Setup · ${_step.clamp(0, 7)} of 7', style: text.labelSmall?.copyWith(color: t.muted)),
+                        _art(context, step),
+                        const SizedBox(height: 22),
+                        Text(
+                          _title(step),
+                          style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.6),
+                        ),
+                        const SizedBox(height: 8),
+                        if (step < 7)
+                          Text(_body(step), style: text.bodyLarge?.copyWith(color: t.muted))
+                        else
+                          _done(context),
+                        const SizedBox(height: 18),
+                        _input(context),
                       ],
                     ),
                   ),
-                  if (_step < 7)
-                    TextButton(key: const Key('skipOnboarding'), onPressed: _finish, child: const Text('Skip')),
-                ],
+                ),
               ),
-            ),
-            Expanded(
-              child: ListView(
-                controller: _scroll,
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                children: [
-                  for (var i = 0; i <= _step; i++) ...[
-                    i == 7 ? _doneBubble(context) : _CoachBubble(_question(i)),
-                    if (i < _step && _answer(i) != null) _YouBubble(_answer(i)!),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: Row(
+                  key: const Key('slideDots'),
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    for (var i = 0; i <= 7; i++)
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        width: i == step ? 22 : 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: i == step ? t.bright : t.muted.withValues(alpha: 0.35),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
                   ],
-                  const SizedBox(height: 8),
-                  _input(context),
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -192,7 +275,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       }),
       4 => _ageInput(context),
       5 => Wrap(
-        alignment: WrapAlignment.end,
+        alignment: WrapAlignment.start,
         spacing: 8,
         runSpacing: 8,
         children: [
@@ -215,7 +298,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _chips<T>(List<T> values, T? selected, String Function(T) label, ValueChanged<T> onSelect) => Wrap(
-    alignment: WrapAlignment.end,
+    alignment: WrapAlignment.start,
     spacing: 8,
     runSpacing: 8,
     children: [
@@ -239,10 +322,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     final zones = HrZones.fromAge(_age);
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.end,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             IconButton.filledTonal(icon: const Icon(Icons.remove), onPressed: () => set(_age - 1)),
             InkWell(
@@ -260,7 +343,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             IconButton.filledTonal(icon: const Icon(Icons.add), onPressed: () => set(_age + 1)),
           ],
         ),
-        Text('Max heart rate about ${zones.maxHr}', style: text.labelMedium),
+        Center(child: Text('Max heart rate about ${zones.maxHr}', style: text.labelMedium)),
         const SizedBox(height: 8),
         _NextButton(label: 'That\'s me', onTap: _next),
       ],
@@ -281,10 +364,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Wrap(
-          alignment: WrapAlignment.end,
+          alignment: WrapAlignment.start,
           spacing: 8,
           runSpacing: 8,
           children: [
@@ -316,97 +399,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _doneBubble(BuildContext context) {
+  Widget _done(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final tips = [
       if (_focus != _Focus.running) 'Strength tab: pick a ready-made program or start an empty workout.',
-      if (_focus != _Focus.strength) 'Run tab: tap Run to go, or plan your weeks.',
+      if (_focus != _Focus.strength) 'Cardio tab: tap Start for a run, walk, hike or ride, or plan your weeks.',
       'Tools › Heart-rate zones: get beeps when you leave your zone.',
       'Tools › Ab workouts: 5–20 minute follow-along workouts.',
     ];
-    return _CoachBubble.rich(
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('You\'re all set', style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-          Text('${_level.label} · ${_place.label} · $_weekly× a week · age $_age', style: text.bodySmall),
-          const SizedBox(height: 8),
-          for (final tip in tips)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text('•  $tip', style: text.bodyMedium),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-/// The coach's bubble on the left.
-class _CoachBubble extends StatelessWidget {
-  const _CoachBubble(String this.message) : child = null;
-  const _CoachBubble.rich(Widget this.child) : message = null;
-
-  final String? message;
-  final Widget? child;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppTheme.of(context);
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.8),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-          decoration: BoxDecoration(
-            color: t.card,
-            boxShadow: t.cardShadow,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(4),
-              topRight: Radius.circular(14),
-              bottomLeft: Radius.circular(14),
-              bottomRight: Radius.circular(14),
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '${_focus?.label ?? 'Hybrid'} · ${_level.label} · ${_place.label} · $_weekly× a week · age $_age',
+          style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 10),
+        for (final tip in tips)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Text('•  $tip', style: text.bodyMedium),
           ),
-          child: child ?? Text(message!, style: Theme.of(context).textTheme.bodyLarge),
-        ),
-      ),
-    );
-  }
-}
-
-/// Your answer on the right, in the dark ink colour.
-class _YouBubble extends StatelessWidget {
-  const _YouBubble(this.message);
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppTheme.of(context);
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final bg = dark ? t.bright : t.ink;
-    return Align(
-      alignment: Alignment.centerRight,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(14),
-            topRight: Radius.circular(4),
-            bottomLeft: Radius.circular(14),
-            bottomRight: Radius.circular(14),
-          ),
-        ),
-        child: Text(
-          message,
-          style: TextStyle(color: onColor(bg), fontWeight: FontWeight.w700),
-        ),
-      ),
+      ],
     );
   }
 }
@@ -418,11 +432,11 @@ class _NextButton extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Align(
-    alignment: Alignment.centerRight,
+  Widget build(BuildContext context) => SizedBox(
+    width: double.infinity,
     child: FilledButton(
       key: const Key('onboardingNext'),
-      style: FilledButton.styleFrom(minimumSize: const Size(150, 48)),
+      style: FilledButton.styleFrom(minimumSize: const Size(150, 54)),
       onPressed: onTap,
       child: Text(label, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
     ),

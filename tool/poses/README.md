@@ -31,3 +31,10 @@ Mockup: https://claude.ai/artifact/GNPyueDWW1a8yTupNqxtUf (owner: style B in lig
 - Round 7 rules: level the left-right body line (roll < 25° removed), align the two photos on
   the body parts touching the floor/pad in both (`touching`), no foot pinning when hanging,
   idle hanging legs follow the spine with soft knees.
+
+## Figures in the app (2026-11-19)
+
+`export_figures.js <review.html> <reviews dir> <figures.json>` records every figure marked
+**Done** in the review (the `reviews` collection of the review artifact, saved as JSON files)
+as vector drawing steps, start + end of the movement. `gzip -9` it to `assets/figures.json.gz`.
+The app draws them with `lib/ui/figures/exercise_figure.dart`.

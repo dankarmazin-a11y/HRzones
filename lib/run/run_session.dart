@@ -874,6 +874,9 @@ class RunSession extends ChangeNotifier {
     hr.onAlert = (alert, bpm) => voice?.heartRateAlert(high: alert == ZoneAlert.high, bpm: bpm);
   }
 
+  /// "Run", "Walk", "Hike" or "Ride" – what is recording now.
+  String get activityWord => _word(_chosen);
+
   static String _word(RunActivity a) => switch (a) {
     RunActivity.run => 'Run',
     RunActivity.walk => 'Walk',

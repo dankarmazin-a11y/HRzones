@@ -147,8 +147,8 @@ class _TotalsCard extends StatelessWidget {
       key: const Key('statsTotals'),
       title: 'Totals',
       subtitle: days == 7
-          ? '${t.strength} strength · ${t.runs} runs'
-          : '${t.strength} strength · ${t.runs} runs · ${perWeek.toStringAsFixed(1)} workouts a week',
+          ? '${t.strength} strength · ${t.runs} cardio'
+          : '${t.strength} strength · ${t.runs} cardio · ${perWeek.toStringAsFixed(1)} workouts a week',
       child: Column(
         children: [
           Row(
@@ -254,7 +254,7 @@ class _WeeksCard extends StatelessWidget {
                     getTooltipItem: (g, _, rod, _) {
                       final w = weeks[g.x];
                       return BarTooltipItem(
-                        '${hours(w.minutes)} h\n${w.strength} strength · ${w.runs} runs',
+                        '${hours(w.minutes)} h\n${w.strength} strength · ${w.runs} cardio',
                         const TextStyle(fontSize: 12, color: Colors.white),
                       );
                     },
@@ -316,7 +316,7 @@ class _WeeksCard extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: [legend(strengthColor, 'Strength'), const SizedBox(width: 18), legend(runColor, 'Running')],
+            children: [legend(strengthColor, 'Strength'), const SizedBox(width: 18), legend(runColor, 'Cardio')],
           ),
         ],
       ),

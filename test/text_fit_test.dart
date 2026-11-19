@@ -135,7 +135,7 @@ void main() {
     }
 
     final shell = find.byType(HomeShell);
-    for (final tab in ['Home', 'Strength', 'Run']) {
+    for (final tab in ['Home', 'Strength', 'Cardio']) {
       await tester.tap(find.text(tab).last);
       await check(tab);
     }

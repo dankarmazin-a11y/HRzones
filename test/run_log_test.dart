@@ -126,7 +126,7 @@ void main() {
     final s = (await tester.runAsync(testServices))!;
     await tester.pumpWidget(HrZonesApp(services: s));
     await settle(tester);
-    await tester.tap(find.text('Run').last);
+    await tester.tap(find.text('Cardio').last);
     await settle(tester);
     await tester.tap(find.byKey(const Key('logRun')));
     await settle(tester);

@@ -20,6 +20,10 @@ void main() {
     for (final k in ['startStrength', 'startRunHome', 'startEmpty', 'startTimer']) {
       expect(find.byKey(Key(k)), findsOneWidget);
     }
+    // owner (19 Nov): the section is Cardio (run, walk, hike, ride) everywhere, not "Run"
+    expect(find.descendant(of: find.byKey(const Key('startRunHome')), matching: find.text('Cardio')), findsOneWidget);
+    expect(find.descendant(of: find.byType(NavigationBar), matching: find.text('Cardio')), findsOneWidget);
+    expect(find.descendant(of: find.byType(NavigationBar), matching: find.text('Run')), findsNothing);
     await tester.tap(find.byKey(const Key('startEmpty')));
     await settle(tester);
     expect(s.session.active, isNotNull);

@@ -9,9 +9,9 @@ import 'zone_colors.dart';
 import 'one_line.dart';
 
 String useLabel(PresetUse u) => switch (u) {
-  PresetUse.any => 'Strength & running',
+  PresetUse.any => 'Strength & cardio',
   PresetUse.strength => 'Strength',
-  PresetUse.run => 'Running',
+  PresetUse.run => 'Cardio',
 };
 
 IconData useIcon(PresetUse u) => switch (u) {
@@ -48,7 +48,7 @@ class HrPresetsSection extends StatelessWidget {
               ],
             ),
             Text(
-              'Name a heart-rate range, choose strength or running, and pick it when you start a workout or '
+              'Name a heart-rate range, choose strength or cardio, and pick it when you start a workout or '
               'save it in a template.',
               style: text.bodySmall,
             ),
@@ -167,7 +167,7 @@ Future<void> editPreset(BuildContext context, [HrPreset? existing]) async {
                 showSelectedIcon: false,
                 segments: const [
                   ButtonSegment(value: PresetUse.strength, label: OneLine('Strength')),
-                  ButtonSegment(value: PresetUse.run, label: OneLine('Running')),
+                  ButtonSegment(value: PresetUse.run, label: OneLine('Cardio')),
                   ButtonSegment(value: PresetUse.any, label: OneLine('Both')),
                 ],
                 selected: {use},

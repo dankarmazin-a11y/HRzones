@@ -127,11 +127,11 @@ Future<bool> confirmNoRun(BuildContext context) async {
   final open = await showDialog<bool>(
     context: context,
     builder: (c) => AlertDialog(
-      title: const Text('Run in progress'),
-      content: const Text('Finish your run before you start a strength workout.'),
+      title: const Text('Cardio in progress'),
+      content: const Text('Finish your run, walk or ride before you start a strength workout.'),
       actions: [
         TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('OK')),
-        TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Open run')),
+        TextButton(onPressed: () => Navigator.pop(c, true), child: const Text('Open it')),
       ],
     ),
   );

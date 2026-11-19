@@ -37,6 +37,8 @@ flutter:
   assets:
     # packed copy of assets/exercises.json (tool/pack_exercises.py) – ~700 KB smaller on the phone
     - assets/exercises.json.gz
+    # line figures of the exercises marked Done in the figures review (tool/poses/export_figures.js)
+    - assets/figures.json.gz
   # Inter (SIL Open Font License, assets/fonts/Inter-LICENSE.txt) – the app font.
   fonts:
     - family: Inter

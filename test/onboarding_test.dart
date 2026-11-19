@@ -18,7 +18,8 @@ void main() {
     await tester.pumpWidget(HrZonesApp(services: s));
     await settle(tester);
     expect(find.byType(OnboardingScreen), findsOneWidget);
-    expect(find.textContaining('HR Zones coach'), findsOneWidget);
+    expect(find.text('Train in your zone.'), findsOneWidget, reason: 'setup is slides now (owner, 19 Nov)');
+    expect(find.byKey(const Key('slideDots')), findsOneWidget);
 
     Future<void> next() async {
       await tester.tap(find.byKey(const Key('onboardingNext')));
@@ -43,7 +44,11 @@ void main() {
     expect(find.textContaining('Max heart rate about 185'), findsOneWidget);
     await next();
     await choose('weekly_4');
-    expect(find.text('4× a week'), findsOneWidget, reason: 'your answer bubble');
+    expect(find.text('Your body weight'), findsOneWidget, reason: 'the next slide');
+    // Back goes one slide back; the answer is kept.
+    await choose('onboardingBack');
+    expect(find.text('Workouts a week?'), findsOneWidget);
+    await choose('weekly_4');
     await choose('enterWeight');
     await tester.enterText(find.byType(TextField).last, '82');
     await tester.tap(find.text('OK'));

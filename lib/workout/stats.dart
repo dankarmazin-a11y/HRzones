@@ -53,6 +53,41 @@ extension RecordKindLabel on RecordKind {
   };
 }
 
+extension RecordKindShort on RecordKind {
+  /// At most 3 words, for the end-of-workout list (owner, 19 Nov).
+  String get short => switch (this) {
+    RecordKind.maxWeight => 'Heaviest weight',
+    RecordKind.est1RM => 'Best est. max',
+    RecordKind.setVolume => 'Best set volume',
+    RecordKind.maxReps => 'Most reps',
+    RecordKind.longestDuration => 'Longest hold',
+  };
+}
+
+/// The records worth showing after a workout (owner, 19 Nov: max 5, the most
+/// important): one per exercise – heaviest weight first, then est. max, set
+/// volume, reps, time – sorted by how much the old best was beaten.
+List<PersonalRecord> topRecords(List<PersonalRecord> all, {int max = 5}) {
+  final best = <String, PersonalRecord>{};
+  for (final r in all) {
+    final had = best[r.exerciseId];
+    if (had == null || r.kind.index < had.kind.index) best[r.exerciseId] = r;
+  }
+  double gain(PersonalRecord r) => r.previous <= 0 ? 1 : r.value / r.previous - 1;
+  final list = best.values.toList()..sort((a, b) => gain(b).compareTo(gain(a)));
+  return list.take(max).toList();
+}
+
+/// "+5 kg", "+2 reps", "+0:15".
+String formatRecordGain(PersonalRecord r) {
+  final d = r.value - r.previous;
+  return switch (r.kind) {
+    RecordKind.maxReps => '+${d.round()}',
+    RecordKind.longestDuration => '+${formatDuration(Duration(seconds: d.round()))}',
+    _ => '+${formatWeight(d)}',
+  };
+}
+
 /// Best values for one exercise.
 class ExerciseBests {
   final values = <RecordKind, double>{};

@@ -36,7 +36,7 @@ class RunningRunBar extends StatelessWidget {
                       valueListenable: run.ticks,
                       builder: (context, _, _) => Text(
                         [
-                          run.paused ? 'Run paused' : 'Run',
+                          run.paused ? '${run.activityWord} paused' : run.activityWord,
                           '${formatKm(run.distanceM)} ${Units.d}',
                           formatDuration(run.moving),
                         ].join(' · '),

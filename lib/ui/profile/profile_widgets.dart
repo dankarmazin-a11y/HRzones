@@ -285,7 +285,7 @@ class _MonthCalendarCardState extends State<MonthCalendarCard> {
                   children: [
                     legend(t.second, 'Strength'),
                     const SizedBox(width: 10),
-                    legend(t.bright, 'Run'),
+                    legend(t.bright, 'Cardio'),
                     const SizedBox(width: 10),
                     legend(t.ink, 'Both'),
                     const Spacer(),

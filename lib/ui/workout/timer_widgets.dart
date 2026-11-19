@@ -84,10 +84,10 @@ class _TimerBarState extends State<TimerBar> {
     );
     Widget pill(String text, VoidCallback onTap, {bool main = false, Key? key}) => Material(
       color: main ? theme.bright : white.withValues(alpha: 0.13),
-      borderRadius: BorderRadius.circular(9),
+      borderRadius: BorderRadius.circular(20),
       child: InkWell(
         key: key,
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(20),
         onTap: onTap,
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: big ? 0 : 16, vertical: big ? 13 : 9),
@@ -111,11 +111,11 @@ class _TimerBarState extends State<TimerBar> {
       children: [
         // just inside the rounded corners, with rounded ends (owner, 17 Nov)
         Padding(
-          padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+          padding: const EdgeInsets.fromLTRB(26, 10, 26, 0),
           child: bar(6, key: const Key('timerBarProgress')),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(18, 10, 10, 10),
+          padding: const EdgeInsets.fromLTRB(24, 8, 12, 12),
           child: Row(
             children: [
               Flexible(
@@ -186,28 +186,29 @@ class _TimerBarState extends State<TimerBar> {
       ],
     );
 
-    return SafeArea(
-      top: false,
-      minimum: const EdgeInsets.only(bottom: 8),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
-        child: Material(
-          color: bg,
-          elevation: 8,
-          shadowColor: Colors.black54,
-          borderRadius: BorderRadius.circular(big ? 16 : 14),
-          clipBehavior: Clip.antiAlias, // the top progress line follows the rounded corners
-          child: InkWell(
-            key: const Key('timerBar'),
-            borderRadius: BorderRadius.circular(big ? 16 : 10),
-            onTap: () => isSet ? openFullScreenTimer(context, session) : setState(() => _expanded = !_expanded),
-            child: AnimatedSize(
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOut,
-              child: Padding(
-                padding: big ? const EdgeInsets.fromLTRB(16, 0, 16, 16) : EdgeInsets.zero,
-                child: big ? expanded : collapsed,
-              ),
+    // owner (19 Nov, option B): floating with about the same gap all round and
+    // big round corners that follow the phone's own curved corners; it may sit
+    // over the home bar line a little instead of leaving a tall gap under it.
+    final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+    return Padding(
+      key: const Key('timerBarFrame'),
+      padding: EdgeInsets.fromLTRB(10, 0, 10, 10 + (bottomInset - 30).clamp(0, 40)),
+      child: Material(
+        color: bg,
+        elevation: 8,
+        shadowColor: Colors.black54,
+        borderRadius: BorderRadius.circular(timerBarRadius),
+        clipBehavior: Clip.antiAlias, // the top progress line follows the rounded corners
+        child: InkWell(
+          key: const Key('timerBar'),
+          borderRadius: BorderRadius.circular(timerBarRadius),
+          onTap: () => isSet ? openFullScreenTimer(context, session) : setState(() => _expanded = !_expanded),
+          child: AnimatedSize(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            child: Padding(
+              padding: big ? const EdgeInsets.fromLTRB(22, 6, 22, 20) : EdgeInsets.zero,
+              child: big ? expanded : collapsed,
             ),
           ),
         ),
@@ -215,6 +216,9 @@ class _TimerBarState extends State<TimerBar> {
     );
   }
 }
+
+/// Corner radius of the floating rest bar (option B, 19 Nov).
+const double timerBarRadius = 30;
 
 Future<void> openFullScreenTimer(BuildContext context, WorkoutSession session) async {
   if (FullScreenTimer.isOpen) return; // one at a time (it follows the chain by itself)

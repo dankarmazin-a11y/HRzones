@@ -250,7 +250,7 @@ void main() {
     await tester.pumpWidget(HrZonesApp(services: s));
     await settle(tester);
 
-    await tester.tap(find.text('Run').last);
+    await tester.tap(find.text('Cardio').last);
     await settle(tester);
     await tester.scrollUntilVisible(find.byKey(const Key('runGuide')), 200, scrollable: runTabList());
     expect(find.byKey(const Key('runGuide')), findsOneWidget);
@@ -310,7 +310,7 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('Start empty workout'));
     await settle(tester);
-    expect(find.text('Run in progress'), findsOneWidget);
+    expect(find.text('Cardio in progress'), findsOneWidget);
     await tester.tap(find.text('OK'));
     await settle(tester);
     expect(s.session.active, isNull);
@@ -771,7 +771,7 @@ void main() {
     expect(homeTile, findsOneWidget, reason: 'the run is the last workout');
 
     // Run tab: records.
-    await tester.tap(find.text('Run').last);
+    await tester.tap(find.text('Cardio').last);
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
     await settle(tester);
     await tester.scrollUntilVisible(find.byKey(const Key('record_1000')), 200, scrollable: runTabList());

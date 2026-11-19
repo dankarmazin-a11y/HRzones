@@ -105,7 +105,7 @@ class SettingsScreen extends StatelessWidget {
           Text('Reminders', style: text.titleMedium),
           const _IdleReminderSwitch(),
           const Divider(height: 32),
-          Text('Running', style: text.titleMedium),
+          Text('Cardio', style: text.titleMedium),
           const RunVoiceSettings(),
           const Divider(height: 32),
           const BatterySettingsSection(),

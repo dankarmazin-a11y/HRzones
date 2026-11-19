@@ -213,10 +213,10 @@ class LocalRestNotifier extends RestNotifier {
     try {
       await _schedule(
         _runIdleId,
-        'Still running?',
+        'Still going?',
         paused
-            ? 'Your run has been paused for a long time. Tap to finish it.'
-            : 'Your run is still recording but you haven\'t moved for 20 minutes. Tap to finish it.',
+            ? 'Your activity has been paused for a long time. Tap to finish it.'
+            : 'Your activity is still recording but you haven\'t moved for 20 minutes. Tap to finish it.',
         after,
         const NotificationDetails(
           android: _reminderChannel,

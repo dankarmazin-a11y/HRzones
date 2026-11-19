@@ -48,7 +48,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ListTile(
                     key: const Key('logPastRun'),
                     leading: const Emblem(EmblemKind.run),
-                    title: const Text('Run'),
+                    title: const Text('Cardio'),
+                    subtitle: const Text('Run, walk, hike or ride'),
                     onTap: () => Navigator.pop(c, 'run'),
                   ),
                 ],

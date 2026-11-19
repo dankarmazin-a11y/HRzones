@@ -231,8 +231,8 @@ class StartMenu extends StatelessWidget {
                 tile(
                   key: const Key('startRunHome'),
                   icon: Icons.directions_run,
-                  title: 'Run',
-                  subtitle: 'Outdoor or treadmill',
+                  title: 'Cardio',
+                  subtitle: 'Run, walk, hike or ride',
                   bg: t.second,
                   fg: t.onSecond,
                   action: (c) => startRun(c),
