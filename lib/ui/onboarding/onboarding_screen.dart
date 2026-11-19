@@ -23,7 +23,7 @@ class OnboardingScreen extends StatefulWidget {
 
 enum _Focus {
   strength('Strength'),
-  running('Running'),
+  running('Cardio'),
   both('Both – hybrid');
 
   const _Focus(this.label);
@@ -93,7 +93,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final zones = HrZones.fromAge(_age);
     return switch (step) {
       0 =>
-        'Hi! I\'m your HR Zones coach. I log your strength workouts, track your runs, and beep when your heart '
+        'Hi! I\'m your HR Zones coach. I log your strength workouts, track your runs, walks and rides, and beep when your heart '
             'rate leaves your zone – even with the screen locked and music playing.\n\nA few quick questions?',
       1 => 'What do you train?',
       2 => 'What\'s your training level? It decides which exercises and options you see.',
@@ -101,8 +101,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       4 => 'How old are you? I use it for your heart-rate zones.',
       5 =>
         'Max heart rate about ${zones.maxHr} bpm – your easy zone 2 is ${zones.zones[1].minBpm}–'
-            '${zones.zones[1].maxBpm} bpm.\n\nHow many workouts a week? Runs count too.',
-      6 => 'Your body weight? Optional – for run calories and progress. Add a goal weight to see it on Home.',
+            '${zones.zones[1].maxBpm} bpm.\n\nHow many workouts a week? Cardio counts too.',
+      6 => 'Your body weight? Optional – for calories and progress. Add a goal weight to see it on Home.',
       _ => 'You\'re all set',
     };
   }
@@ -320,7 +320,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final text = Theme.of(context).textTheme;
     final tips = [
       if (_focus != _Focus.running) 'Strength tab: pick a ready-made program or start an empty workout.',
-      if (_focus != _Focus.strength) 'Run tab: tap Run to go, or plan your weeks.',
+      if (_focus != _Focus.strength) 'Cardio tab: tap Start for a run, walk, hike or ride, or plan your weeks.',
       'Tools › Heart-rate zones: get beeps when you leave your zone.',
       'Tools › Ab workouts: 5–20 minute follow-along workouts.',
     ];

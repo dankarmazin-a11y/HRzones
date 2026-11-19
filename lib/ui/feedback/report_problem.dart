@@ -11,7 +11,7 @@ import '../theme/app_theme.dart';
 /// What the report is about (chips on the report screen).
 enum ReportArea {
   strength('Strength'),
-  run('Running'),
+  run('Cardio'),
   heartRate('Heart rate'),
   timers('Timers & sounds'),
   data('Data & backup'),
@@ -242,7 +242,7 @@ String buildReport({
     ..writeln('Phone: ${kIsWeb ? 'web preview' : defaultTargetPlatform.name}')
     ..writeln('Sent: ${DateTime.now().toIso8601String()}');
   if (workoutRunning) b.writeln('A strength workout is running');
-  if (runRunning) b.writeln('A run is running');
+  if (runRunning) b.writeln('A cardio activity is recording');
   if (lastRating != null) b.writeln('Last rating: ${lastRating.stars}/5 (${_date(lastRating.at)})');
   if (errors.isNotEmpty) {
     b

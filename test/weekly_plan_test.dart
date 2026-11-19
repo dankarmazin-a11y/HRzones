@@ -50,7 +50,7 @@ void main() {
     final s = (await tester.runAsync(testServices))!;
     await tester.pumpWidget(HrZonesApp(services: s));
     await settle(tester);
-    await tester.tap(find.text('Run').last);
+    await tester.tap(find.text('Cardio').last);
     await settle(tester);
     final runList = find.descendant(of: find.byType(RunScreen), matching: find.byType(Scrollable)).first;
     await tester.scrollUntilVisible(find.byKey(const Key('weeklyPlanCard')), 100, scrollable: runList);

@@ -110,7 +110,7 @@ void main() {
     s.run.location = gps;
     await tester.pumpWidget(HrZonesApp(services: s));
     await settle(tester);
-    await tester.tap(find.text('Run').last);
+    await tester.tap(find.text('Cardio').last);
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
     await settle(tester);
     expect(find.text('Easy 5 km'), findsOneWidget, reason: 'built-in examples');

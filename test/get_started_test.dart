@@ -19,7 +19,7 @@ void main() {
     expect(find.text('Starter programs'), findsWidgets);
     expect(find.byKey(const Key('guideAction_program_1')), findsOneWidget);
 
-    await tester.tap(find.descendant(of: find.byType(NavigationBar), matching: find.text('Run')));
+    await tester.tap(find.descendant(of: find.byType(NavigationBar), matching: find.text('Cardio')));
     await settle(tester);
     expect(find.byKey(const Key('runGuide'), skipOffstage: false), findsOneWidget);
     expect(find.byKey(const Key('guideAction_zone_0'), skipOffstage: false), findsOneWidget);

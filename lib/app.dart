@@ -163,7 +163,7 @@ class _HomeShellState extends State<HomeShell> {
                           NavigationDestination(
                             icon: EmblemIcon(EmblemKind.run),
                             selectedIcon: EmblemIcon(EmblemKind.run, bold: true),
-                            label: 'Run',
+                            label: 'Cardio',
                           ),
                           NavigationDestination(
                             icon: Icon(Icons.person_outline),

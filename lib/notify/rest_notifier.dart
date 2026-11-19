@@ -152,10 +152,10 @@ class LocalRestNotifier extends RestNotifier {
     try {
       await _plugin.zonedSchedule(
         id: _runIdleId,
-        title: 'Still running?',
+        title: 'Still going?',
         body: paused
-            ? 'Your run has been paused for a long time. Tap to finish it.'
-            : 'Your run is still recording but you haven\'t moved for 20 minutes. Tap to finish it.',
+            ? 'Your activity has been paused for a long time. Tap to finish it.'
+            : 'Your activity is still recording but you haven\'t moved for 20 minutes. Tap to finish it.',
         scheduledDate: tz.TZDateTime.now(tz.UTC).add(after),
         notificationDetails: const NotificationDetails(
           android: _reminderChannel,

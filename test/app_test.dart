@@ -30,7 +30,12 @@ void main() {
     await settle(tester);
 
     expect(find.textContaining('streak'), findsOneWidget);
-    for (final (tab, title) in [('Strength', 'Strength'), ('Run', 'Run'), ('Profile', 'Profile'), ('Home', 'Good')]) {
+    for (final (tab, title) in [
+      ('Strength', 'Strength'),
+      ('Cardio', 'Cardio'),
+      ('Profile', 'Profile'),
+      ('Home', 'Good'),
+    ]) {
       await tester.tap(find.text(tab).last);
       await settle(tester);
       expect(find.descendant(of: find.byType(AppBar), matching: find.textContaining(title)), findsWidgets);

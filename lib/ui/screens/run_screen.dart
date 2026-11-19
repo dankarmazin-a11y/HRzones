@@ -29,17 +29,17 @@ class RunScreen extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Run'),
+        title: const Text('Cardio'),
         actions: [
           IconButton(
             key: const Key('logRun'),
-            tooltip: 'Log a run',
+            tooltip: 'Log an activity',
             icon: const Icon(Icons.edit_calendar),
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EditRunScreen())),
           ),
         ],
       ),
-      // The big Run button sits at the bottom, always in reach.
+      // The big Start button sits at the bottom, always in reach.
       bottomNavigationBar: SafeArea(
         top: false,
         child: Padding(
@@ -51,7 +51,10 @@ class RunScreen extends StatelessWidget {
               child: FilledButton.icon(
                 key: const Key('startRun'),
                 icon: Icon(s.run.active ? Icons.directions_run : Icons.play_arrow, size: 32),
-                label: const Text('Run', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
+                label: Text(
+                  s.run.active ? 'Back' : 'Start',
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+                ),
                 onPressed: () => startRun(context),
               ),
             ),
@@ -99,7 +102,7 @@ class RunScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Text('Your runs', style: text.titleMedium),
+                Text('Your activities', style: text.titleMedium),
                 for (final r in runs) RunTile(run: r),
               ] else
                 const RunGetStarted(),
@@ -140,7 +143,7 @@ class _Totals extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text('${week.length} ${week.length == 1 ? 'run' : 'runs'}', style: text.bodyMedium),
+                Text('${week.length} ${week.length == 1 ? 'activity' : 'activities'}', style: text.bodyMedium),
                 Text(formatDuration(Duration(seconds: secs)), style: text.bodyMedium),
               ],
             ),

@@ -261,10 +261,10 @@ class RunGetStarted extends StatelessWidget {
               ),
               GuideStep(
                 id: 'first',
-                title: 'Go for your first run',
+                title: 'Your first run, walk or ride',
                 detail: 'Lock the phone and go – it keeps recording with music playing',
                 done: false,
-                actions: [('Start run', () => startRun(context))],
+                actions: [('Start', () => startRun(context))],
               ),
             ],
           );

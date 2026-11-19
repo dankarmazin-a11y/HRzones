@@ -175,7 +175,7 @@ class _ProfileHeader extends StatelessWidget {
           builder: (context, d) {
             final what = switch (focus.data) {
               'strength' => 'Strength',
-              'running' => 'Running',
+              'running' => 'Cardio',
               _ => 'Hybrid',
             };
             final first = d.first;
