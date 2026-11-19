@@ -16,6 +16,7 @@ import '../../workout/training_place.dart';
 import '../number_input.dart';
 import '../theme/app_theme.dart';
 import '../../units/units.dart';
+import '../one_line.dart';
 
 /// Settings (⚙ on Profile): theme, training, rest timer alerts, sounds.
 class SettingsScreen extends StatelessWidget {
@@ -68,7 +69,7 @@ class SettingsScreen extends StatelessWidget {
                 SegmentedButton<TrainingLevel>(
                   key: const Key('levelPicker'),
                   showSelectedIcon: false,
-                  segments: [for (final l in TrainingLevel.values) ButtonSegment(value: l, label: Text(l.label))],
+                  segments: [for (final l in TrainingLevel.values) ButtonSegment(value: l, label: OneLine(l.label))],
                   selected: {level},
                   onSelectionChanged: (v) => s.setLevel(v.first),
                 ),
@@ -88,10 +89,7 @@ class SettingsScreen extends StatelessWidget {
                 SegmentedButton<TrainingPlace>(
                   key: const Key('placePicker'),
                   showSelectedIcon: false,
-                  segments: [
-                    for (final p in TrainingPlace.values)
-                      ButtonSegment(value: p, label: Text(p.label, maxLines: 1, softWrap: false)),
-                  ],
+                  segments: [for (final p in TrainingPlace.values) ButtonSegment(value: p, label: OneLine(p.label))],
                   selected: {place},
                   onSelectionChanged: (v) => s.setPlace(v.first),
                 ),
@@ -321,7 +319,7 @@ class _RunVoiceSettingsState extends State<RunVoiceSettings> {
               showSelectedIcon: false,
               key: const Key('runVoiceEvery'),
               segments: [
-                for (final m in const [500, 1000, 2000]) ButtonSegment(value: m, label: Text(every(m))),
+                for (final m in const [500, 1000, 2000]) ButtonSegment(value: m, label: OneLine(every(m))),
               ],
               selected: {v.everyM},
               onSelectionChanged: (sel) async {
@@ -363,9 +361,9 @@ class _RunVoiceSettingsState extends State<RunVoiceSettings> {
                     showSelectedIcon: false,
                     key: const Key('voiceKind'),
                     segments: const [
-                      ButtonSegment(value: 'default', label: Text('Default')),
-                      ButtonSegment(value: 'female', label: Text('Female')),
-                      ButtonSegment(value: 'male', label: Text('Male')),
+                      ButtonSegment(value: 'default', label: OneLine('Default')),
+                      ButtonSegment(value: 'female', label: OneLine('Female')),
+                      ButtonSegment(value: 'male', label: OneLine('Male')),
                     ],
                     selected: {v.kind},
                     onSelectionChanged: (sel) async {
@@ -611,9 +609,9 @@ Future<void> showThemeSheet(BuildContext context) => showModalBottomSheet<void>(
                   key: const Key('themePicker'),
                   showSelectedIcon: false,
                   segments: const [
-                    ButtonSegment(value: ThemeMode.system, label: Text('Phone')),
-                    ButtonSegment(value: ThemeMode.light, label: Text('Light')),
-                    ButtonSegment(value: ThemeMode.dark, label: Text('Dark')),
+                    ButtonSegment(value: ThemeMode.system, label: OneLine('Phone')),
+                    ButtonSegment(value: ThemeMode.light, label: OneLine('Light')),
+                    ButtonSegment(value: ThemeMode.dark, label: OneLine('Dark')),
                   ],
                   selected: {s.themeMode.value},
                   onSelectionChanged: (v) => s.setThemeMode(v.first),
@@ -655,7 +653,7 @@ class UnitsSettings extends StatelessWidget {
             key: Key(key),
             showSelectedIcon: false,
             style: const ButtonStyle(visualDensity: VisualDensity.compact),
-            segments: [for (final (v, label) in options) ButtonSegment(value: v, label: Text(label))],
+            segments: [for (final (v, label) in options) ButtonSegment(value: v, label: OneLine(label))],
             selected: {value},
             onSelectionChanged: (v) => s.setUnits(change(v.first)),
           ),

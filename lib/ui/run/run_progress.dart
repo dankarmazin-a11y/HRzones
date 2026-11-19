@@ -9,6 +9,7 @@ import '../../workout/streak.dart';
 import '../theme/charts.dart';
 import '../theme/app_theme.dart';
 import '../../units/units.dart';
+import '../one_line.dart';
 
 /// Running charts: km per week, pace over time and aerobic fitness (metres
 /// per heartbeat).
@@ -214,8 +215,9 @@ class _RunLine extends StatelessWidget {
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 40,
-              getTitlesWidget: (v, m) =>
-                  v == m.min || v == m.max ? const SizedBox.shrink() : Text(label(v), style: SoftChart.axis(context)),
+              getTitlesWidget: (v, m) => v == m.min || v == m.max
+                  ? const SizedBox.shrink()
+                  : OneLine(label(v), style: SoftChart.axis(context)),
             ),
           ),
         ),

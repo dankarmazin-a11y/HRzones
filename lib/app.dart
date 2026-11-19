@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import 'ui/app_frame.dart';
 import 'ui/onboarding/onboarding_screen.dart';
 import 'ui/theme/app_theme.dart';
 
 import 'app_services.dart';
 import 'app_shell.dart';
 import 'hr/hr_monitor.dart';
+import 'platform/phone_system.dart';
 import 'ui/screens/home_screen.dart';
 import 'ui/screens/profile_screen.dart';
 import 'ui/screens/run_screen.dart';
@@ -36,6 +38,7 @@ class HrZonesApp extends StatelessWidget {
             theme: buildAppTheme(services.palette.value, Brightness.light),
             darkTheme: buildAppTheme(services.palette.value, Brightness.dark),
             themeMode: services.themeMode.value,
+            builder: (context, child) => AppFrame.forPlatform(child: child!),
             // First launch: the setup walk-through, then the app.
             home: ValueListenableBuilder<bool>(
               valueListenable: services.needsOnboarding,
@@ -98,11 +101,18 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
-    // Android back on another tab goes to Home first; on Home it leaves the app as usual.
+    // Android back on another tab goes to Home first. On Home it puts the app in the
+    // background like the Home button: closing it stopped a running workout or run
+    // (timers, GPS, beeps) and left its card in the notifications.
     return PopScope(
-      canPop: _tab == AppTab.home,
+      canPop: _tab == AppTab.home && !PhoneSystem.hasNative,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _goTo(AppTab.home);
+        if (didPop) return;
+        if (_tab != AppTab.home) {
+          _goTo(AppTab.home);
+        } else {
+          PhoneSystem.toBack();
+        }
       },
       child: ForgottenWorkoutWatcher(
         child: AppShell(

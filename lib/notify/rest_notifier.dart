@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 
@@ -52,8 +53,80 @@ class LocalRestNotifier extends RestNotifier {
     channelDescription: 'Asks when a workout has been open for a long time',
   );
 
+  /// Android shows a notification even while the app is open (iPhone hides them with
+  /// `presentAlert: false`), so the owner kept getting "Rest is over" / "Still working
+  /// out?" on top of the app (2026-11-19). On Android a notification is only handed to the
+  /// phone while the app is in the background: kept here while the app is open, scheduled
+  /// when it goes to the background, taken back when it comes to the front again.
+  final _waiting = <int, ({DateTime at, String title, String body, NotificationDetails details})>{};
+  bool _inFront = true;
+  AppLifecycleListener? _life;
+
+  static bool get _onlyInBackground => defaultTargetPlatform == TargetPlatform.android;
+
+  void _watchApp() {
+    if (!_onlyInBackground || _life != null) return;
+    _inFront =
+        WidgetsBinding.instance.lifecycleState != AppLifecycleState.paused &&
+        WidgetsBinding.instance.lifecycleState != AppLifecycleState.hidden;
+    _life = AppLifecycleListener(
+      onStateChange: (state) {
+        final front = state == AppLifecycleState.resumed || state == AppLifecycleState.inactive;
+        if (front == _inFront) return;
+        _inFront = front;
+        front ? _takeBack() : _handOver();
+      },
+    );
+  }
+
+  Future<void> _handOver() async {
+    final now = DateTime.now();
+    for (final MapEntry(key: id, value: n) in [..._waiting.entries]) {
+      if (!n.at.isAfter(now)) {
+        _waiting.remove(id);
+        continue;
+      }
+      await _zoned(id, n.title, n.body, n.at.difference(now), n.details);
+    }
+  }
+
+  Future<void> _takeBack() async {
+    for (final id in _waiting.keys) {
+      try {
+        await _plugin.cancel(id: id);
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _schedule(int id, String title, String body, Duration after, NotificationDetails details) async {
+    if (_onlyInBackground) {
+      _waiting[id] = (at: DateTime.now().add(after), title: title, body: body, details: details);
+      if (_inFront) return;
+    }
+    await _zoned(id, title, body, after, details);
+  }
+
+  Future<void> _zoned(int id, String title, String body, Duration after, NotificationDetails details) =>
+      _plugin.zonedSchedule(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: tz.TZDateTime.now(tz.UTC).add(after),
+        notificationDetails: details,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      );
+
+  Future<void> _cancel(int id) async {
+    _waiting.remove(id);
+    if (!_ready) return;
+    try {
+      await _plugin.cancel(id: id);
+    } catch (_) {}
+  }
+
   Future<bool> _init() async {
     if (_ready) return true;
+    _watchApp();
     try {
       await _plugin.initialize(
         settings: const InitializationSettings(
@@ -87,12 +160,12 @@ class LocalRestNotifier extends RestNotifier {
   Future<void> scheduleRestOver(Duration after, {String? next}) async {
     if (!await _init()) return;
     try {
-      await _plugin.zonedSchedule(
-        id: _id,
-        title: 'Rest is over',
-        body: next == null ? 'Time for your next set' : 'Next: $next',
-        scheduledDate: tz.TZDateTime.now(tz.UTC).add(after),
-        notificationDetails: const NotificationDetails(
+      await _schedule(
+        _id,
+        'Rest is over',
+        next == null ? 'Time for your next set' : 'Next: $next',
+        after,
+        const NotificationDetails(
           android: _restChannel,
           // Inside the app (foreground) stay quiet: the app dings itself.
           iOS: DarwinNotificationDetails(
@@ -102,7 +175,6 @@ class LocalRestNotifier extends RestNotifier {
             presentSound: false,
           ),
         ),
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       );
     } catch (e) {
       debugPrint('Could not schedule the rest notification: $e');
@@ -110,28 +182,22 @@ class LocalRestNotifier extends RestNotifier {
   }
 
   @override
-  Future<void> cancel() async {
-    if (!_ready) return;
-    try {
-      await _plugin.cancel(id: _id);
-    } catch (_) {}
-  }
+  Future<void> cancel() => _cancel(_id);
 
   @override
   Future<void> scheduleIdle(Duration after, {required String workout}) async {
     if (!await _init()) return;
     try {
-      await _plugin.zonedSchedule(
-        id: _idleId,
-        title: 'Still working out?',
-        body: '"$workout" is still open. Tap to finish it or keep going.',
-        scheduledDate: tz.TZDateTime.now(tz.UTC).add(after),
-        notificationDetails: const NotificationDetails(
+      await _schedule(
+        _idleId,
+        'Still working out?',
+        '"$workout" is still open. Tap to finish it or keep going.',
+        after,
+        const NotificationDetails(
           android: _reminderChannel,
           // In the app the same question is asked on screen instead.
           iOS: DarwinNotificationDetails(presentAlert: false, presentBanner: false, presentList: false),
         ),
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       );
     } catch (e) {
       debugPrint('Could not schedule the reminder: $e');
@@ -139,29 +205,23 @@ class LocalRestNotifier extends RestNotifier {
   }
 
   @override
-  Future<void> cancelIdle() async {
-    if (!_ready) return;
-    try {
-      await _plugin.cancel(id: _idleId);
-    } catch (_) {}
-  }
+  Future<void> cancelIdle() => _cancel(_idleId);
 
   @override
   Future<void> scheduleRunIdle(Duration after, {required bool paused}) async {
     if (!await _init()) return;
     try {
-      await _plugin.zonedSchedule(
-        id: _runIdleId,
-        title: 'Still running?',
-        body: paused
+      await _schedule(
+        _runIdleId,
+        'Still running?',
+        paused
             ? 'Your run has been paused for a long time. Tap to finish it.'
             : 'Your run is still recording but you haven\'t moved for 20 minutes. Tap to finish it.',
-        scheduledDate: tz.TZDateTime.now(tz.UTC).add(after),
-        notificationDetails: const NotificationDetails(
+        after,
+        const NotificationDetails(
           android: _reminderChannel,
           iOS: DarwinNotificationDetails(presentAlert: false, presentBanner: false, presentList: false),
         ),
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       );
     } catch (e) {
       debugPrint('Could not schedule the run reminder: $e');
@@ -169,12 +229,7 @@ class LocalRestNotifier extends RestNotifier {
   }
 
   @override
-  Future<void> cancelRunIdle() async {
-    if (!_ready) return;
-    try {
-      await _plugin.cancel(id: _runIdleId);
-    } catch (_) {}
-  }
+  Future<void> cancelRunIdle() => _cancel(_runIdleId);
 }
 
 /// Web preview and tests: records what would happen.

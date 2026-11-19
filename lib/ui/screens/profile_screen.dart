@@ -18,6 +18,7 @@ import '../theme/app_theme.dart';
 import '../theme/emblems.dart';
 import 'settings_screen.dart';
 import 'tools_screen.dart';
+import '../one_line.dart';
 
 /// Set by CI (`--dart-define=APP_BUILD=<commit> <date>`) so you can see which
 /// version is running; "dev" for local builds.
@@ -143,7 +144,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               for (final p in ProfileTab.values)
                 ButtonSegment(
                   value: p,
-                  label: Text(p.label, key: Key('profileTab_${p.name}')),
+                  label: OneLine(p.label, key: Key('profileTab_${p.name}')),
                 ),
             ],
             selected: {_tab},

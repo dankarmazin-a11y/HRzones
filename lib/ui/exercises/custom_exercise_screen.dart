@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app_services.dart';
 import '../../data/database.dart';
 import '../../data/exercise_repository.dart';
+import '../one_line.dart';
 
 /// Create a custom exercise; pops with the new [Exercise].
 class CustomExerciseScreen extends StatefulWidget {
@@ -78,7 +79,7 @@ class _CustomExerciseScreenState extends State<CustomExerciseScreen> {
             showSelectedIcon: false,
             segments: [
               for (final MapEntry(:key, :value) in _trackingLabels.entries)
-                ButtonSegment(value: key, label: Text(value)),
+                ButtonSegment(value: key, label: OneLine(value)),
             ],
             selected: {_tracking},
             onSelectionChanged: (s) => setState(() => _tracking = s.first),

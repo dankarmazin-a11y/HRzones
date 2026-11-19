@@ -25,6 +25,8 @@ class MainActivity : FlutterActivity() {
   }
 
   override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+    // The Dart side is going away: nothing can update or end the workout card any more.
+    WorkoutService.end(applicationContext)
     beeper?.dispose()
     beeper = null
     live?.dispose()

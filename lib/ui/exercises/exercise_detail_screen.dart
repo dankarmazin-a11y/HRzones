@@ -9,6 +9,7 @@ import '../../data/database.dart';
 import '../../data/exercise_repository.dart';
 import '../workout/active_workout_screen.dart';
 import 'exercise_progress.dart';
+import '../one_line.dart';
 
 class ExerciseDetailScreen extends StatefulWidget {
   const ExerciseDetailScreen({super.key, required this.exercise});
@@ -116,9 +117,9 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
           SegmentedButton<TrackingType>(
             showSelectedIcon: false,
             segments: const [
-              ButtonSegment(value: TrackingType.weightReps, label: Text('Weight × reps')),
-              ButtonSegment(value: TrackingType.bodyweightReps, label: Text('Reps')),
-              ButtonSegment(value: TrackingType.duration, label: Text('Time')),
+              ButtonSegment(value: TrackingType.weightReps, label: OneLine('Weight × reps')),
+              ButtonSegment(value: TrackingType.bodyweightReps, label: OneLine('Reps')),
+              ButtonSegment(value: TrackingType.duration, label: OneLine('Time')),
             ],
             selected: {e.trackingType == TrackingType.distance ? TrackingType.duration : e.trackingType},
             onSelectionChanged: (s) => _setTracking(s.first),

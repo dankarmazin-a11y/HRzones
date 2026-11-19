@@ -10,6 +10,7 @@ import '../../workout/workout_session.dart';
 import '../workout/workout_editor.dart';
 import '../workout/workout_summary_screen.dart';
 import '../theme/emblems.dart';
+import '../one_line.dart';
 
 enum _Show { all, strength, run, walk, ride }
 
@@ -101,16 +102,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     showSelectedIcon: false,
                     key: const Key('historyFilter'),
                     segments: const [
-                      ButtonSegment(value: _Show.all, label: Text('All')),
-                      ButtonSegment(value: _Show.strength, label: Text('Strength')),
-                      ButtonSegment(value: _Show.run, label: Text('Run')),
+                      ButtonSegment(value: _Show.all, label: OneLine('All')),
+                      ButtonSegment(value: _Show.strength, label: OneLine('Strength')),
+                      ButtonSegment(value: _Show.run, label: OneLine('Run')),
                       ButtonSegment(
                         value: _Show.walk,
-                        label: Text('Walk', key: Key('historyWalk')),
+                        label: OneLine('Walk', key: Key('historyWalk')),
                       ),
                       ButtonSegment(
                         value: _Show.ride,
-                        label: Text('Ride', key: Key('historyRide')),
+                        label: OneLine('Ride', key: Key('historyRide')),
                       ),
                     ],
                     selected: {_show},

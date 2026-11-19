@@ -410,21 +410,24 @@ class StrengthRecordsCard extends StatelessWidget {
               if (list.isEmpty)
                 Text('Your best lifts show up here after your first workout.', style: text.bodySmall)
               else
-                GridView.count(
-                  crossAxisCount: 3,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 6,
-                  crossAxisSpacing: 6,
-                  childAspectRatio: 1.35,
-                  children: [
-                    for (final (l, name) in list)
-                      RecordBox(
-                        label: name,
-                        value: formatWeight(l.estimated1Rm),
-                        detail: 'est. 1RM · ${shortDate(l.date)}',
-                      ),
-                  ],
+                // Three a row, each as tall as its text needs (a fixed-height grid cut the
+                // last line off with a big phone font).
+                LayoutBuilder(
+                  builder: (context, box) => Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final (l, name) in list)
+                        SizedBox(
+                          width: (box.maxWidth - 12) / 3,
+                          child: RecordBox(
+                            label: name,
+                            value: formatWeight(l.estimated1Rm),
+                            detail: 'est. 1RM · ${shortDate(l.date)}',
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
             ],
           );
