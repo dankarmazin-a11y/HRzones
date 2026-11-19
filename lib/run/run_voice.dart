@@ -85,6 +85,15 @@ class RunVoice {
 
   void planDone() => _say('Workout complete. Keep running, or finish when you\'re ready.', force: true);
 
+  /// The time-in-zone goal is full.
+  void zoneGoal(int minutes) => _say('Zone goal reached. $minutes minutes in your zone.', force: true);
+
+  /// Heart rate drifting up at the same speed.
+  void driftAlert(double percent) => _say(
+    'Same pace, heart rate up ${percent.round()} percent since the start. Heat or tiredness – take it easier or drink.',
+    force: true,
+  );
+
   /// Heart rate out of the zone during a run.
   void heartRateAlert({required bool high, required int bpm}) {
     if (spokenAlerts) _say('Heart rate $bpm. ${high ? 'Slow down' : 'Speed up'}.', force: true);

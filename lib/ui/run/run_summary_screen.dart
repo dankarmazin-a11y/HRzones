@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../run/hr_drift.dart';
 import '../hr_recovery_card.dart';
 import '../theme/app_theme.dart';
 import '../../app_services.dart';
@@ -509,6 +510,15 @@ class _ZoneTimes extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Time in heart-rate zones', style: text.titleMedium),
+            if (hrDriftPercent(points) case final d?)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(
+                  'Heart-rate drift: ${d.round()} % · ${hrDriftWord(d)}',
+                  key: const Key('hrDrift'),
+                  style: text.bodySmall,
+                ),
+              ),
             const SizedBox(height: 8),
             for (final z in zones.zones.reversed)
               Padding(

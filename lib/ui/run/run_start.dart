@@ -486,6 +486,7 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
                             style: text.bodySmall,
                           ),
                         ),
+                      if (_selected != null) const ZoneGoalRow(),
                     ],
                     if (!_treadmill && _activity == RunActivity.run) const PaceAlertRow(),
                     if (!_treadmill && _activity == RunActivity.ride) ...[
@@ -789,6 +790,49 @@ class _WalkingOptionsState extends State<_WalkingOptions> {
             ),
         ],
       ],
+    );
+  }
+}
+
+/// Time-in-zone goal for this outing (owner's idea 2, 19 Nov): Off / 10 /
+/// 20 / 30 / 45 / 60 minutes; remembered (setting `zoneGoalMin`).
+class ZoneGoalRow extends StatefulWidget {
+  const ZoneGoalRow({super.key});
+
+  @override
+  State<ZoneGoalRow> createState() => _ZoneGoalRowState();
+}
+
+class _ZoneGoalRowState extends State<ZoneGoalRow> {
+  @override
+  Widget build(BuildContext context) {
+    final s = Services.of(context);
+    final text = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Time in zone goal', style: text.labelLarge),
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final m in const [0, 10, 20, 30, 45, 60])
+                ChoiceChip(
+                  key: Key('zoneGoal_$m'),
+                  label: Text(m == 0 ? 'Off' : '$m min'),
+                  selected: s.run.zoneGoalMin == m,
+                  onSelected: (_) async {
+                    await s.setZoneGoal(m);
+                    setState(() {});
+                  },
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

@@ -259,6 +259,18 @@ class AppServices {
     await db.setSetting('sounds', jsonEncode({for (final x in hr.beeper.choices.entries) x.key.name: x.value.name}));
   }
 
+  /// Time-in-zone goal for cardio (minutes, 0 = off; setting `zoneGoalMin`).
+  Future<void> setZoneGoal(int minutes) async {
+    run.zoneGoalMin = minutes;
+    await db.setSetting('zoneGoalMin', '$minutes');
+  }
+
+  /// Heart-rate drift alert during cardio (setting `driftAlert`, default on).
+  Future<void> setDriftAlert(bool on) async {
+    run.driftAlert = on;
+    await db.setSetting('driftAlert', on ? '1' : '0');
+  }
+
   /// Heart-rate recovery minute after a workout or run (setting `hrRecoveryCheck`, default on).
   Future<void> setHrRecoveryCheck(bool on) async {
     hr.recoveryCheck = on;
@@ -496,6 +508,8 @@ class AppServices {
     run.walkPreset = await presets.byId(await db.getSetting('walkPresetId'));
     run.autoDetect = await db.getSetting('autoDetectWalk') != '0';
     run.autoPauseRide = await db.getSetting('autoPauseRide') != '0';
+    run.zoneGoalMin = int.tryParse(await db.getSetting('zoneGoalMin') ?? '') ?? 0;
+    run.driftAlert = await db.getSetting('driftAlert') != '0';
     rideScreenOn = await db.getSetting('rideScreenOn') != '0';
     run.voice!.gaitChanges = await db.getSetting('runVoiceGait') == '1';
     hr.beeper.choices.clear();

@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'hr_drift.dart';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
@@ -883,6 +885,38 @@ class RunSession extends ChangeNotifier {
   /// "Run", "Walk", "Hike" or "Ride" – what is recording now.
   String get activityWord => _word(_chosen);
 
+  /// Time-in-zone goal (owner's idea 2, 19 Nov; setting `zoneGoalMin`, 0 =
+  /// off): seconds inside the heart-rate zone count up; a ding, two
+  /// vibrations and "Zone goal reached" when it's full.
+  int zoneGoalMin = 0;
+  int zoneSecs = 0;
+  bool zoneGoalDone = false;
+
+  /// Heart-rate drift alert (owner's idea 7; setting `driftAlert`, default
+  /// on): said once when the heart rate climbs 8 % at the same speed.
+  bool driftAlert = true;
+  final drift = DriftWatch();
+
+  @visibleForTesting
+  void zoneSecond() {
+    if (paused || !active) return;
+    final bpm = hr.running ? hr.bpm : null;
+    if (bpm == null) return;
+    if (driftAlert && !_treadmill) {
+      drift.add(moving.inMilliseconds / 1000, distanceM, bpm);
+      final rise = drift.check();
+      if (rise != null) voice?.driftAlert(rise);
+    }
+    if (zoneGoalMin <= 0 || hr.status != RangeStatus.inRange) return;
+    zoneSecs++;
+    if (!zoneGoalDone && zoneSecs >= zoneGoalMin * 60) {
+      zoneGoalDone = true;
+      hr.beeper.play(SoundEvent.intervalDone);
+      HapticFeedback.vibrate();
+      voice?.zoneGoal(zoneGoalMin);
+    }
+  }
+
   static String _word(RunActivity a) => switch (a) {
     RunActivity.run => 'Run',
     RunActivity.walk => 'Walk',
@@ -1026,6 +1060,7 @@ class RunSession extends ChangeNotifier {
       if (ticks.value % 5 == 0) _readSteps();
       _sampleBike();
       _checkAutoPause();
+      zoneSecond();
       _pushLive();
       if (++_sinceSave >= saveEvery) flush();
     });
@@ -1236,6 +1271,9 @@ class RunSession extends ChangeNotifier {
   }
 
   void _reset() {
+    zoneSecs = 0;
+    zoneGoalDone = false;
+    drift.reset();
     _id = null;
     _startedAt = null;
     _pausedAt = null;

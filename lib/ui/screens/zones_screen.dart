@@ -183,7 +183,7 @@ class _HrWorkoutOptionsState extends State<HrWorkoutOptions> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('During workouts', style: text.titleMedium),
+        Text('During workouts and cardio', style: text.titleMedium),
         SwitchListTile(
           key: const Key('recoveryRest'),
           contentPadding: EdgeInsets.zero,
@@ -217,6 +217,17 @@ class _HrWorkoutOptionsState extends State<HrWorkoutOptions> {
               ),
             ],
           ),
+        SwitchListTile(
+          key: const Key('driftAlert'),
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Heart-rate drift alert'),
+          subtitle: const Text('On long cardio: said once when your heart rate climbs 8 % at the same speed'),
+          value: s.run.driftAlert,
+          onChanged: (v) async {
+            await s.setDriftAlert(v);
+            setState(() {});
+          },
+        ),
         SwitchListTile(
           key: const Key('hrRecoveryCheck'),
           contentPadding: EdgeInsets.zero,

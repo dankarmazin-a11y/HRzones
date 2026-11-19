@@ -330,6 +330,7 @@ class _Numbers extends StatelessWidget {
         const SizedBox(height: 20),
         ...rows,
         _GhostChip(run: run),
+        _ZoneGoalChip(run: run),
         const SizedBox(height: 24),
         const _HeartRate(),
         if (!run.riding) _Cadence(run: run),
@@ -803,6 +804,50 @@ class _Cadence extends StatelessWidget {
 }
 
 /// Racing an earlier run: "Ahead 0:12" (green) / "Behind 0:08" (orange).
+/// Time-in-zone goal (owner's idea 2): "In zone 12:40 / 20:00", full = ✓.
+class _ZoneGoalChip extends StatelessWidget {
+  const _ZoneGoalChip({required this.run});
+
+  final RunSession run;
+
+  @override
+  Widget build(BuildContext context) {
+    if (run.zoneGoalMin <= 0) return const SizedBox.shrink();
+    final goal = run.zoneGoalMin * 60;
+    final done = run.zoneGoalDone;
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Container(
+        key: const Key('zoneGoalChip'),
+        padding: const EdgeInsets.fromLTRB(14, 6, 14, 8),
+        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(20)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              done
+                  ? '✓ ${run.zoneGoalMin} min in zone'
+                  : 'In zone ${formatDuration(Duration(seconds: run.zoneSecs))} / ${formatDuration(Duration(seconds: goal))}',
+              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 4),
+            SizedBox(
+              width: 180,
+              child: LinearProgressIndicator(
+                value: (run.zoneSecs / goal).clamp(0, 1),
+                minHeight: 5,
+                color: TimerStyle.workAccent,
+                backgroundColor: Colors.white24,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _GhostChip extends StatelessWidget {
   const _GhostChip({required this.run});
 
