@@ -52,7 +52,7 @@ Profile. Settings is a gear button at the top right of Profile.
   goals with rings, tools, your data) · Records (strength + running records with dates, milestones) ·
   Body & gear (measurements, shoes with km bars).
 - **Lock screen card:** glass (frosted) with the bright colour for the countdown and button.
-- **Setup:** chat style (app bubbles, answer chips).
+- **Setup:** slides (owner, 2026-11-19 – was a chat): one question per slide, picture box on top, big headline, answer chips, dots, Back + Skip.
 - **App icon:** heart pulse for now (name and icon will change later).
 - **Later:** realistic body figures / muscle map need real artwork (buy or commission) – keep photos until then.
 

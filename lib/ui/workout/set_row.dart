@@ -87,12 +87,7 @@ class _SetRowState extends State<SetRow> {
     }
   }
 
-  Color? _labelColor(BuildContext context) => switch (widget.set.type) {
-    SetType.warmup => Colors.amber,
-    SetType.drop => Colors.purple,
-    SetType.failure => Colors.red,
-    SetType.normal => null,
-  };
+  Color? _labelColor(BuildContext context) => setTypeColor(widget.set.type);
 
   String _previousText(WorkoutSet? p) {
     if (p == null) return '—';
@@ -394,26 +389,49 @@ class _SetRowState extends State<SetRow> {
   Future<void> _pickSetType(WorkoutSession session) async {
     const names = {
       SetType.normal: ('Normal set', 'Counts for your records'),
-      SetType.failure: ('F · Failure', 'Went until you couldn\'t do another rep'),
-      SetType.warmup: ('W · Warm-up', 'Not counted in volume or records'),
-      SetType.drop: ('D · Drop set', 'Lighter weight right after the previous set'),
+      SetType.failure: ('Failure', 'Went until you couldn\'t do another rep'),
+      SetType.warmup: ('Warm-up', 'Not counted in volume or records'),
+      SetType.drop: ('Drop set', 'Lighter weight right after the previous set'),
     };
+    const letters = {SetType.normal: null, SetType.failure: 'F', SetType.warmup: 'W', SetType.drop: 'D'};
+    final number = _label().replaceAll(RegExp(r'[^0-9]'), '');
     final t = await showModalBottomSheet<SetType>(
       context: context,
       builder: (c) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const ListTile(title: Text('Set type')),
-            for (final type in WorkoutSession.setTypeCycle)
-              ListTile(
-                key: Key('setType-${type.name}'),
-                title: Text(names[type]!.$1),
-                subtitle: Text(names[type]!.$2),
-                trailing: widget.set.type == type ? const Icon(Icons.check) : null,
-                onTap: () => Navigator.pop(c, type),
-              ),
-          ],
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const ListTile(title: Text('Set type')),
+              for (final type in WorkoutSession.setTypeCycle)
+                ListTile(
+                  key: Key('setType-${type.name}'),
+                  // owner (19 Nov): each type's letter in its own colour, in a soft box
+                  leading: Container(
+                    key: Key('setTypeLetter-${type.name}'),
+                    width: 36,
+                    height: 36,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: (setTypeColor(type) ?? Theme.of(c).colorScheme.onSurface).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Text(
+                      letters[type] ?? (number.isEmpty ? '1' : number),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                        color: setTypeColor(type) ?? Theme.of(c).colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
+                  title: Text(names[type]!.$1, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  subtitle: Text(names[type]!.$2),
+                  trailing: widget.set.type == type ? const Icon(Icons.check) : null,
+                  onTap: () => Navigator.pop(c, type),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -678,3 +696,12 @@ class _SetRowState extends State<SetRow> {
     );
   }
 }
+
+/// Set-type letter colours, the same in the row and the long-press menu
+/// (owner, 19 Nov): F red, W orange, D blue; a normal set shows its number.
+Color? setTypeColor(SetType t) => switch (t) {
+  SetType.failure => const Color(0xFFE5484D),
+  SetType.warmup => const Color(0xFFF08A3E),
+  SetType.drop => const Color(0xFF3E63DD),
+  SetType.normal => null,
+};

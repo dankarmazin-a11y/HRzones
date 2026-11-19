@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hrzones/app.dart';
 import 'package:hrzones/ui/timer_style.dart';
+import 'package:hrzones/ui/workout/active_workout_screen.dart' show setTypeColor;
+import 'package:hrzones/data/database.dart' show SetType;
 import 'package:hrzones/ui/workout/running_workout_bar.dart';
 import 'package:hrzones/workout/workout_session.dart';
 
@@ -43,6 +45,33 @@ void main() {
     final ink = tester.widget<InkWell>(find.byKey(Key('setNumber_${set.id}')));
     expect(ink.highlightColor, Colors.transparent);
     expect(ink.splashFactory, NoSplash.splashFactory);
+    await tester.runAsync(s.session.discard);
+    await tearDownApp(tester, s);
+  });
+
+  testWidgets('long-press menu shows each set type letter in its colour (F red, W orange, D blue)', (tester) async {
+    final s = (await tester.runAsync(testServices))!;
+    await tester.runAsync(() async {
+      await s.session.startEmpty();
+      await s.session.addExercises([(await s.exercises.byId('Barbell_Bench_Press'))!]);
+    });
+    await tester.pumpWidget(HrZonesApp(services: s));
+    await settle(tester);
+    await tester.tap(find.byType(RunningWorkoutBar));
+    await settle(tester);
+    final set = s.session.active!.exercises.single.sets.first;
+    await tester.longPress(find.byKey(Key('setNumber_${set.id}')));
+    await settle(tester);
+    for (final (type, letter) in [(SetType.failure, 'F'), (SetType.warmup, 'W'), (SetType.drop, 'D')]) {
+      final box = find.byKey(Key('setTypeLetter-${type.name}'));
+      final txt = tester.widget<Text>(find.descendant(of: box, matching: find.byType(Text)));
+      expect(txt.data, letter);
+      expect(txt.style!.color, setTypeColor(type));
+    }
+    expect(setTypeColor(SetType.failure), isNot(setTypeColor(SetType.drop)));
+    await tester.tap(find.byKey(const Key('setType-failure')));
+    await settle(tester);
+    expect(set.type, SetType.failure);
     await tester.runAsync(s.session.discard);
     await tearDownApp(tester, s);
   });
