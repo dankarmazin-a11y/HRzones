@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 
+import '../one_line.dart';
 import '../../app_services.dart';
 import '../../hr/hr_monitor.dart';
 import '../../hr/zone_alert_engine.dart';
@@ -105,7 +106,8 @@ class ZonesScreen extends StatelessWidget {
         key: const Key('monitorBeepWhen'),
         showSelectedIcon: false,
         segments: [
-          for (final w in [BeepWhen.high, BeepWhen.low, BeepWhen.both]) ButtonSegment(value: w, label: Text(w.label)),
+          for (final w in [BeepWhen.high, BeepWhen.low, BeepWhen.both])
+            ButtonSegment(value: w, label: OneLine(w.label)),
         ],
         selected: {m.beepWhen},
         onSelectionChanged: (v) => m.setBeepWhen(v.first),

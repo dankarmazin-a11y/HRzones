@@ -184,7 +184,7 @@ Future<void> editPreset(BuildContext context, [HrPreset? existing]) async {
                 showSelectedIcon: false,
                 segments: [
                   for (final w in [BeepWhen.high, BeepWhen.low, BeepWhen.both])
-                    ButtonSegment(value: w, label: Text(w.label), tooltip: 'beepWhen_${w.name}'),
+                    ButtonSegment(value: w, label: OneLine(w.label), tooltip: 'beepWhen_${w.name}'),
                 ],
                 selected: {beepWhen},
                 onSelectionChanged: (v) => setState(() => beepWhen = v.first),
