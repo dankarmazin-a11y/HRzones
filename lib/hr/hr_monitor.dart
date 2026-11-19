@@ -154,7 +154,18 @@ class HrMonitor extends ChangeNotifier {
 
   void setAge(int age) {
     _age = age;
-    _zones = HrZones.fromAge(age);
+    _zones = HrZones(_maxHr ?? HrZones.maxHrFromAge(age));
+    _settingsChanged();
+  }
+
+  /// Your own max heart rate (owner's idea 4, 19 Nov: zones that fit you,
+  /// not 220 − age): typed in, or the highest one recorded. Null = from age.
+  int? _maxHr;
+  int? get maxHrOverride => _maxHr;
+
+  void setMaxHr(int? maxHr) {
+    _maxHr = maxHr;
+    _zones = HrZones(maxHr ?? HrZones.maxHrFromAge(_age));
     _settingsChanged();
   }
 

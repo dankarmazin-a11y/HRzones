@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../hr/hr_monitor.dart';
 import '../../app_services.dart';
 import '../../data/database.dart';
 import '../../run/gait.dart';
@@ -90,6 +91,8 @@ class _PlanEditorScreenState extends State<PlanEditorScreen> {
   late bool _workByDistance, _recoverByDistance;
   late int _work, _recover; // metres or seconds; recover 0 = none
   late bool _walkBreaks; // run/walk: the breaks are walked
+  late bool _byHr; // heart-rate intervals: work up to / recover down to a heart rate
+  late int _workBpm, _recoverBpm;
 
   @override
   void initState() {
@@ -106,7 +109,13 @@ class _PlanEditorScreenState extends State<PlanEditorScreen> {
     _recoverByDistance = spec?.recover?.byDistance ?? true;
     _recover = spec?.recover?.value ?? (spec?.isIntervals == true ? 0 : 200);
     _walkBreaks = spec?.walkBreaks ?? false;
+    _byHr = spec?.work?.untilBpm != null;
+    _workBpm = spec?.work?.untilBpm ?? 165;
+    _recoverBpm = spec?.recover?.untilBpm ?? 130;
   }
+
+  /// Longest a heart-rate step may take (in case the heart rate never gets there).
+  static const _hrStepCapS = 600;
 
   @override
   void dispose() {
@@ -118,8 +127,12 @@ class _PlanEditorScreenState extends State<PlanEditorScreen> {
       ? PlanSpec(
           warmup: _warmupMin > 0 ? PlanStep(StepKind.warmup, byDistance: false, value: _warmupMin * 60) : null,
           repeats: _repeats,
-          work: PlanStep(StepKind.work, byDistance: _workByDistance, value: _work),
-          recover: _recover > 0
+          work: _byHr
+              ? PlanStep(StepKind.work, byDistance: false, value: _hrStepCapS, untilBpm: _workBpm)
+              : PlanStep(StepKind.work, byDistance: _workByDistance, value: _work),
+          recover: _byHr
+              ? PlanStep(StepKind.recover, byDistance: false, value: _hrStepCapS, untilBpm: _recoverBpm)
+              : _recover > 0
               ? PlanStep(StepKind.recover, byDistance: _recoverByDistance, value: _recover, walking: _walkBreaks)
               : null,
           cooldown: _cooldownMin > 0 ? PlanStep(StepKind.cooldown, byDistance: false, value: _cooldownMin * 60) : null,
@@ -275,34 +288,72 @@ class _PlanEditorScreenState extends State<PlanEditorScreen> {
                 onChanged: (v) => setState(() => _repeats = v.toInt()),
               ),
             ),
-            row(
-              'Run fast',
-              _amount(
-                key: const Key('workValue'),
-                byDistance: _workByDistance,
-                value: _work,
-                onKind: (d) => setState(() {
-                  _workByDistance = d;
-                  _work = d ? 400 : 60;
-                }),
-                onValue: (v) => setState(() => _work = v),
-              ),
+            SwitchListTile(
+              key: const Key('planByHr'),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('By heart rate'),
+              subtitle: const Text('Run fast until your heart rate is up, recover until it is down (needs a strap)'),
+              value: _byHr,
+              onChanged: (v) => setState(() => _byHr = v),
             ),
-            row(
-              'Recover',
-              _amount(
-                key: const Key('recoverValue'),
-                byDistance: _recoverByDistance,
-                value: _recover,
-                allowNone: true,
-                onKind: (d) => setState(() {
-                  _recoverByDistance = d;
-                  _recover = d ? 200 : 60;
-                }),
-                onValue: (v) => setState(() => _recover = v),
+            if (_byHr) ...[
+              row(
+                'Run fast up to',
+                EditableNumber(
+                  key: const Key('planWorkBpm'),
+                  value: _workBpm,
+                  title: 'Run fast until (bpm)',
+                  min: 100,
+                  max: 220,
+                  suffix: 'bpm',
+                  display: '$_workBpm bpm',
+                  onChanged: (v) => setState(() => _workBpm = v.toInt()),
+                ),
               ),
-            ),
-            if (_recover > 0)
+              row(
+                'Recover down to',
+                EditableNumber(
+                  key: const Key('planRecoverBpm'),
+                  value: _recoverBpm,
+                  title: 'Recover until (bpm)',
+                  min: 60,
+                  max: 200,
+                  suffix: 'bpm',
+                  display: '$_recoverBpm bpm',
+                  onChanged: (v) => setState(() => _recoverBpm = v.toInt()),
+                ),
+              ),
+            ],
+            if (!_byHr)
+              row(
+                'Run fast',
+                _amount(
+                  key: const Key('workValue'),
+                  byDistance: _workByDistance,
+                  value: _work,
+                  onKind: (d) => setState(() {
+                    _workByDistance = d;
+                    _work = d ? 400 : 60;
+                  }),
+                  onValue: (v) => setState(() => _work = v),
+                ),
+              ),
+            if (!_byHr)
+              row(
+                'Recover',
+                _amount(
+                  key: const Key('recoverValue'),
+                  byDistance: _recoverByDistance,
+                  value: _recover,
+                  allowNone: true,
+                  onKind: (d) => setState(() {
+                    _recoverByDistance = d;
+                    _recover = d ? 200 : 60;
+                  }),
+                  onValue: (v) => setState(() => _recover = v),
+                ),
+              ),
+            if (_recover > 0 && !_byHr)
               SwitchListTile(
                 key: const Key('planWalkBreaks'),
                 contentPadding: EdgeInsets.zero,
@@ -373,7 +424,12 @@ class PlanBanner extends StatelessWidget {
                 ),
               ),
               Text(
-                step.byDistance ? '${left.round()} m left' : '${formatDuration(Duration(seconds: left.round()))} left',
+                step.untilBpm != null
+                    ? '♥ ${HrScope.of(context).bpm ?? '–'} → ${step.untilBpm}'
+                    : step.byDistance
+                    ? '${left.round()} m left'
+                    : '${formatDuration(Duration(seconds: left.round()))} left',
+                key: const Key('planBannerLeft'),
                 style: const TextStyle(color: Colors.white70, fontSize: 16),
               ),
             ],

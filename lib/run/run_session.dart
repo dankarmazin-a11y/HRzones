@@ -546,7 +546,7 @@ class RunSession extends ChangeNotifier {
   void _advancePlan() {
     final p = plan;
     if (p == null || p.done || paused) return;
-    final event = p.update(distanceM, moving.inMilliseconds / 1000);
+    final event = p.update(distanceM, moving.inMilliseconds / 1000, bpm: hr.running ? hr.bpm : null);
     if (event == null) return;
     switch (event) {
       case PlanEvent.halfway:

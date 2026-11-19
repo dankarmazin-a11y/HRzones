@@ -7,7 +7,15 @@ import '../units/units.dart';
 enum StepKind { warmup, work, recover, cooldown, goal }
 
 class PlanStep {
-  const PlanStep(this.kind, {required this.byDistance, required this.value, this.walking = false});
+  const PlanStep(this.kind, {required this.byDistance, required this.value, this.walking = false, this.untilBpm});
+
+  /// Heart-rate intervals (owner's idea 5, 19 Nov): a work step ends once the
+  /// heart rate reaches this, a recover step once it is down to it; [value]
+  /// (seconds) is then the longest it may take.
+  final int? untilBpm;
+
+  /// Shortest a heart-rate step lasts (a spike doesn't end it at once).
+  static const minBpmStepS = 15;
 
   final StepKind kind;
 
@@ -27,15 +35,20 @@ class PlanStep {
   };
 
   /// "400 m", "1.5 km", "10 min", "90 s".
-  String get amount => byDistance ? metresText(value) : secondsText(value);
+  String get amount => untilBpm != null
+      ? (kind == StepKind.recover ? 'down to $untilBpm bpm' : 'up to $untilBpm bpm')
+      : byDistance
+      ? metresText(value)
+      : secondsText(value);
 
-  Map<String, Object> toJson() => {byDistance ? 'd' : 's': value, if (walking) 'w': 1};
+  Map<String, Object> toJson() => {byDistance ? 'd' : 's': value, if (walking) 'w': 1, 'h': ?untilBpm};
 
   static PlanStep? fromJson(StepKind kind, Object? json) {
     if (json is! Map) return null;
-    final d = json['d'], s = json['s'], w = json['w'] == 1;
+    final d = json['d'], s = json['s'], w = json['w'] == 1, h = json['h'];
+    final bpm = h is num ? h.toInt() : null;
     if (d is num) return PlanStep(kind, byDistance: true, value: d.toInt(), walking: w);
-    if (s is num) return PlanStep(kind, byDistance: false, value: s.toInt(), walking: w);
+    if (s is num) return PlanStep(kind, byDistance: false, value: s.toInt(), walking: w, untilBpm: bpm);
     return null;
   }
 }
@@ -87,7 +100,9 @@ class PlanSpec {
     return [
       if (warmup != null) 'Warm-up ${warmup!.amount}',
       if (work != null && walkBreaks) '$repeats × run ${work!.amount} / walk ${recover!.amount}',
-      if (work != null && !walkBreaks)
+      if (work != null && work!.untilBpm != null)
+        '$repeats × run ${work!.amount}${recover == null ? '' : ' / recover ${recover!.amount}'}',
+      if (work != null && !walkBreaks && work!.untilBpm == null)
         '$repeats × ${work!.amount}${recover == null ? '' : ' / ${recover!.amount} easy'}',
       if (cooldown != null) 'Cool-down ${cooldown!.amount}',
     ].join(' · ');
@@ -166,6 +181,7 @@ class Lap {
     'by': step.byDistance ? 'd' : 's',
     'v': step.value,
     if (step.walking) 'w': 1,
+    if (step.untilBpm != null) 'h': step.untilBpm!,
     'm': distanceM,
     't': seconds,
   };
@@ -174,7 +190,13 @@ class Lap {
     final kind = StepKind.values.where((k) => k.name == m['k']).firstOrNull;
     if (kind == null) return null;
     return Lap(
-      step: PlanStep(kind, byDistance: m['by'] == 'd', value: (m['v'] as num).toInt(), walking: m['w'] == 1),
+      step: PlanStep(
+        kind,
+        byDistance: m['by'] == 'd',
+        value: (m['v'] as num).toInt(),
+        walking: m['w'] == 1,
+        untilBpm: (m['h'] as num?)?.toInt(),
+      ),
       distanceM: (m['m'] as num).toDouble(),
       seconds: (m['t'] as num).toDouble(),
     );
@@ -240,12 +262,19 @@ class PlanRunner {
     return (s.value - (s.byDistance ? metres - _startM : seconds - _startS)).clamp(0, s.value.toDouble());
   }
 
-  /// Call on every GPS fix / second with the run's distance and moving time.
-  PlanEvent? update(double metres, double seconds) {
+  /// Call on every GPS fix / second with the run's distance and moving time
+  /// (and the heart rate, for heart-rate steps).
+  PlanEvent? update(double metres, double seconds, {int? bpm}) {
     final s = current;
     if (s == null) return null;
     final doneAmount = s.byDistance ? metres - _startM : seconds - _startS;
-    if (doneAmount >= s.value) {
+    final h = s.untilBpm;
+    final bpmReached =
+        h != null &&
+        bpm != null &&
+        seconds - _startS >= PlanStep.minBpmStepS &&
+        (s.kind == StepKind.recover ? bpm <= h : bpm >= h);
+    if (doneAmount >= s.value || bpmReached) {
       laps.add(Lap(step: s, distanceM: metres - _startM, seconds: seconds - _startS));
       _startM = metres;
       _startS = seconds;

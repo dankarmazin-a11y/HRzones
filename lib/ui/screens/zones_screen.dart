@@ -4,6 +4,7 @@ import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import '../../app_services.dart';
 import '../../hr/hr_monitor.dart';
 import '../../hr/zone_alert_engine.dart';
+import '../../hr/zones.dart';
 import '../hr_monitor_card.dart';
 import '../hr_presets.dart';
 import '../hr_source_section.dart';
@@ -70,9 +71,10 @@ class ZonesScreen extends StatelessWidget {
         children: [
           const Text('Age '),
           EditableNumber(value: m.age, title: 'Age', min: 10, max: 100, onChanged: (v) => m.setAge(v.round())),
-          Text(' → max HR ${m.zones.maxHr} bpm (220 − age)'),
+          if (m.maxHrOverride == null) Text(' → max HR ${m.zones.maxHr} bpm (220 − age)'),
         ],
       ),
+      const MaxHrPicker(),
       Slider(
         min: 14,
         max: 80,
@@ -240,6 +242,74 @@ class _HrWorkoutOptionsState extends State<HrWorkoutOptions> {
           },
         ),
       ],
+    );
+  }
+}
+
+/// Max heart rate for the zones (owner's idea 4): from age, the highest one
+/// recorded in your workouts and runs, or typed in (e.g. from a test).
+class MaxHrPicker extends StatelessWidget {
+  const MaxHrPicker({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Services.of(context);
+    final m = HrScope.of(context);
+    final text = Theme.of(context).textTheme;
+    return FutureBuilder<int?>(
+      future: s.workouts.highestHr(),
+      builder: (context, snap) {
+        final highest = snap.data;
+        final fromAge = HrZones.maxHrFromAge(m.age);
+        final own = m.maxHrOverride;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Max heart rate for your zones', style: text.labelLarge),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                ChoiceChip(
+                  key: const Key('maxHrAge'),
+                  label: Text('From age · $fromAge'),
+                  selected: own == null,
+                  onSelected: (_) => m.setMaxHr(null),
+                ),
+                if (highest != null && highest > 100)
+                  ChoiceChip(
+                    key: const Key('maxHrHighest'),
+                    label: Text('Highest recorded · $highest'),
+                    selected: own == highest,
+                    onSelected: (_) => m.setMaxHr(highest),
+                  ),
+                ChoiceChip(
+                  key: const Key('maxHrOwn'),
+                  label: Text(own != null && own != highest ? 'Your own · $own' : 'Type your own'),
+                  selected: own != null && own != highest,
+                  onSelected: (_) async {
+                    final v = await promptNumber(
+                      context,
+                      title: 'Max heart rate (bpm)',
+                      initial: own ?? fromAge,
+                      min: 100,
+                      max: 240,
+                    );
+                    if (v != null) m.setMaxHr(v.round());
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Best: your real max from a hard effort (e.g. 3 × 3 min uphill as hard as you can, after a warm-up). '
+              'Zones and their colours follow it everywhere.',
+              style: text.bodySmall,
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -526,6 +526,8 @@ class AppServices {
     final min = await getInt('rangeMin'), max = await getInt('rangeMax');
     final cooldown = await getInt('cooldownS');
     final volume = double.tryParse(await db.getSetting('volume') ?? '');
+    final maxHr = await getInt('maxHr');
+    if (maxHr != null && maxHr >= 100 && maxHr <= 240) hr.setMaxHr(maxHr);
     if (age != null) hr.setAge(age);
     if (min != null && max != null && min < max) hr.setRange(HrRange(min: min, max: max));
     if (cooldown != null) hr.setCooldown(Duration(seconds: cooldown));
@@ -557,6 +559,7 @@ class AppServices {
     await db.setSetting('cooldownS', '${hr.settings.cooldown.inSeconds}');
     await db.setSetting('volume', '${hr.volume}');
     await db.setSetting('beepWhen', '${hr.beepWhen.index}');
+    await db.setSetting('maxHr', '${hr.maxHrOverride ?? ''}');
     await db.setSetting('beepFaster', hr.engine.fasterWhenFar ? '1' : '0');
     await db.setSetting('backChime', hr.backChime ? '1' : '0');
   }

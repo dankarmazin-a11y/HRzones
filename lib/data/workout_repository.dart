@@ -332,6 +332,17 @@ class WorkoutRepository {
   Future<int?> hrRecoveryOf(String id) async =>
       (await (db.select(db.workouts)..where((w) => w.id.equals(id))).getSingleOrNull())?.hrRecovery;
 
+  /// The highest heart rate ever recorded in a workout or run (null = none).
+  Future<int?> highestHr() async {
+    final row = await db
+        .customSelect(
+          'SELECT MAX(m) AS m FROM (SELECT MAX(max_hr) AS m FROM workouts UNION ALL SELECT MAX(max_hr) FROM runs)',
+          readsFrom: {db.workouts, db.runs},
+        )
+        .getSingleOrNull();
+    return row?.read<int?>('m');
+  }
+
   /// Average heart-rate recovery of the last [n] workouts and runs that have one.
   Future<double?> hrRecoveryAverage({int n = 10}) async {
     final rows = await db
