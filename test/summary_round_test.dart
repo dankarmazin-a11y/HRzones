@@ -3,6 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hrzones/app.dart';
 import 'package:hrzones/ui/workout/workout_summary_screen.dart';
 import 'package:hrzones/ui/workout/timer_widgets.dart';
+import 'package:hrzones/ui/figures/exercise_figure.dart';
+
+import 'dart:io';
+
 import 'package:hrzones/workout/workout_session.dart';
 
 import 'app_test.dart' show settle, tearDownApp;
@@ -75,5 +79,60 @@ void main() {
 
   test('the rest bar floats with big round corners (option B)', () {
     expect(timerBarRadius, greaterThanOrEqualTo(28));
+  });
+
+  test('the shipped figures unpack: every one is a known exercise with a start and an end frame', () {
+    final figures = decodeFigures(File('assets/figures.json.gz').readAsBytesSync());
+    expect(figures.length, greaterThan(500));
+    final ids = File('assets/exercises.json').readAsStringSync();
+    for (final MapEntry(:key, :value) in figures.entries) {
+      expect(ids.contains('"$key"'), isTrue, reason: key);
+      expect(value, hasLength(2));
+      expect(value.first.first.first, isA<String>());
+    }
+  });
+
+  testWidgets('a record shows the exercise line figure when there is one, the photo otherwise', (tester) async {
+    final s = (await tester.runAsync(testServices))!;
+    await tester.runAsync(() async {
+      await s.session.startEmpty();
+      await s.session.addExercises([(await s.exercises.byId('Barbell_Bench_Press'))!]);
+    });
+    FigureLibrary.enabled = true;
+    FigureLibrary.debugSet({
+      'Barbell_Bench_Press': [
+        [
+          ['C', 'i'],
+          ['W', 0.02],
+          ['B'],
+          ['M', 0.1, 0.1],
+          ['L', 0.9, 0.9],
+          ['S'],
+          ['K', 'x59627a'],
+          ['B'],
+          ['E', 0.5, 0.5, 0.1, 0.1, 0, 0, 6.283],
+          ['F'],
+        ],
+      ],
+    });
+    addTearDown(() {
+      FigureLibrary.debugSet(null);
+      FigureLibrary.enabled = false;
+    });
+    final w = s.session.active!;
+    final summary = WorkoutSummary(
+      workout: w,
+      endedAt: w.startedAt.add(const Duration(minutes: 30)),
+      records: [r('Barbell_Bench_Press', RecordKind.maxWeight, 100, 80)],
+    );
+    await tester.pumpWidget(HrZonesApp(services: s));
+    await settle(tester);
+    tester
+        .state<NavigatorState>(find.byType(Navigator).first)
+        .push(MaterialPageRoute<void>(builder: (_) => WorkoutSummaryScreen(summary: summary, justFinished: true)));
+    await settle(tester);
+    expect(find.byKey(const Key('figure_Barbell_Bench_Press')), findsOneWidget);
+    await tester.runAsync(s.session.discard);
+    await tearDownApp(tester, s);
   });
 }

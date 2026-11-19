@@ -11,6 +11,7 @@ import 'workout_editor.dart';
 import '../theme/emblems.dart';
 import '../theme/app_theme.dart';
 import '../exercises/exercise_avatar.dart';
+import '../figures/exercise_figure.dart';
 
 String formatDate(DateTime d) {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -372,8 +373,8 @@ class _RecordsState extends State<_Records> {
   }
 }
 
-/// The exercise's picture next to a record. The line figures from the
-/// figures project replace the photo once they ship (BACKLOG).
+/// The exercise's line figure next to a record (owner, 19 Nov), on a soft
+/// tile; the photo while an exercise has no approved figure yet.
 class RecordFigure extends StatelessWidget {
   const RecordFigure({super.key, required this.exercise, this.size = 40});
 
@@ -381,12 +382,18 @@ class RecordFigure extends StatelessWidget {
   final double size;
 
   @override
-  Widget build(BuildContext context) => SizedBox(
+  Widget build(BuildContext context) => Container(
     width: size,
     height: size,
-    child: ClipRRect(
+    decoration: BoxDecoration(
+      color: AppTheme.of(context).bright.withValues(alpha: 0.10),
       borderRadius: BorderRadius.circular(size * 0.25),
-      child: ExerciseAvatar(exercise: exercise, radius: size / 2),
+    ),
+    clipBehavior: Clip.antiAlias,
+    child: ExerciseFigure(
+      exerciseId: exercise.id,
+      size: size,
+      fallback: ExerciseAvatar(exercise: exercise, radius: size / 2),
     ),
   );
 }
