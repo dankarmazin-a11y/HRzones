@@ -4623,8 +4623,18 @@ class $HrPresetsTable extends HrPresets with TableInfo<$HrPresetsTable, HrPreset
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   ).withConverter<PresetUse>($HrPresetsTable.$converteruse);
+  static const VerificationMeta _beepWhenMeta = const VerificationMeta('beepWhen');
   @override
-  List<GeneratedColumn> get $columns => [id, updatedAt, name, minBpm, maxBpm, use];
+  late final GeneratedColumn<int> beepWhen = GeneratedColumn<int>(
+    'beep_when',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, updatedAt, name, minBpm, maxBpm, use, beepWhen];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -4655,6 +4665,9 @@ class $HrPresetsTable extends HrPresets with TableInfo<$HrPresetsTable, HrPreset
     } else if (isInserting) {
       context.missing(_maxBpmMeta);
     }
+    if (data.containsKey('beep_when')) {
+      context.handle(_beepWhenMeta, beepWhen.isAcceptableOrUnknown(data['beep_when']!, _beepWhenMeta));
+    }
     return context;
   }
 
@@ -4672,6 +4685,7 @@ class $HrPresetsTable extends HrPresets with TableInfo<$HrPresetsTable, HrPreset
       use: $HrPresetsTable.$converteruse.fromSql(
         attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}use'])!,
       ),
+      beepWhen: attachedDatabase.typeMapping.read(DriftSqlType.int, data['${effectivePrefix}beep_when'])!,
     );
   }
 
@@ -4690,6 +4704,9 @@ class HrPreset extends DataClass implements Insertable<HrPreset> {
   final int minBpm;
   final int maxBpm;
   final PresetUse use;
+
+  /// v20: which side beeps – `BeepWhen` index (0 both, 1 too high, 2 too low).
+  final int beepWhen;
   const HrPreset({
     required this.id,
     required this.updatedAt,
@@ -4697,6 +4714,7 @@ class HrPreset extends DataClass implements Insertable<HrPreset> {
     required this.minBpm,
     required this.maxBpm,
     required this.use,
+    required this.beepWhen,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -4709,6 +4727,7 @@ class HrPreset extends DataClass implements Insertable<HrPreset> {
     {
       map['use'] = Variable<int>($HrPresetsTable.$converteruse.toSql(use));
     }
+    map['beep_when'] = Variable<int>(beepWhen);
     return map;
   }
 
@@ -4720,6 +4739,7 @@ class HrPreset extends DataClass implements Insertable<HrPreset> {
       minBpm: Value(minBpm),
       maxBpm: Value(maxBpm),
       use: Value(use),
+      beepWhen: Value(beepWhen),
     );
   }
 
@@ -4732,6 +4752,7 @@ class HrPreset extends DataClass implements Insertable<HrPreset> {
       minBpm: serializer.fromJson<int>(json['minBpm']),
       maxBpm: serializer.fromJson<int>(json['maxBpm']),
       use: $HrPresetsTable.$converteruse.fromJson(serializer.fromJson<int>(json['use'])),
+      beepWhen: serializer.fromJson<int>(json['beepWhen']),
     );
   }
   @override
@@ -4744,18 +4765,27 @@ class HrPreset extends DataClass implements Insertable<HrPreset> {
       'minBpm': serializer.toJson<int>(minBpm),
       'maxBpm': serializer.toJson<int>(maxBpm),
       'use': serializer.toJson<int>($HrPresetsTable.$converteruse.toJson(use)),
+      'beepWhen': serializer.toJson<int>(beepWhen),
     };
   }
 
-  HrPreset copyWith({String? id, DateTime? updatedAt, String? name, int? minBpm, int? maxBpm, PresetUse? use}) =>
-      HrPreset(
-        id: id ?? this.id,
-        updatedAt: updatedAt ?? this.updatedAt,
-        name: name ?? this.name,
-        minBpm: minBpm ?? this.minBpm,
-        maxBpm: maxBpm ?? this.maxBpm,
-        use: use ?? this.use,
-      );
+  HrPreset copyWith({
+    String? id,
+    DateTime? updatedAt,
+    String? name,
+    int? minBpm,
+    int? maxBpm,
+    PresetUse? use,
+    int? beepWhen,
+  }) => HrPreset(
+    id: id ?? this.id,
+    updatedAt: updatedAt ?? this.updatedAt,
+    name: name ?? this.name,
+    minBpm: minBpm ?? this.minBpm,
+    maxBpm: maxBpm ?? this.maxBpm,
+    use: use ?? this.use,
+    beepWhen: beepWhen ?? this.beepWhen,
+  );
   HrPreset copyWithCompanion(HrPresetsCompanion data) {
     return HrPreset(
       id: data.id.present ? data.id.value : this.id,
@@ -4764,6 +4794,7 @@ class HrPreset extends DataClass implements Insertable<HrPreset> {
       minBpm: data.minBpm.present ? data.minBpm.value : this.minBpm,
       maxBpm: data.maxBpm.present ? data.maxBpm.value : this.maxBpm,
       use: data.use.present ? data.use.value : this.use,
+      beepWhen: data.beepWhen.present ? data.beepWhen.value : this.beepWhen,
     );
   }
 
@@ -4775,13 +4806,14 @@ class HrPreset extends DataClass implements Insertable<HrPreset> {
           ..write('name: $name, ')
           ..write('minBpm: $minBpm, ')
           ..write('maxBpm: $maxBpm, ')
-          ..write('use: $use')
+          ..write('use: $use, ')
+          ..write('beepWhen: $beepWhen')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, updatedAt, name, minBpm, maxBpm, use);
+  int get hashCode => Object.hash(id, updatedAt, name, minBpm, maxBpm, use, beepWhen);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -4791,7 +4823,8 @@ class HrPreset extends DataClass implements Insertable<HrPreset> {
           other.name == this.name &&
           other.minBpm == this.minBpm &&
           other.maxBpm == this.maxBpm &&
-          other.use == this.use);
+          other.use == this.use &&
+          other.beepWhen == this.beepWhen);
 }
 
 class HrPresetsCompanion extends UpdateCompanion<HrPreset> {
@@ -4801,6 +4834,7 @@ class HrPresetsCompanion extends UpdateCompanion<HrPreset> {
   final Value<int> minBpm;
   final Value<int> maxBpm;
   final Value<PresetUse> use;
+  final Value<int> beepWhen;
   final Value<int> rowid;
   const HrPresetsCompanion({
     this.id = const Value.absent(),
@@ -4809,6 +4843,7 @@ class HrPresetsCompanion extends UpdateCompanion<HrPreset> {
     this.minBpm = const Value.absent(),
     this.maxBpm = const Value.absent(),
     this.use = const Value.absent(),
+    this.beepWhen = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   HrPresetsCompanion.insert({
@@ -4818,6 +4853,7 @@ class HrPresetsCompanion extends UpdateCompanion<HrPreset> {
     required int minBpm,
     required int maxBpm,
     this.use = const Value.absent(),
+    this.beepWhen = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : name = Value(name),
        minBpm = Value(minBpm),
@@ -4829,6 +4865,7 @@ class HrPresetsCompanion extends UpdateCompanion<HrPreset> {
     Expression<int>? minBpm,
     Expression<int>? maxBpm,
     Expression<int>? use,
+    Expression<int>? beepWhen,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -4838,6 +4875,7 @@ class HrPresetsCompanion extends UpdateCompanion<HrPreset> {
       if (minBpm != null) 'min_bpm': minBpm,
       if (maxBpm != null) 'max_bpm': maxBpm,
       if (use != null) 'use': use,
+      if (beepWhen != null) 'beep_when': beepWhen,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -4849,6 +4887,7 @@ class HrPresetsCompanion extends UpdateCompanion<HrPreset> {
     Value<int>? minBpm,
     Value<int>? maxBpm,
     Value<PresetUse>? use,
+    Value<int>? beepWhen,
     Value<int>? rowid,
   }) {
     return HrPresetsCompanion(
@@ -4858,6 +4897,7 @@ class HrPresetsCompanion extends UpdateCompanion<HrPreset> {
       minBpm: minBpm ?? this.minBpm,
       maxBpm: maxBpm ?? this.maxBpm,
       use: use ?? this.use,
+      beepWhen: beepWhen ?? this.beepWhen,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -4883,6 +4923,9 @@ class HrPresetsCompanion extends UpdateCompanion<HrPreset> {
     if (use.present) {
       map['use'] = Variable<int>($HrPresetsTable.$converteruse.toSql(use.value));
     }
+    if (beepWhen.present) {
+      map['beep_when'] = Variable<int>(beepWhen.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -4898,6 +4941,7 @@ class HrPresetsCompanion extends UpdateCompanion<HrPreset> {
           ..write('minBpm: $minBpm, ')
           ..write('maxBpm: $maxBpm, ')
           ..write('use: $use, ')
+          ..write('beepWhen: $beepWhen, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -11440,6 +11484,7 @@ typedef $$HrPresetsTableCreateCompanionBuilder = HrPresetsCompanion Function({
   required int minBpm,
   required int maxBpm,
   Value<PresetUse> use,
+  Value<int> beepWhen,
   Value<int> rowid,
 });
 typedef $$HrPresetsTableUpdateCompanionBuilder = HrPresetsCompanion Function({
@@ -11449,6 +11494,7 @@ typedef $$HrPresetsTableUpdateCompanionBuilder = HrPresetsCompanion Function({
   Value<int> minBpm,
   Value<int> maxBpm,
   Value<PresetUse> use,
+  Value<int> beepWhen,
   Value<int> rowid,
 });
 
@@ -11475,6 +11521,9 @@ class $$HrPresetsTableFilterComposer extends Composer<_$AppDatabase, $HrPresetsT
 
   ColumnWithTypeConverterFilters<PresetUse, PresetUse, int> get use =>
       $composableBuilder(column: $table.use, builder: (column) => ColumnWithTypeConverterFilters(column));
+
+  ColumnFilters<int> get beepWhen =>
+      $composableBuilder(column: $table.beepWhen, builder: (column) => ColumnFilters(column));
 }
 
 class $$HrPresetsTableOrderingComposer extends Composer<_$AppDatabase, $HrPresetsTable> {
@@ -11500,6 +11549,9 @@ class $$HrPresetsTableOrderingComposer extends Composer<_$AppDatabase, $HrPreset
       $composableBuilder(column: $table.maxBpm, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<int> get use => $composableBuilder(column: $table.use, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get beepWhen =>
+      $composableBuilder(column: $table.beepWhen, builder: (column) => ColumnOrderings(column));
 }
 
 class $$HrPresetsTableAnnotationComposer extends Composer<_$AppDatabase, $HrPresetsTable> {
@@ -11522,6 +11574,8 @@ class $$HrPresetsTableAnnotationComposer extends Composer<_$AppDatabase, $HrPres
 
   GeneratedColumnWithTypeConverter<PresetUse, int> get use =>
       $composableBuilder(column: $table.use, builder: (column) => column);
+
+  GeneratedColumn<int> get beepWhen => $composableBuilder(column: $table.beepWhen, builder: (column) => column);
 }
 
 class $$HrPresetsTableTableManager
@@ -11555,6 +11609,7 @@ class $$HrPresetsTableTableManager
                 Value<int> minBpm = const Value.absent(),
                 Value<int> maxBpm = const Value.absent(),
                 Value<PresetUse> use = const Value.absent(),
+                Value<int> beepWhen = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => HrPresetsCompanion(
                 id: id,
@@ -11563,6 +11618,7 @@ class $$HrPresetsTableTableManager
                 minBpm: minBpm,
                 maxBpm: maxBpm,
                 use: use,
+                beepWhen: beepWhen,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -11573,6 +11629,7 @@ class $$HrPresetsTableTableManager
                 required int minBpm,
                 required int maxBpm,
                 Value<PresetUse> use = const Value.absent(),
+                Value<int> beepWhen = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => HrPresetsCompanion.insert(
                 id: id,
@@ -11581,6 +11638,7 @@ class $$HrPresetsTableTableManager
                 minBpm: minBpm,
                 maxBpm: maxBpm,
                 use: use,
+                beepWhen: beepWhen,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

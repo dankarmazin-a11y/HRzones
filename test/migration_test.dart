@@ -76,6 +76,7 @@ const _v16Columns = ['runs DROP COLUMN activity', 'runs DROP COLUMN walked_m', '
 const _v17Columns = ['runs DROP COLUMN max_speed_ms'];
 const _v19Columns = ['runs DROP COLUMN avg_power_w', 'runs DROP COLUMN max_power_w'];
 const _v18Columns = ['shoes DROP COLUMN kind', 'shoes DROP COLUMN serviced_km'];
+const _v20Columns = ['hr_presets DROP COLUMN beep_when'];
 const _v4Changes = [
   'exercises DROP COLUMN hidden',
   'template_exercises DROP COLUMN sets_json',
@@ -115,8 +116,12 @@ void main() {
       4,
       [..._v5Changes, ..._v6Columns, ..._v7Changes, ..._v9Columns, ..._shoes, ..._plans, ..._v15],
     ),
-    ('v5 database is upgraded', 5, [..._v6Columns, ..._v7Changes, ..._v9Columns, ..._shoes, ..._plans, ..._v15]),
-    ('v6 database is upgraded', 6, [..._v7Changes, ..._v9Columns, ..._shoes, ..._plans, ..._v15]),
+    (
+      'v5 database is upgraded',
+      5,
+      [..._v20Columns, ..._v6Columns, ..._v7Changes, ..._v9Columns, ..._shoes, ..._plans, ..._v15],
+    ),
+    ('v6 database is upgraded', 6, [..._v20Columns, ..._v7Changes, ..._v9Columns, ..._shoes, ..._plans, ..._v15]),
     (
       'v7 database is upgraded',
       7,
@@ -132,6 +137,7 @@ void main() {
         ..._v16Columns,
         ..._v17Columns,
         ..._v19Columns,
+        ..._v20Columns,
       ],
     ),
     (
@@ -148,6 +154,7 @@ void main() {
         ..._v16Columns,
         ..._v17Columns,
         ..._v19Columns,
+        ..._v20Columns,
       ],
     ),
     (
@@ -163,6 +170,7 @@ void main() {
         ..._v16Columns,
         ..._v17Columns,
         ..._v19Columns,
+        ..._v20Columns,
       ],
     ),
     (
@@ -177,6 +185,7 @@ void main() {
         ..._v16Columns,
         ..._v17Columns,
         ..._v19Columns,
+        ..._v20Columns,
       ],
     ),
     (
@@ -190,25 +199,40 @@ void main() {
         ..._v16Columns,
         ..._v17Columns,
         ..._v19Columns,
+        ..._v20Columns,
         ..._v18Columns,
       ],
     ),
     (
       'v12 database is upgraded',
       12,
-      [..._v13Changes, ..._v14Columns, ..._v15, ..._v16Columns, ..._v17Columns, ..._v19Columns, ..._v18Columns],
+      [
+        ..._v13Changes,
+        ..._v14Columns,
+        ..._v15,
+        ..._v16Columns,
+        ..._v17Columns,
+        ..._v19Columns,
+        ..._v20Columns,
+        ..._v18Columns,
+      ],
     ),
     (
       'v13 database is upgraded',
       13,
-      [..._v14Columns, ..._v15, ..._v16Columns, ..._v17Columns, ..._v19Columns, ..._v18Columns],
+      [..._v14Columns, ..._v15, ..._v16Columns, ..._v17Columns, ..._v19Columns, ..._v20Columns, ..._v18Columns],
     ),
-    ('v14 database is upgraded', 14, [..._v15, ..._v16Columns, ..._v17Columns, ..._v19Columns, ..._v18Columns]),
-    ('v15 database is upgraded', 15, [..._v16Columns, ..._v17Columns, ..._v19Columns, ..._v18Columns]),
-    ('v16 database is upgraded', 16, [..._v17Columns, ..._v19Columns, ..._v18Columns]),
-    ('v17 database is upgraded', 17, [..._v18Columns, ..._v19Columns]),
-    ('v18 database is upgraded', 18, _v19Columns),
-    ('missing column/table is repaired', 19, [..._v2Columns, 'DROP TABLE goals']),
+    (
+      'v14 database is upgraded',
+      14,
+      [..._v15, ..._v16Columns, ..._v17Columns, ..._v19Columns, ..._v20Columns, ..._v18Columns],
+    ),
+    ('v15 database is upgraded', 15, [..._v16Columns, ..._v17Columns, ..._v19Columns, ..._v20Columns, ..._v18Columns]),
+    ('v16 database is upgraded', 16, [..._v17Columns, ..._v19Columns, ..._v20Columns, ..._v18Columns]),
+    ('v17 database is upgraded', 17, [..._v18Columns, ..._v19Columns, ..._v20Columns]),
+    ('v18 database is upgraded', 18, [..._v19Columns, ..._v20Columns]),
+    ('v19 database is upgraded', 19, _v20Columns),
+    ('missing column/table is repaired', 20, [..._v2Columns, 'DROP TABLE goals']),
   ];
   for (final (label, version, drop) in cases) {
     test(label, () async {
@@ -230,7 +254,7 @@ void main() {
       expect(await cols('exercises'), contains('level'));
       expect(await cols('workouts'), contains('hr_preset_id'));
       expect(await cols('templates'), contains('hr_preset_id'));
-      expect(await cols('hr_presets'), contains('min_bpm'));
+      expect(await cols('hr_presets'), containsAll(['min_bpm', 'beep_when']));
       expect(await cols('interval_presets'), contains('segments_json'));
       expect(await cols('exercises'), containsAll(['unilateral', 'note', 'note_at']));
       expect(await cols('workout_sets'), contains('side'));

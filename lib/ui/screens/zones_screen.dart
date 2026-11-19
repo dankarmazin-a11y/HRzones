@@ -3,6 +3,7 @@ import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 
 import '../../app_services.dart';
 import '../../hr/hr_monitor.dart';
+import '../../hr/zone_alert_engine.dart';
 import '../hr_monitor_card.dart';
 import '../hr_presets.dart';
 import '../hr_source_section.dart';
@@ -95,6 +96,34 @@ class ZonesScreen extends StatelessWidget {
         'First alert after ${m.settings.grace.inSeconds} s out of range.',
       ),
       const SizedBox(height: 8),
+      // owner (19 Nov): beep only on one side of the zone
+      Text('Beep when', style: text.labelLarge),
+      const SizedBox(height: 4),
+      SegmentedButton<BeepWhen>(
+        key: const Key('monitorBeepWhen'),
+        showSelectedIcon: false,
+        segments: [
+          for (final w in [BeepWhen.high, BeepWhen.low, BeepWhen.both]) ButtonSegment(value: w, label: Text(w.label)),
+        ],
+        selected: {m.beepWhen},
+        onSelectionChanged: (v) => m.setBeepWhen(v.first),
+      ),
+      SwitchListTile(
+        key: const Key('beepFaster'),
+        contentPadding: EdgeInsets.zero,
+        title: const Text('Faster beeps when far out'),
+        subtitle: const Text('10 bpm or more outside the zone: beeps repeat twice as often'),
+        value: m.engine.fasterWhenFar,
+        onChanged: m.setFasterWhenFar,
+      ),
+      SwitchListTile(
+        key: const Key('backChime'),
+        contentPadding: EdgeInsets.zero,
+        title: const Text('Chime when back in the zone'),
+        subtitle: const Text('One soft sound after a beep, once you are back inside'),
+        value: m.backChime,
+        onChanged: m.setBackChime,
+      ),
       Row(
         children: [
           const Text('Minimum gap between alerts: '),

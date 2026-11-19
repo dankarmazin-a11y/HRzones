@@ -28,6 +28,7 @@ class HrPresetRepository {
     required int min,
     required int max,
     required PresetUse use,
+    int beepWhen = 0,
   }) async {
     final presetId = id ?? newId();
     await db
@@ -39,6 +40,7 @@ class HrPresetRepository {
             minBpm: min,
             maxBpm: max,
             use: Value(use),
+            beepWhen: Value(beepWhen),
             updatedAt: Value(DateTime.now()),
           ),
         );

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 
 import '../beep/beeper.dart';
+import '../beep/sounds.dart';
 import 'ble_hr_source.dart';
 import 'heart_rate_source.dart';
 import 'simulated_hr_source.dart';
@@ -17,7 +18,7 @@ class HrMonitor extends ChangeNotifier {
       beeper = beeper ?? Beeper.create(),
       _zones = HrZones.fromAge(age),
       _age = age {
-    engine = ZoneAlertEngine(range: _zones.rangeForZone(2));
+    engine = ZoneAlertEngine(range: _zones.rangeForZone(2))..fasterWhenFar = true;
   }
 
   HeartRateSource _source;
@@ -117,6 +118,7 @@ class HrMonitor extends ChangeNotifier {
     if (_sessionMax == null || r.bpm > _sessionMax!) _sessionMax = r.bpm;
     if (_intervalMax == null || r.bpm > _intervalMax!) _intervalMax = r.bpm;
     final alert = engine.onReading(r.bpm, r.time);
+    if (engine.justBack && backChime) beeper.play(SoundEvent.zoneBack);
     if (alert != null) {
       _lastAlert = alert;
       _lastAlertAt = r.time;
@@ -152,6 +154,26 @@ class HrMonitor extends ChangeNotifier {
   void setAge(int age) {
     _age = age;
     _zones = HrZones.fromAge(age);
+    _settingsChanged();
+  }
+
+  /// A soft chime when the heart rate is back in the zone after a beep.
+  bool backChime = true;
+
+  BeepWhen get beepWhen => engine.beepWhen;
+
+  void setBeepWhen(BeepWhen w) {
+    engine.beepWhen = w;
+    _settingsChanged();
+  }
+
+  void setFasterWhenFar(bool on) {
+    engine.fasterWhenFar = on;
+    _settingsChanged();
+  }
+
+  void setBackChime(bool on) {
+    backChime = on;
     _settingsChanged();
   }
 

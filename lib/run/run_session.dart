@@ -607,6 +607,7 @@ class RunSession extends ChangeNotifier {
     final startRange = _rangeFor(_liveGait);
     if (startRange != null) {
       hr.setRange(startRange);
+      if (preset != null) hr.setBeepWhen(BeepWhen.values[preset.beepWhen.clamp(0, BeepWhen.values.length - 1)]);
       if (!hr.running) {
         await hr.start();
         _hrStartedByRun = true;
@@ -832,6 +833,7 @@ class RunSession extends ChangeNotifier {
     final preset = await presetFor?.call(row.hrPresetId);
     if (preset != null) {
       hr.setRange(HrRange(min: preset.minBpm, max: preset.maxBpm));
+      hr.setBeepWhen(BeepWhen.values[preset.beepWhen.clamp(0, BeepWhen.values.length - 1)]);
       if (!hr.running) {
         await hr.start();
         _hrStartedByRun = true;

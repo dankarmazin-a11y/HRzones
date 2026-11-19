@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app_services.dart';
 import '../data/database.dart';
 import '../hr/hr_monitor.dart';
+import '../hr/zone_alert_engine.dart';
 import '../hr/zones.dart';
 import 'number_input.dart';
 import 'zone_colors.dart';
@@ -95,6 +96,7 @@ Future<void> editPreset(BuildContext context, [HrPreset? existing]) async {
   var min = existing?.minBpm ?? zones.zones[1].minBpm;
   var max = existing?.maxBpm ?? zones.zones[1].maxBpm;
   var use = existing?.use ?? PresetUse.any;
+  var beepWhen = BeepWhen.values[(existing?.beepWhen ?? 0).clamp(0, BeepWhen.values.length - 1)];
   final ok = await showDialog<bool>(
     context: context,
     builder: (c) => StatefulBuilder(
@@ -172,6 +174,26 @@ Future<void> editPreset(BuildContext context, [HrPreset? existing]) async {
                 selected: {use},
                 onSelectionChanged: (v) => setState(() => use = v.first),
               ),
+              const SizedBox(height: 16),
+              // owner (19 Nov): "just too high" – warm-ups and rests stay quiet
+              const Text('Beep when'),
+              const SizedBox(height: 4),
+              SegmentedButton<BeepWhen>(
+                key: const Key('presetBeepWhen'),
+                showSelectedIcon: false,
+                segments: [
+                  for (final w in [BeepWhen.high, BeepWhen.low, BeepWhen.both])
+                    ButtonSegment(value: w, label: Text(w.label), tooltip: 'beepWhen_${w.name}'),
+                ],
+                selected: {beepWhen},
+                onSelectionChanged: (v) => setState(() => beepWhen = v.first),
+              ),
+              const SizedBox(height: 4),
+              Text(switch (beepWhen) {
+                BeepWhen.high => '3 high beeps above $max. Nothing below $min.',
+                BeepWhen.low => '2 low beeps below $min. Nothing above $max.',
+                BeepWhen.both => '3 high beeps above $max, 2 low beeps below $min.',
+              }, style: Theme.of(c).textTheme.bodySmall),
             ],
           ),
         ),
@@ -184,7 +206,7 @@ Future<void> editPreset(BuildContext context, [HrPreset? existing]) async {
   );
   if (ok == true) {
     final n = name.text.trim().isEmpty ? '$min–$max bpm' : name.text.trim();
-    await s.presets.save(id: existing?.id, name: n, min: min, max: max, use: use);
+    await s.presets.save(id: existing?.id, name: n, min: min, max: max, use: use, beepWhen: beepWhen.index);
   }
   name.dispose();
 }

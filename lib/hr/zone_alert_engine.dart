@@ -5,6 +5,19 @@ enum RangeStatus { noSignal, inRange, above, below }
 
 enum ZoneAlert { high, low }
 
+/// Which side of the zone beeps (owner, 19 Nov: "just too high" so warm-ups
+/// and rests stay quiet). Stored by index on heart-rate zones – only append.
+enum BeepWhen {
+  both('Both'),
+  high('Too high'),
+  low('Too low');
+
+  const BeepWhen(this.label);
+  final String label;
+
+  bool allows(ZoneAlert a) => this == both || (this == high) == (a == ZoneAlert.high);
+}
+
 class AlertSettings {
   const AlertSettings({
     this.grace = const Duration(seconds: 5),
@@ -41,6 +54,22 @@ class ZoneAlertEngine {
   HrRange range;
   AlertSettings settings;
 
+  /// Only these alerts beep; the other side stays quiet.
+  BeepWhen beepWhen = BeepWhen.both;
+
+  /// Smarter beeps: far outside the zone the beeps repeat twice as often.
+  /// Off by default (the pace alerts use this engine too); the heart-rate
+  /// monitor switches it on from the setting `beepFaster`.
+  bool fasterWhenFar = false;
+
+  /// How far outside the zone counts as "far".
+  static const farBpm = 10;
+
+  /// Set by [onReading] when the heart rate came back into the zone after an
+  /// alert (a gentle chime).
+  bool justBack = false;
+  bool _alerted = false;
+
   RangeStatus _status = RangeStatus.noSignal;
   DateTime? _lastReadingAt;
   DateTime? _outOfRangeSince;
@@ -51,20 +80,28 @@ class ZoneAlertEngine {
   /// Process one reading. Returns an alert to play, or null.
   ZoneAlert? onReading(int bpm, DateTime now) {
     _lastReadingAt = now;
+    justBack = false;
     final next = _classify(bpm);
     if (next != _status) {
+      if (next == RangeStatus.inRange && _alerted) justBack = true;
+      _alerted = false;
       _outOfRangeSince = next == RangeStatus.inRange ? null : now;
       _status = next;
     }
     if (_status == RangeStatus.inRange) return null;
+    final alert = _status == RangeStatus.above ? ZoneAlert.high : ZoneAlert.low;
+    if (!beepWhen.allows(alert)) return null;
 
     final since = _outOfRangeSince!;
     if (now.difference(since) < settings.grace) return null;
     final last = _lastAlertAt;
-    if (last != null && now.difference(last) < settings.cooldown) return null;
+    final far = alert == ZoneAlert.high ? bpm >= range.max + farBpm : bpm <= range.min - farBpm;
+    final cooldown = fasterWhenFar && far ? settings.cooldown ~/ 2 : settings.cooldown;
+    if (last != null && now.difference(last) < cooldown) return null;
 
     _lastAlertAt = now;
-    return _status == RangeStatus.above ? ZoneAlert.high : ZoneAlert.low;
+    _alerted = true;
+    return alert;
   }
 
   /// Call about once a second so a lost signal is detected even when no
@@ -78,6 +115,8 @@ class ZoneAlertEngine {
   }
 
   void reset() {
+    justBack = false;
+    _alerted = false;
     _status = RangeStatus.noSignal;
     _lastReadingAt = null;
     _outOfRangeSince = null;

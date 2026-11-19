@@ -231,6 +231,9 @@ class HrPresets extends Table with SyncColumns {
   IntColumn get maxBpm => integer()();
   IntColumn get use => intEnum<PresetUse>().withDefault(const Constant(0))();
 
+  /// v20: which side beeps – `BeepWhen` index (0 both, 1 too high, 2 too low).
+  IntColumn get beepWhen => integer().withDefault(const Constant(0))();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -471,7 +474,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? _open());
 
   @override
-  int get schemaVersion => 19;
+  int get schemaVersion => 20;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -554,6 +557,7 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(shoes, shoes.kind);
         await m.addColumn(shoes, shoes.servicedKm);
       }
+      if (from >= 5 && from < 20) await m.addColumn(hrPresets, hrPresets.beepWhen);
     },
     beforeOpen: (details) async {
       await _addMissingColumns();

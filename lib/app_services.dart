@@ -24,6 +24,7 @@ import 'data/template_repository.dart';
 import 'data/workout_repository.dart';
 import 'hr/ble_hr_source.dart';
 import 'hr/hr_monitor.dart';
+import 'hr/zone_alert_engine.dart';
 import 'hr/zones.dart';
 import 'live/live_activity.dart';
 import 'notify/rest_notifier.dart';
@@ -494,6 +495,10 @@ class AppServices {
     if (min != null && max != null && min < max) hr.setRange(HrRange(min: min, max: max));
     if (cooldown != null) hr.setCooldown(Duration(seconds: cooldown));
     if (volume != null) hr.setVolume(volume);
+    final bw = await getInt('beepWhen');
+    if (bw != null && bw >= 0 && bw < BeepWhen.values.length) hr.setBeepWhen(BeepWhen.values[bw]);
+    hr.setFasterWhenFar(await db.getSetting('beepFaster') != '0');
+    hr.setBackChime(await db.getSetting('backChime') != '0');
     // Saved heart-rate source: "ble|<id>|<name>" or "simulated".
     final src = (await db.getSetting('hrSource'))?.split('|');
     if (src != null && src.length == 3 && src[0] == 'ble' && bluetoothSupported) {
@@ -515,6 +520,9 @@ class AppServices {
     await db.setSetting('rangeMax', '${hr.range.max}');
     await db.setSetting('cooldownS', '${hr.settings.cooldown.inSeconds}');
     await db.setSetting('volume', '${hr.volume}');
+    await db.setSetting('beepWhen', '${hr.beepWhen.index}');
+    await db.setSetting('beepFaster', hr.engine.fasterWhenFar ? '1' : '0');
+    await db.setSetting('backChime', hr.backChime ? '1' : '0');
   }
 
   Future<void> close() async {

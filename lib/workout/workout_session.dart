@@ -10,6 +10,7 @@ import '../data/workout_repository.dart';
 import '../data/exercise_repository.dart';
 import '../hr/hr_monitor.dart';
 import '../data/preset_repository.dart';
+import '../hr/zone_alert_engine.dart';
 import '../hr/zones.dart';
 import '../live/live_activity.dart';
 import '../notify/rest_notifier.dart';
@@ -343,6 +344,7 @@ class WorkoutSession extends ChangeNotifier {
     w.hrPresetId = p?.id;
     if (p != null && !templateMode && !editMode) {
       hr.setRange(HrRange(min: p.minBpm, max: p.maxBpm));
+      hr.setBeepWhen(BeepWhen.values[p.beepWhen.clamp(0, BeepWhen.values.length - 1)]);
       if (!hr.running) {
         await hr.start();
         _hrStartedByWorkout = true;
