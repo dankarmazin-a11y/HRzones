@@ -8,6 +8,7 @@ import '../number_input.dart';
 import 'run_start.dart';
 import '../../workout/stats.dart';
 import '../../units/units.dart';
+import '../one_line.dart';
 
 const _dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const _dayLetters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -461,7 +462,7 @@ class _WeeklyPlanEditorState extends State<WeeklyPlanEditor> {
             Card(
               child: ListTile(
                 key: Key('planDay_$wd'),
-                leading: SizedBox(width: 40, child: Text(_dayNames[wd - 1], style: text.titleSmall)),
+                leading: SizedBox(width: 40, child: OneLine(_dayNames[wd - 1], style: text.titleSmall)),
                 title: Text(_dayAt(wd)?.describe ?? 'Rest'),
                 textColor: _dayAt(wd) == null ? Theme.of(context).colorScheme.outline : null,
                 trailing: const Icon(Icons.edit, size: 18),
@@ -549,8 +550,8 @@ class _DayEditorState extends State<_DayEditor> {
                   SegmentedButton<bool>(
                     showSelectedIcon: false,
                     segments: [
-                      ButtonSegment(value: true, label: Text(Units.d)),
-                      const ButtonSegment(value: false, label: Text('min')),
+                      ButtonSegment(value: true, label: OneLine(Units.d)),
+                      const ButtonSegment(value: false, label: OneLine('min')),
                     ],
                     selected: {_byKm},
                     onSelectionChanged: (v) => setState(() => _byKm = v.first),

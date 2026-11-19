@@ -28,6 +28,7 @@ import '../../hr/zones.dart';
 import '../../run/route_zones.dart';
 import '../zone_colors.dart';
 import '../../units/units.dart';
+import '../one_line.dart';
 
 /// A finished run: distance, time, pace, heart rate.
 class RunSummaryScreen extends StatelessWidget {
@@ -414,10 +415,10 @@ class _RouteCardState extends State<_RouteCard> {
               showSelectedIcon: false,
               key: const Key('routeMode'),
               segments: const [
-                ButtonSegment(value: false, label: Text('Route'), icon: Icon(Icons.route)),
+                ButtonSegment(value: false, label: OneLine('Route'), icon: Icon(Icons.route)),
                 ButtonSegment(
                   value: true,
-                  label: Text('Heart-rate zones'),
+                  label: OneLine('Heart-rate zones'),
                   icon: Icon(Icons.favorite_outline, color: AppColors.heart),
                 ),
               ],
@@ -525,7 +526,7 @@ class _ZoneTimes extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 3),
                 child: Row(
                   children: [
-                    SizedBox(width: 92, child: Text('Z${z.number} ${z.name}', style: text.bodySmall)),
+                    SizedBox(width: 92, child: OneLine('Z${z.number} ${z.name}', style: text.bodySmall)),
                     Expanded(
                       child: LayoutBuilder(
                         builder: (context, box) => Align(
@@ -910,7 +911,7 @@ class _ElevationChart extends StatelessWidget {
                     interval: yStep,
                     getTitlesWidget: (v, meta) => SideTitleWidget(
                       meta: meta,
-                      child: Text('${v.round()} m', style: label),
+                      child: OneLine('${v.round()} m', style: label),
                     ),
                   ),
                 ),

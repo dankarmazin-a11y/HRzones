@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hrzones/app.dart';
 import 'package:hrzones/app_services.dart';
+import 'package:hrzones/platform/phone_system.dart';
 import 'package:hrzones/ui/workout/active_workout_screen.dart';
 import 'package:hrzones/workout/workout_session.dart';
 
@@ -68,6 +70,30 @@ void main() {
     await tester.binding.handlePopRoute();
     await settle(tester);
     expect(bar().selectedIndex, 0, reason: 'back from Profile goes Home instead of closing the app');
+    await tearDownApp(tester, s);
+  });
+
+  testWidgets('Android: back on Home puts the app in the background instead of closing it', (tester) async {
+    const channel = MethodChannel('hrzones/system');
+    final calls = <String>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) async {
+      calls.add(call.method);
+      return true;
+    });
+    PhoneSystem.hasNative = true;
+    addTearDown(() {
+      PhoneSystem.hasNative = false;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, null);
+    });
+    final s = (await tester.runAsync(testServices))!;
+    await tester.pumpWidget(HrZonesApp(services: s));
+    await settle(tester);
+
+    final closed = await tester.binding.handlePopRoute();
+    await settle(tester);
+    expect(calls, ['toBack'], reason: 'closing the app would stop a running workout and leave its card');
+    expect(closed, isTrue, reason: 'Back was handled by the app (no SystemNavigator.pop)');
+    expect(find.byType(HomeShell), findsOneWidget);
     await tearDownApp(tester, s);
   });
 }

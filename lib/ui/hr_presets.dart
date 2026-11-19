@@ -7,6 +7,7 @@ import '../hr/zone_alert_engine.dart';
 import '../hr/zones.dart';
 import 'number_input.dart';
 import 'zone_colors.dart';
+import 'one_line.dart';
 
 String useLabel(PresetUse u) => switch (u) {
   PresetUse.any => 'Strength & cardio',
@@ -167,9 +168,9 @@ Future<void> editPreset(BuildContext context, [HrPreset? existing]) async {
               SegmentedButton<PresetUse>(
                 showSelectedIcon: false,
                 segments: const [
-                  ButtonSegment(value: PresetUse.strength, label: Text('Strength')),
-                  ButtonSegment(value: PresetUse.run, label: Text('Cardio')),
-                  ButtonSegment(value: PresetUse.any, label: Text('Both')),
+                  ButtonSegment(value: PresetUse.strength, label: OneLine('Strength')),
+                  ButtonSegment(value: PresetUse.run, label: OneLine('Cardio')),
+                  ButtonSegment(value: PresetUse.any, label: OneLine('Both')),
                 ],
                 selected: {use},
                 onSelectionChanged: (v) => setState(() => use = v.first),

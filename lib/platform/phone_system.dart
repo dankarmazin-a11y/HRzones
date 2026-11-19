@@ -63,6 +63,16 @@ class PhoneSystem {
     } catch (_) {}
   }
 
+  /// Android: puts the app in the background (like the Home button) instead of closing it.
+  /// False when it couldn't (not Android) – then Back closes the app as usual.
+  static Future<bool> toBack() async {
+    try {
+      return await _channel.invokeMethod<bool>('toBack') ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Future<void> openUrl(String url) async {
     try {
       await _channel.invokeMethod<void>('openUrl', {'url': url});

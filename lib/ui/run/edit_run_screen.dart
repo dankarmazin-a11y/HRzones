@@ -8,6 +8,7 @@ import '../number_input.dart';
 import 'run_summary_screen.dart';
 import '../theme/app_theme.dart';
 import '../../units/units.dart';
+import '../one_line.dart';
 
 /// Log a run by hand ([run] null: treadmill, or the phone stayed at home)
 /// or edit a finished run: start, time, distance, kind, average heart rate.
@@ -123,8 +124,8 @@ class _EditRunScreenState extends State<EditRunScreen> {
             showSelectedIcon: false,
             key: const Key('editRunKind'),
             segments: const [
-              ButtonSegment(value: RunKind.outdoor, label: Text('Outdoor'), icon: Icon(Icons.landscape_outlined)),
-              ButtonSegment(value: RunKind.treadmill, label: Text('Treadmill'), icon: Icon(Icons.home_outlined)),
+              ButtonSegment(value: RunKind.outdoor, label: OneLine('Outdoor'), icon: Icon(Icons.landscape_outlined)),
+              ButtonSegment(value: RunKind.treadmill, label: OneLine('Treadmill'), icon: Icon(Icons.home_outlined)),
             ],
             selected: {_kind},
             onSelectionChanged: (v) => setState(() => _kind = v.first),

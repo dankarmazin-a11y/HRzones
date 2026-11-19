@@ -12,6 +12,7 @@ import 'run_start.dart';
 import 'run_summary_screen.dart' show gaitOf;
 import '../theme/emblems.dart';
 import '../../units/units.dart';
+import '../one_line.dart';
 
 /// Run tab: your planned runs; ▶ starts one, tap to edit.
 class RunPlansSection extends StatelessWidget {
@@ -193,8 +194,8 @@ class _PlanEditorScreenState extends State<PlanEditorScreen> {
           showSelectedIcon: false,
           style: const ButtonStyle(visualDensity: VisualDensity.compact),
           segments: const [
-            ButtonSegment(value: true, label: Text('m')),
-            ButtonSegment(value: false, label: Text('min')),
+            ButtonSegment(value: true, label: OneLine('m')),
+            ButtonSegment(value: false, label: OneLine('min')),
           ],
           selected: {byDistance},
           onSelectionChanged: (v) => onKind(v.first),
@@ -238,8 +239,8 @@ class _PlanEditorScreenState extends State<PlanEditorScreen> {
             showSelectedIcon: false,
             key: const Key('planType'),
             segments: const [
-              ButtonSegment(value: false, label: Text('Goal'), icon: Icon(Icons.flag_outlined)),
-              ButtonSegment(value: true, label: Text('Intervals'), icon: Icon(Icons.timer_outlined)),
+              ButtonSegment(value: false, label: OneLine('Goal'), icon: Icon(Icons.flag_outlined)),
+              ButtonSegment(value: true, label: OneLine('Intervals'), icon: Icon(Icons.timer_outlined)),
             ],
             selected: {_intervals},
             onSelectionChanged: (v) => setState(() {
@@ -486,7 +487,10 @@ class LapsCard extends StatelessWidget {
                         style: TextStyle(fontWeight: l.step.kind == StepKind.work ? FontWeight.w700 : null),
                       ),
                     ),
-                    SizedBox(width: 70, child: Text('${formatKm(l.distanceM)} ${Units.d}', textAlign: TextAlign.end)),
+                    SizedBox(
+                      width: 70,
+                      child: OneLine('${formatKm(l.distanceM)} ${Units.d}', textAlign: TextAlign.end),
+                    ),
                     SizedBox(
                       width: 64,
                       child: Text(formatDuration(Duration(seconds: l.seconds.round())), textAlign: TextAlign.end),

@@ -20,6 +20,8 @@ import io.flutter.plugin.common.MethodChannel
  * - battery: whether Android may stop the app in the background, and the phone's brand.
  * - openAppSettings: App info (Battery → Unrestricted, permissions).
  * - openUrl: a web page (battery help per brand).
+ * - toBack: Back on the Home tab puts the app in the background like the Home button, instead
+ *   of closing it – closing it ended a running workout's timers and left its card behind.
  * iOS has no such channel; Dart treats the missing plugin as "allowed".
  */
 class SystemPlugin(
@@ -101,6 +103,7 @@ class SystemPlugin(
           activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
           result.success(true)
         }
+        "toBack" -> result.success(activity.moveTaskToBack(true))
         else -> result.notImplemented()
       }
     } catch (e: Exception) {

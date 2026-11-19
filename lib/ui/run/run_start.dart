@@ -27,6 +27,7 @@ import 'shoes.dart' show editShoe;
 import 'bike_sensors_sheet.dart';
 import '../../platform/phone_system.dart';
 import '../battery_guide.dart';
+import '../one_line.dart';
 
 /// Start a run: the "Ready to run" sheet (heart-rate zone), location
 /// permission, a vibration, then the live run screen.
@@ -423,10 +424,14 @@ class _ReadyToRunSheetState extends State<ReadyToRunSheet> {
                       showSelectedIcon: false,
                       key: const Key('runKind'),
                       segments: [
-                        const ButtonSegment(value: false, label: Text('Outdoor'), icon: Icon(Icons.landscape_outlined)),
+                        const ButtonSegment(
+                          value: false,
+                          label: OneLine('Outdoor'),
+                          icon: Icon(Icons.landscape_outlined),
+                        ),
                         ButtonSegment(
                           value: true,
-                          label: Text(_activity == RunActivity.ride ? 'Indoor' : 'Treadmill'),
+                          label: OneLine(_activity == RunActivity.ride ? 'Indoor' : 'Treadmill'),
                           icon: const Icon(Icons.home_outlined),
                         ),
                       ],
