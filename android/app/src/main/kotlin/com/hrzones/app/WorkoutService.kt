@@ -65,6 +65,17 @@ class WorkoutService : Service() {
       }
   }
 
+  /**
+   * The app was swiped away from the recent apps. The Dart side (timers, GPS, beeps) is gone
+   * with it, so the card would stay for ever with a clock that keeps ticking, and couldn't be
+   * swiped away (owner's Galaxy, 2026-11-19). End it; the workout itself is saved and comes
+   * back when the app is opened again (like on iPhone).
+   */
+  override fun onTaskRemoved(rootIntent: Intent?) {
+    end(this)
+    super.onTaskRemoved(rootIntent)
+  }
+
   override fun onDestroy() {
     running = false
     wakeLock?.let { if (it.isHeld) it.release() }

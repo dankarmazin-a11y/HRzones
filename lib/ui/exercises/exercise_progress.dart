@@ -7,6 +7,7 @@ import '../../data/workout_repository.dart';
 import '../../workout/stats.dart';
 import '../theme/charts.dart';
 import '../../units/units.dart';
+import '../one_line.dart';
 
 /// Records, a progress chart and the history of one exercise.
 class ExerciseProgressSection extends StatelessWidget {
@@ -123,7 +124,7 @@ class _ProgressChart extends StatelessWidget {
               reservedSize: 40,
               getTitlesWidget: (v, m) => v == m.min || v == m.max
                   ? const SizedBox.shrink()
-                  : Text(m.formattedValue, style: SoftChart.axis(context)),
+                  : OneLine(m.formattedValue, style: SoftChart.axis(context)),
             ),
           ),
           bottomTitles: AxisTitles(

@@ -14,6 +14,7 @@ import '../body_map.dart';
 import '../exercises/exercise_detail_screen.dart';
 import '../theme/app_theme.dart';
 import '../../units/units.dart';
+import '../one_line.dart';
 
 /// The periods the stats can show.
 enum StatsPeriod {
@@ -65,7 +66,7 @@ class _StatsScreenState extends State<StatsScreen> {
                     key: const Key('statsPeriod'),
                     segments: [
                       for (final p in StatsPeriod.values)
-                        ButtonSegment(value: p, label: Text(p.label), tooltip: 'Last ${p.label}'),
+                        ButtonSegment(value: p, label: OneLine(p.label), tooltip: 'Last ${p.label}'),
                     ],
                     selected: {_period},
                     showSelectedIcon: false,
@@ -268,7 +269,7 @@ class _WeeksCard extends StatelessWidget {
                       reservedSize: 30,
                       interval: step,
                       getTitlesWidget: (v, m) =>
-                          Text(v == 0 ? '0' : '${v == v.roundToDouble() ? v.round() : v} h', style: axis),
+                          OneLine(v == 0 ? '0' : '${v == v.roundToDouble() ? v.round() : v} h', style: axis),
                     ),
                   ),
                   bottomTitles: AxisTitles(
@@ -405,7 +406,7 @@ class _MuscleSectionState extends State<_MuscleSection> {
                         padding: const EdgeInsets.symmetric(vertical: 3),
                         child: Row(
                           children: [
-                            SizedBox(width: 110, child: Text(titleCase(m), style: text.bodyMedium)),
+                            SizedBox(width: 110, child: OneLine(titleCase(m), style: text.bodyMedium)),
                             Expanded(
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(4),
