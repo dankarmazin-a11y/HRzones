@@ -9,6 +9,8 @@ import '../../workout/workout_session.dart';
 import 'active_workout_screen.dart';
 import 'workout_editor.dart';
 import '../theme/emblems.dart';
+import '../theme/app_theme.dart';
+import '../exercises/exercise_avatar.dart';
 
 String formatDate(DateTime d) {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -99,50 +101,42 @@ class WorkoutSummaryScreen extends StatelessWidget {
           if (justFinished) Text(s.workout.name, style: text.headlineSmall),
           Text(formatDate(s.workout.startedAt), style: text.bodyMedium),
           const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _Stat(label: 'Duration', value: formatDuration(s.duration)),
-              _Stat(label: 'Volume', value: formatWeight(s.volume)),
-              _Stat(label: 'Sets', value: '${s.setCount}'),
-              if (s.avgHr != null) _Stat(label: 'Avg HR', value: '${s.avgHr}'),
-              if (s.maxHr != null) _Stat(label: 'Max HR', value: '${s.maxHr}'),
-              // owner (17 Nov): calories and the rest of the picture
-              FutureBuilder<double?>(
-                key: const Key('summaryCalories'),
-                future: Services.of(context).body.latest('weight'),
-                builder: (context, snap) {
-                  final kcal = s.calories(weightKg: snap.data, age: Services.of(context).hr.age);
-                  return _Stat(
-                    label: kcal == null ? 'kcal (add weight)' : 'Calories',
-                    value: kcal == null ? '–' : '${kcal.round()} kcal',
-                  );
-                },
-              ),
-              if (s.reps > 0) _Stat(label: 'Reps', value: '${s.reps}'),
-              _Stat(label: 'Working', value: formatDuration(s.working)),
-              _Stat(label: 'Resting', value: formatDuration(s.resting)),
-              if (s.heaviestSet != null)
-                _Stat(
-                  label: 'Heaviest set',
-                  value:
-                      '${formatWeight(s.heaviestSet!.weightKg!)}'
-                      '${s.heaviestSet!.reps != null ? ' × ${s.heaviestSet!.reps}' : ''}',
+          // owner (19 Nov): a tidy 3 × 3 grid, every tile the same size, numbers centred, grey
+          FutureBuilder<double?>(
+            key: const Key('summaryCalories'),
+            future: Services.of(context).body.latest('weight'),
+            builder: (context, snap) {
+              final kcal = s.calories(weightKg: snap.data, age: Services.of(context).hr.age);
+              final h = s.heaviestSet;
+              final tiles = <(String, String)>[
+                ('Time', formatDuration(s.duration)),
+                (
+                  'Volume',
+                  '${formatBigWeight(s.volume)}${bigWeightUnit(s.volume).isEmpty ? '' : ' ${bigWeightUnit(s.volume)}'}',
                 ),
-            ],
+                ('Sets', '${s.setCount}'),
+                (kcal == null ? 'kcal (add weight)' : 'Calories', kcal == null ? '–' : '${kcal.round()}'),
+                ('Avg HR', s.avgHr == null ? '–' : '${s.avgHr}'),
+                ('Reps', '${s.reps}'),
+                ('Working', formatDuration(s.working)),
+                ('Resting', formatDuration(s.resting)),
+                ('Heaviest', h == null ? '–' : '${formatW(h.weightKg!)}${h.reps != null ? ' × ${h.reps}' : ''}'),
+              ];
+              return GridView(
+                key: const Key('summaryStats'),
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  mainAxisExtent: 74,
+                ),
+                children: [for (final (label, value) in tiles) _Stat(label: label, value: value)],
+              );
+            },
           ),
-          if (s.records.isNotEmpty) ...[
-            const SizedBox(height: 24),
-            Text('🏆 New personal records', style: text.titleMedium),
-            for (final r in s.records)
-              ListTile(
-                dense: true,
-                leading: const Icon(Icons.emoji_events, color: Colors.amber),
-                title: Text('${s.exerciseName(r.exerciseId)} – ${r.kind.label}'),
-                subtitle: Text('${formatRecord(r.kind, r.value)} (was ${formatRecord(r.kind, r.previous)})'),
-              ),
-          ],
+          if (s.records.isNotEmpty) ...[const SizedBox(height: 24), _Records(summary: s)],
           if (s.setsPerMuscle.isNotEmpty) ...[
             const SizedBox(height: 24),
             Text('Muscles worked', style: text.titleMedium),
@@ -204,6 +198,7 @@ class WorkoutSummaryScreen extends StatelessWidget {
   }
 }
 
+/// Grey stat tile: label on top, the number big, both centred.
 class _Stat extends StatelessWidget {
   const _Stat({required this.label, required this.value});
 
@@ -214,19 +209,184 @@ class _Stat extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     return Container(
-      width: 104,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(label, style: text.labelSmall),
-          Text(value, style: text.titleMedium),
+          Text(
+            label.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: text.labelSmall?.copyWith(letterSpacing: 0.4, color: AppTheme.of(context).muted),
+          ),
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(value, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -0.3)),
+          ),
         ],
       ),
     );
   }
+}
+
+/// The new records (owner, 19 Nov): at most 5, one per exercise, short; the
+/// most important one of the workout is highlighted on top.
+class _Records extends StatefulWidget {
+  const _Records({required this.summary});
+
+  final WorkoutSummary summary;
+
+  @override
+  State<_Records> createState() => _RecordsState();
+}
+
+class _RecordsState extends State<_Records> {
+  bool _all = false;
+
+  Exercise? _exercise(String id) {
+    for (final e in widget.summary.workout.exercises) {
+      if (e.exercise.id == id) return e.exercise;
+      for (final s in e.sets) {
+        if (s.subExercise?.id == id) return s.subExercise;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.summary;
+    final text = Theme.of(context).textTheme;
+    final t = AppTheme.of(context);
+    final top = topRecords(s.records);
+    final shown = _all ? s.records : top;
+    final more = s.records.length - top.length;
+    Widget figure(PersonalRecord r, double size) {
+      final e = _exercise(r.exerciseId);
+      return e == null
+          ? Icon(Icons.emoji_events, color: Colors.amber, size: size)
+          : RecordFigure(exercise: e, size: size);
+    }
+
+    final best = top.first;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          '🏆 ${s.records.length == 1 ? '1 new record' : '${s.records.length} new records'}',
+          style: text.titleMedium,
+        ),
+        const SizedBox(height: 8),
+        // The workout's most important record, highlighted.
+        Container(
+          key: const Key('topRecord'),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: t.bright.withValues(alpha: 0.12),
+            border: Border.all(color: t.bright, width: 1.5),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              figure(best, 56),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('BEST OF THE WORKOUT', style: text.labelSmall?.copyWith(color: t.bright, letterSpacing: 0.6)),
+                    Text(
+                      s.exerciseName(best.exerciseId),
+                      style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                    ),
+                    Text(best.kind.short, style: text.bodySmall?.copyWith(color: t.muted)),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    formatRecord(best.kind, best.value),
+                    style: text.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+                  ),
+                  Text(
+                    formatRecordGain(best),
+                    style: text.labelMedium?.copyWith(color: const Color(0xFF30A46C), fontWeight: FontWeight.w800),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 6),
+        for (final r in shown.where((r) => r != best))
+          Padding(
+            key: Key('record_${r.exerciseId}_${r.kind.name}'),
+            padding: const EdgeInsets.symmetric(vertical: 5),
+            child: Row(
+              children: [
+                figure(r, 40),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        s.exerciseName(r.exerciseId),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: text.bodyLarge?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      Text(r.kind.short, style: text.bodySmall?.copyWith(color: t.muted)),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(formatRecord(r.kind, r.value), style: text.titleSmall?.copyWith(fontWeight: FontWeight.w900)),
+                    Text(
+                      formatRecordGain(r),
+                      style: text.labelSmall?.copyWith(color: const Color(0xFF30A46C), fontWeight: FontWeight.w800),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        if (more > 0 && !_all)
+          TextButton(
+            key: const Key('moreRecords'),
+            onPressed: () => setState(() => _all = true),
+            child: Text('+$more more'),
+          ),
+      ],
+    );
+  }
+}
+
+/// The exercise's picture next to a record. The line figures from the
+/// figures project replace the photo once they ship (BACKLOG).
+class RecordFigure extends StatelessWidget {
+  const RecordFigure({super.key, required this.exercise, this.size = 40});
+
+  final Exercise exercise;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: size,
+    height: size,
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(size * 0.25),
+      child: ExerciseAvatar(exercise: exercise, radius: size / 2),
+    ),
+  );
 }
