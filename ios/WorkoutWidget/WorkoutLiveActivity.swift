@@ -134,6 +134,33 @@ private struct TimerBar: View {
   }
 }
 
+/// "Rest ━━━━━━━──── 0:41" on one line (the bar empties by itself).
+private struct TimerLine: View {
+  let label: String?
+  let start: Date?
+  let end: Date
+  let color: Color
+
+  var body: some View {
+    let from = min(start ?? Date(), end.addingTimeInterval(-1))
+    HStack(spacing: 8) {
+      Text(label ?? "Rest").font(.subheadline.weight(.bold)).lineLimit(1)
+      ProgressView(timerInterval: from...end, countsDown: true) {
+        EmptyView()
+      } currentValueLabel: {
+        EmptyView()
+      }
+      .progressViewStyle(.linear)
+      .tint(color)
+      Text(timerInterval: from...end, countsDown: true)
+        .font(.headline.monospacedDigit().bold())
+        .multilineTextAlignment(.trailing)
+        .frame(width: 56, alignment: .trailing)
+    }
+    .foregroundStyle(color)
+  }
+}
+
 /// Big numbers: pace · avg pace · heart rate (or sets done · heart rate).
 private struct Metrics: View {
   let metrics: [WorkoutMetric]
@@ -145,7 +172,7 @@ private struct Metrics: View {
         VStack(alignment: .leading, spacing: 0) {
           HStack(spacing: 3) {
             if m.label == "Heart rate" {
-              Image(systemName: "heart.fill").font(.headline).foregroundStyle(heartRed)
+              Image(systemName: "heart.fill").font(.subheadline).foregroundStyle(heartRed)
             }
             Text(m.value)
               .font(.system(size: size, weight: .bold, design: .rounded).monospacedDigit())
@@ -169,41 +196,36 @@ private struct LockScreenView: View {
   var body: some View {
     let over = stale || (state.countdownEnd.map { $0 <= Date() } ?? false)
     let actions = (state.actions ?? []).map { over && $0 == "skipRest" ? "completeSet" : $0 }
-    VStack(alignment: .leading, spacing: 6) {
-      // Name ··· clock
-      HStack(spacing: 8) {
+    // owner (22 Nov): the lock screen gives a card at most ~160 pt – anything taller is cut off at
+    // the top (the name and clock were hidden). One compact block: title + clock, detail, a
+    // one-line timer, then numbers and the button.
+    VStack(alignment: .leading, spacing: 5) {
+      HStack(alignment: .firstTextBaseline, spacing: 8) {
         Image(systemName: icon(attributes))
-          .font(.headline)
+          .font(.subheadline.bold())
           .foregroundStyle(state.paused ? .white.opacity(0.6) : accent(state))
-        Text(state.paused ? "\(attributes.name) · paused" : attributes.name)
-          .font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.75)).lineLimit(1)
-        Spacer(minLength: 8)
-        Clock(state: state)
-          .font(.title2.monospacedDigit().bold()).foregroundStyle(.white)
-          .multilineTextAlignment(.trailing)
-          .frame(maxWidth: 110, alignment: .trailing)
-      }
-      // Distance / exercise, big, and the set or step under it
-      VStack(alignment: .leading, spacing: 1) {
         Text(state.title)
-          .font(.system(size: 30, weight: .heavy, design: .rounded))
+          .font(.system(size: 21, weight: .heavy, design: .rounded))
           .foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.6)
-        if !state.detail.isEmpty {
-          // owner (17 Nov): the set and weight bold white – grey on dark was hard to read
-          Text(state.detail).font(.title3.weight(.bold)).foregroundStyle(.white).lineLimit(1)
-            .minimumScaleFactor(0.7)
-        }
+        Spacer(minLength: 6)
+        Clock(state: state)
+          .font(.title3.monospacedDigit().bold()).foregroundStyle(.white.opacity(0.9))
+          .multilineTextAlignment(.trailing)
+          .frame(maxWidth: 92, alignment: .trailing)
       }
+      // owner (17 Nov): the set and weight bold white – grey on dark was hard to read
+      Text(state.paused ? "Paused · \(state.detail)" : (state.detail.isEmpty ? attributes.name : state.detail))
+        .font(.system(size: 16, weight: .bold)).foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.7)
       if let end = state.countdownEnd, end > Date() {
-        TimerBar(label: state.countdownLabel, start: state.countdownStart, end: end, color: accent(state))
+        TimerLine(label: state.countdownLabel, start: state.countdownStart, end: end, color: accent(state))
       }
       // Numbers on the left half, the button on the right half
-      HStack(alignment: .center, spacing: 12) {
+      HStack(alignment: .center, spacing: 10) {
         if let metrics = state.metrics, !metrics.isEmpty {
-          Metrics(metrics: metrics, size: actions.isEmpty ? 26 : 22)
+          Metrics(metrics: metrics, size: actions.isEmpty ? 22 : 19)
             .frame(maxWidth: .infinity, alignment: .leading)
         } else if let hr = state.heartRate {
-          Label("\(hr)", systemImage: "heart.fill").font(.title3.bold()).foregroundStyle(heartRed)
+          Label("\(hr)", systemImage: "heart.fill").font(.headline).foregroundStyle(heartRed)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         if !actions.isEmpty {
@@ -211,9 +233,9 @@ private struct LockScreenView: View {
         }
       }
     }
-    // owner (17 Nov): more room around the edges (the clock touched them)
-    .padding(.horizontal, 24)
-    .padding(.vertical, 20)
+    // owner (17 Nov): room around the edges; less top/bottom so it fits (22 Nov)
+    .padding(.horizontal, 20)
+    .padding(.vertical, 12)
   }
 }
 
@@ -231,10 +253,10 @@ private struct CardButtons: View {
             Label(title(a), systemImage: symbol(a))
               .font(.title3.bold())
               .lineLimit(1).minimumScaleFactor(0.7)
-              .frame(maxWidth: .infinity, minHeight: 34)
+              .frame(maxWidth: .infinity, minHeight: 32)
           }
           .buttonStyle(.borderedProminent)
-          .controlSize(.large)
+          .controlSize(.regular)
           .tint(color) // owner (17 Nov): every card button in the theme colour
         }
       }

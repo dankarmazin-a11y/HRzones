@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../feedback/problem_log.dart';
 import 'hr_drift.dart';
 
 import 'package:drift/drift.dart' show Value;
@@ -327,7 +328,27 @@ class RunSession extends ChangeNotifier {
 
   void _liveStart() {
     if (!active) return;
-    live?.start('run', _planName ?? (_treadmill ? 'Treadmill run' : 'Run'), liveCard);
+    final l = live;
+    if (l == null) return;
+    liveProblem.value = null;
+    l.start('run', _planName ?? (_treadmill ? 'Treadmill run' : 'Run'), liveCard).then((_) => _checkLive(l));
+  }
+
+  /// Why the lock-screen card didn't show for this outing (owner, 22 Nov: no
+  /// card on a run) – shown on the live screen and kept in Report a problem.
+  final liveProblem = ValueNotifier<String?>(null);
+
+  Future<void> _checkLive(LiveActivity l) async {
+    if (await l.status() == null) return; // web / tests: no card to check
+    await Future<void>.delayed(const Duration(seconds: 3));
+    if (!active) return;
+    final m = await l.status();
+    if (m == null || m['android'] == true || m['old'] == true) return;
+    final running = (m['running'] as num?)?.toInt() ?? 0;
+    if (running > 0 && m['lastError'] == null) return;
+    final why = liveStatusText(m);
+    liveProblem.value = why.startsWith('Ready') ? 'The iPhone did not show the lock-screen card.' : why;
+    ProblemLog.instance.record('Lock-screen card did not start for a ${_word(_chosen)}: ${liveProblem.value} $m');
   }
 
   void _pushLive({bool now = false}) {

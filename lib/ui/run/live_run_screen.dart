@@ -115,6 +115,25 @@ class _LiveRunScreenState extends State<LiveRunScreen> {
                             seconds: run.moving.inMilliseconds / 1000,
                           ),
                         ),
+                      ValueListenableBuilder<String?>(
+                        valueListenable: run.liveProblem,
+                        builder: (context, why, _) => why == null
+                            ? const SizedBox.shrink()
+                            : Container(
+                                key: const Key('liveCardProblem'),
+                                width: double.infinity,
+                                margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.withValues(alpha: 0.18),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  'No lock-screen card: $why',
+                                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                                ),
+                              ),
+                      ),
                       if (run.autoPaused)
                         Container(
                           key: const Key('autoPausedBanner'),

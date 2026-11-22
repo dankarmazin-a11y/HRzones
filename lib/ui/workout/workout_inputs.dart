@@ -21,6 +21,9 @@ Future<DateTime?> pickWorkoutStart(BuildContext context, DateTime initial) async
 /// The barbell weight being typed (owner, 17 Nov): the keyboard bar shows its
 /// plates. Weight in kg; null when no barbell weight field has focus.
 typedef PlateTarget = ({String exerciseId, double kg});
+
+/// No plate picture above this (nobody loads more than ~600 kg on a bar).
+const maxPreviewKg = 600.0;
 final platePreview = ValueNotifier<PlateTarget?>(null);
 
 class SetNumberField extends StatefulWidget {
@@ -97,7 +100,11 @@ class _SetNumberFieldState extends State<SetNumberField> {
       autofocus: widget.autofocus,
       textAlign: TextAlign.center,
       keyboardType: TextInputType.numberWithOptions(decimal: widget.decimal),
-      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(widget.decimal ? r'[0-9.,]' : r'[0-9]'))],
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(widget.decimal ? r'[0-9.,]' : r'[0-9]')),
+        // "999.75" at most – a stray 1000000 crashed the app (22 Nov)
+        LengthLimitingTextInputFormatter(widget.decimal ? 6 : 5),
+      ],
       decoration: InputDecoration(
         isDense: true,
         hintText: widget.hint,
@@ -147,24 +154,32 @@ class KeyboardBar extends StatelessWidget {
     return TextFieldTapRegion(
       child: Material(
         color: scheme.surfaceContainerHighest,
+        // owner (22 Nov): Next and Done fill the whole line – big, easy to hit
         child: SizedBox(
-          height: 44,
+          height: 48,
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(width: 8),
-              const Flexible(child: _PlatePreview()),
-              const Spacer(),
-              TextButton(
-                key: const Key('keyboardNext'),
-                onPressed: () => focusNextNumberField(context),
-                child: const Text('Next'),
+              const Padding(
+                padding: EdgeInsets.only(left: 6),
+                child: Center(child: _PlatePreview()),
               ),
-              TextButton(
-                key: const Key('keyboardDone'),
-                onPressed: () => FocusManager.instance.primaryFocus?.unfocus(),
-                child: const Text('Done', style: TextStyle(fontWeight: FontWeight.bold)),
+              Expanded(
+                child: TextButton(
+                  key: const Key('keyboardNext'),
+                  style: TextButton.styleFrom(shape: const RoundedRectangleBorder()),
+                  onPressed: () => focusNextNumberField(context),
+                  child: const Text('Next', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+                ),
               ),
-              const SizedBox(width: 8),
+              Expanded(
+                child: TextButton(
+                  key: const Key('keyboardDone'),
+                  style: TextButton.styleFrom(shape: const RoundedRectangleBorder()),
+                  onPressed: () => FocusManager.instance.primaryFocus?.unfocus(),
+                  child: const Text('Done', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+                ),
+              ),
             ],
           ),
         ),
@@ -248,6 +263,8 @@ class _PlatePreview extends StatelessWidget {
           final setup = snap.data;
           if (setup == null) return const SizedBox.shrink();
           final lb = Units.lb;
+          // A typo like 1000000 kg must not try to draw a million plates (it froze the app, 22 Nov).
+          if (target.kg > maxPreviewKg) return const SizedBox.shrink();
           final result = platesPerSide(Units.toW(target.kg), bar: setup.$1, plates: setup.$2);
           if (result.perSide.isEmpty) return const SizedBox.shrink();
           final biggest = lb ? 45.0 : 25.0;

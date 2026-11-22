@@ -13,13 +13,18 @@ class PlateResult {
   final double remainder;
 }
 
+/// Most plates the calculators will put on one side.
+const maxPlatesPerSide = 40;
+
 /// Which plates to put on each side of a [bar] to reach [target] kg.
 PlateResult platesPerSide(double target, {double bar = 20, List<double> plates = standardPlates}) {
   var side = (target - bar) / 2;
   if (side <= 0) return PlateResult(perSide: const [], remainder: target < bar ? 0 : target - bar);
   final out = <double>[];
   for (final p in plates) {
-    while (side + 1e-9 >= p) {
+    if (p <= 0) continue;
+    // No bar holds more than ~40 plates a side; a typo like 1,000,000 kg used to loop forever.
+    while (side + 1e-9 >= p && out.length < maxPlatesPerSide) {
       out.add(p);
       side -= p;
     }
