@@ -62,6 +62,9 @@ polish later.
 16. **Button style check (owner, 17 Nov)**: a mockup with every button in the app side by side
    (round timer buttons, pills, chips, filled / outlined, icon buttons) to make sure they follow
    one style language and line up; then fix the odd ones out.
+17. **Skip button on every timer (owner, 22 Nov – for later)**: every timer in the app gets a
+   Skip – rest, timed sets / holds, switch sides, interval and ab-workout steps, quick countdowns,
+   the 3-2-1 before a run, planned-run time steps – in the same button style everywhere.
 
 ## Suggested order
 A1–A4 (bugs) → B11, B8, B5 (quick wins) → B7, B9, B10 → B6 (lock-screen buttons) →
