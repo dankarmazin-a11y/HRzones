@@ -30,8 +30,11 @@ import kotlin.math.sin
  *
  * - Sounds are generated (same formulas as iOS) and played with a short AudioTrack. They mix
  *   over the user's music (no audio focus is taken for a beep, like iOS .mixWithOthers).
- * - Spoken updates use TextToSpeech and ask for *transient focus with ducking*: the music is
- *   turned down while talking and comes back when the sentence is over.
+ * - Spoken updates use TextToSpeech. With `duck` (setting "Lower music while talking") they ask
+ *   for *transient focus with ducking*: the music is turned down while talking and comes back
+ *   when the sentence is over. Without it (the default) the voice just mixes over the music and
+ *   no audio focus is taken – some music apps paused or came back louder after a duck.
+ *   Older Dart code sends no `duck`: then it ducks as before.
  * - start/stop holds: Android keeps the app alive with the screen off through the foreground
  *   service (Phase 5 step 4), not through the audio, so here they only record that sound is
  *   wanted.
@@ -51,7 +54,7 @@ class BeeperPlugin(private val context: Context, messenger: BinaryMessenger) : M
 
   private var tts: TextToSpeech? = null
   private var ttsReady = false
-  private val pendingSpeech = mutableListOf<Pair<String, String>>()
+  private val pendingSpeech = mutableListOf<Triple<String, String, Boolean>>()
   private var focusRequest: AudioFocusRequest? = null
   private var utteranceId = 0
 
@@ -106,7 +109,11 @@ class BeeperPlugin(private val context: Context, messenger: BinaryMessenger) : M
           result.success(null)
         }
         "speak" -> {
-          speak(call.argument<String>("text") ?: "", call.argument<String>("voice") ?: "default")
+          speak(
+            call.argument<String>("text") ?: "",
+            call.argument<String>("voice") ?: "default",
+            call.argument<Boolean>("duck") ?: true,
+          )
           result.success(null)
         }
         "setVolume" -> {
@@ -175,11 +182,11 @@ class BeeperPlugin(private val context: Context, messenger: BinaryMessenger) : M
 
   // ------------------------------------------------------------------ speech
 
-  private fun speak(text: String, voice: String) {
+  private fun speak(text: String, voice: String, duck: Boolean) {
     if (text.isEmpty()) return
     val engine = tts
     if (engine == null) {
-      pendingSpeech.add(text to voice)
+      pendingSpeech.add(Triple(text, voice, duck))
       tts = TextToSpeech(context) { status ->
         main.post {
           ttsReady = status == TextToSpeech.SUCCESS
@@ -188,24 +195,24 @@ class BeeperPlugin(private val context: Context, messenger: BinaryMessenger) : M
           if (ttsReady) {
             tts?.setAudioAttributes(speechAttributes)
             tts?.setOnUtteranceProgressListener(progress)
-            waiting.forEach { (t, v) -> say(t, v) }
+            waiting.forEach { (t, v, d) -> say(t, v, d) }
           }
         }
       }
       return
     }
     if (!ttsReady) {
-      pendingSpeech.add(text to voice)
+      pendingSpeech.add(Triple(text, voice, duck))
       return
     }
-    say(text, voice)
+    say(text, voice, duck)
   }
 
-  private fun say(text: String, kind: String) {
+  private fun say(text: String, kind: String, duck: Boolean) {
     val engine = tts ?: return
     engine.language = Locale.US
     englishVoice(engine, kind)?.let { engine.voice = it }
-    duck()
+    if (duck) duck()
     utteranceId += 1
     // One volume for all the app's sounds (Settings › Sounds), like iOS; never fully silent.
     val params = Bundle().apply { putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, volume.coerceIn(0.1f, 1f)) }
