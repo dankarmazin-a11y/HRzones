@@ -82,6 +82,8 @@ void main() {
       300,
       scrollable: find.byType(Scrollable).first,
     );
+    await tester.ensureVisible(find.byKey(const Key('soundVolume')));
+    await settle(tester);
     await tester.drag(find.byKey(const Key('soundVolume')), const Offset(-400, 0));
     await settle(tester);
     expect(s.hr.volume, lessThan(0.5));
