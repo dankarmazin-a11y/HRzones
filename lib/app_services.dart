@@ -152,6 +152,12 @@ class AppServices {
     await db.setSetting('runVoiceGait', on ? '1' : '0');
   }
 
+  /// Lower the music while the voice speaks (setting `voiceDuck`, default off).
+  Future<void> setVoiceDuck(bool on) async {
+    hr.beeper.duckMusic = on;
+    await db.setSetting('voiceDuck', on ? '1' : '0');
+  }
+
   /// Voice updates during runs (setting `runVoice`, default on) every
   /// [RunVoice.everyM] metres (setting `runVoiceEvery`, default 1000).
   Future<void> setRunVoice({bool? on, int? everyM, Set<VoiceItem>? items, String? kind, bool? spokenAlerts}) async {
@@ -488,6 +494,7 @@ class AppServices {
       ..everyM = await getInt('runVoiceEvery') ?? 1000
       ..kind = await db.getSetting('runVoiceKind') ?? 'default'
       ..spokenAlerts = await db.getSetting('spokenAlerts') != '0';
+    hr.beeper.duckMusic = await db.getSetting('voiceDuck') == '1';
     final items = await db.getSetting('runVoiceItems');
     if (items != null) {
       run.voice!.items = {for (final n in items.split(',')) ?VoiceItem.values.where((i) => i.name == n).firstOrNull};

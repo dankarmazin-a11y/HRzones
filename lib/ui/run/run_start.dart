@@ -22,6 +22,8 @@ import '../../run/geo.dart';
 import '../../units/units.dart';
 import 'pace_alert.dart';
 import '../../run/run_plan.dart';
+import '../../run/run_session.dart';
+import '../../live/live_activity.dart';
 import '../../data/shoe_repository.dart';
 import 'shoes.dart' show editShoe;
 import 'bike_sensors_sheet.dart';
@@ -193,7 +195,29 @@ class _RunCountdownScreenState extends State<RunCountdownScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => mounted ? _begin() : null);
   }
 
+  LiveActivity? _live;
+
   void _begin() {
+    // owner (22 + 26 Nov): no card on cardio. iOS only lets the app put a card up while it is
+    // on screen – the run starts at GO, often after the phone was locked. So the card goes up
+    // now ("Get ready" counting down) and the run only updates it.
+    final s = Services.of(context);
+    if (!s.run.active) {
+      final now = DateTime.now();
+      _live = s.live;
+      s.live.start(
+        'run',
+        RunSession.cardName(plan: widget.plan?.name, treadmill: widget.treadmill, activity: widget.activity),
+        LiveCard(
+          title: 'Get ready',
+          detail: RunSession.cardName(treadmill: widget.treadmill, activity: widget.activity),
+          clockStart: now,
+          countdownStart: now,
+          countdownEnd: now.add(Duration(seconds: _left)),
+          countdownLabel: 'Starting',
+        ),
+      );
+    }
     if (_left <= 0) {
       _go();
       return;
@@ -234,6 +258,7 @@ class _RunCountdownScreenState extends State<RunCountdownScreen> {
     );
     if (!mounted) return;
     if (access != LocationAccess.granted) {
+      if (!s.run.active) s.live.end(kind: 'run');
       nav.pop();
       return;
     }
@@ -250,6 +275,8 @@ class _RunCountdownScreenState extends State<RunCountdownScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    // Cancelled before GO (or no location): take the "Get ready" card away.
+    if (!_started) _live?.end(kind: 'run');
     super.dispose();
   }
 

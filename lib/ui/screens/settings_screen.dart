@@ -393,6 +393,18 @@ class _RunVoiceSettingsState extends State<RunVoiceSettings> {
               setState(() {});
             },
           ),
+          SwitchListTile(
+            key: const Key('voiceDuck'),
+            contentPadding: EdgeInsets.zero,
+            secondary: const Icon(Icons.music_note_outlined),
+            title: const Text('Lower music while speaking'),
+            subtitle: const Text('Off: the voice plays over your music, which stays as it is'),
+            value: s.hr.beeper.duckMusic,
+            onChanged: (on) async {
+              await s.setVoiceDuck(on);
+              setState(() {});
+            },
+          ),
           const PaceAlertRow(),
           const SpeedAlertRow(),
           const BikeSensorsRow(),

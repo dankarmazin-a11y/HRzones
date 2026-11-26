@@ -48,9 +48,16 @@ abstract class Beeper {
   /// played [count] times.
   Future<void> sound(String name, {int count = 1});
 
-  /// Says [text] out loud (voice updates during runs). Other apps' music is
-  /// turned down while speaking. [voice]: "default", "female" or "male".
+  /// Says [text] out loud (voice updates during runs). [voice]: "default",
+  /// "female" or "male". The music plays on at its own volume unless
+  /// [duckMusic] is on.
   Future<void> speak(String text, {String voice = 'default'});
+
+  /// Setting `voiceDuck` (default off, owner 26 Nov): turn other apps' music
+  /// down while the voice speaks. iOS brings the music back by switching our
+  /// audio off and on, which some music apps answered by stopping or by
+  /// coming back louder – so by default the voice just plays over the music.
+  bool duckMusic = false;
 
   /// The sound picked for each event (Settings › Sounds); missing = classic.
   final choices = <SoundEvent, SoundChoice>{};
@@ -118,7 +125,8 @@ class NativeBeeper extends Beeper {
   Future<void> sound(String name, {int count = 1}) => _call('sound', {'name': name, 'count': count});
 
   @override
-  Future<void> speak(String text, {String voice = 'default'}) => _call('speak', {'text': text, 'voice': voice});
+  Future<void> speak(String text, {String voice = 'default'}) =>
+      _call('speak', {'text': text, 'voice': voice, 'duck': duckMusic});
 }
 
 /// Used on web and in tests: records calls instead of making sound.

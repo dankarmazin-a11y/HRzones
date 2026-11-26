@@ -51,7 +51,7 @@ struct WorkoutLiveActivity: Widget {
         Image(systemName: icon(context.attributes)).foregroundStyle(accent(context.state))
       } compactTrailing: {
         if let end = context.state.countdownEnd, end > Date() {
-          Text(timerInterval: Date()...end, countsDown: true)
+          Text(end, style: .timer)
             .monospacedDigit().frame(maxWidth: 48).foregroundStyle(accent(context.state))
         } else {
           Clock(state: context.state).monospacedDigit().frame(maxWidth: 52)
@@ -59,7 +59,7 @@ struct WorkoutLiveActivity: Widget {
       } minimal: {
         // With music playing iOS shows this small form: the countdown while a timer runs
         if let end = context.state.countdownEnd, end > Date() {
-          Text(timerInterval: Date()...end, countsDown: true)
+          Text(end, style: .timer)
             .monospacedDigit().font(.caption2.bold()).minimumScaleFactor(0.6)
             .frame(maxWidth: 40).foregroundStyle(accent(context.state))
         } else {
@@ -117,7 +117,9 @@ private struct TimerBar: View {
       HStack {
         Text(label ?? "Rest").font(.subheadline.weight(.semibold))
         Spacer(minLength: 8)
-        Text(timerInterval: from...end, countsDown: true)
+        // A plain timer text never freezes at 0:00 (timerInterval: did when the app was
+        // asleep at the end – owner 26 Nov); it counts on until iOS redraws the card.
+        Text(end, style: .timer)
           .font(.title3.monospacedDigit().bold())
           .multilineTextAlignment(.trailing)
           .frame(maxWidth: 90, alignment: .trailing)
@@ -134,30 +136,22 @@ private struct TimerBar: View {
   }
 }
 
-/// "Rest ━━━━━━━──── 0:41" on one line (the bar empties by itself).
-private struct TimerLine: View {
-  let label: String?
+/// A thin line under the title that empties by itself during a countdown.
+private struct ThinTimerBar: View {
   let start: Date?
   let end: Date
   let color: Color
 
   var body: some View {
     let from = min(start ?? Date(), end.addingTimeInterval(-1))
-    HStack(spacing: 8) {
-      Text(label ?? "Rest").font(.subheadline.weight(.bold)).lineLimit(1)
-      ProgressView(timerInterval: from...end, countsDown: true) {
-        EmptyView()
-      } currentValueLabel: {
-        EmptyView()
-      }
-      .progressViewStyle(.linear)
-      .tint(color)
-      Text(timerInterval: from...end, countsDown: true)
-        .font(.headline.monospacedDigit().bold())
-        .multilineTextAlignment(.trailing)
-        .frame(width: 56, alignment: .trailing)
+    ProgressView(timerInterval: from...end, countsDown: true) {
+      EmptyView()
+    } currentValueLabel: {
+      EmptyView()
     }
-    .foregroundStyle(color)
+    .progressViewStyle(.linear)
+    .tint(color)
+    .frame(height: 4)
   }
 }
 
@@ -196,6 +190,9 @@ private struct LockScreenView: View {
   var body: some View {
     let over = stale || (state.countdownEnd.map { $0 <= Date() } ?? false)
     let actions = (state.actions ?? []).map { over && $0 == "skipRest" ? "completeSet" : $0 }
+    // A countdown is shown until it is over; once iOS marks the card stale at its end, the
+    // workout clock comes back.
+    let countdown: Date? = over || state.paused ? nil : state.countdownEnd
     // owner (22 Nov): the lock screen gives a card at most ~160 pt – anything taller is cut off at
     // the top (the name and clock were hidden). One compact block: title + clock, detail, a
     // one-line timer, then numbers and the button.
@@ -208,16 +205,30 @@ private struct LockScreenView: View {
           .font(.system(size: 21, weight: .heavy, design: .rounded))
           .foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.6)
         Spacer(minLength: 6)
-        Clock(state: state)
-          .font(.title3.monospacedDigit().bold()).foregroundStyle(.white.opacity(0.9))
-          .multilineTextAlignment(.trailing)
-          .frame(maxWidth: 92, alignment: .trailing)
+        if let end = countdown {
+          // owner (26 Nov): the timer filled too much of the card – the countdown takes the
+          // clock's place, with a thin bar under the title instead of a row of its own.
+          HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Text(state.countdownLabel ?? "Rest").font(.caption.bold()).lineLimit(1)
+            Text(end, style: .timer)
+              .font(.title3.monospacedDigit().bold())
+              .multilineTextAlignment(.trailing)
+              .frame(maxWidth: 70, alignment: .trailing)
+          }
+          .foregroundStyle(accent(state))
+          .frame(maxWidth: 130, alignment: .trailing)
+        } else {
+          Clock(state: state)
+            .font(.title3.monospacedDigit().bold()).foregroundStyle(.white.opacity(0.9))
+            .multilineTextAlignment(.trailing)
+            .frame(maxWidth: 92, alignment: .trailing)
+        }
       }
       // owner (17 Nov): the set and weight bold white – grey on dark was hard to read
       Text(state.paused ? "Paused · \(state.detail)" : (state.detail.isEmpty ? attributes.name : state.detail))
         .font(.system(size: 16, weight: .bold)).foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.7)
-      if let end = state.countdownEnd, end > Date() {
-        TimerLine(label: state.countdownLabel, start: state.countdownStart, end: end, color: accent(state))
+      if let end = countdown {
+        ThinTimerBar(start: state.countdownStart, end: end, color: accent(state))
       }
       // Numbers on the left half, the button on the right half
       HStack(alignment: .center, spacing: 10) {

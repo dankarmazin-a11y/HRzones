@@ -331,7 +331,9 @@ class RunSession extends ChangeNotifier {
     final l = live;
     if (l == null) return;
     liveProblem.value = null;
-    l.start('run', _planName ?? (_treadmill ? 'Treadmill run' : 'Run'), liveCard).then((_) => _checkLive(l));
+    l
+        .start('run', cardName(plan: _planName, treadmill: _treadmill, activity: _chosen), liveCard)
+        .then((_) => _checkLive(l));
   }
 
   /// Why the lock-screen card didn't show for this outing (owner, 22 Nov: no
@@ -937,6 +939,14 @@ class RunSession extends ChangeNotifier {
       voice?.zoneGoal(zoneGoalMin);
     }
   }
+
+  /// The name on the lock-screen card. The countdown screen starts the card
+  /// with the same name (iOS keeps it and only updates the card).
+  static String cardName({String? plan, bool treadmill = false, RunActivity activity = RunActivity.run}) =>
+      plan ??
+      (treadmill
+          ? (activity == RunActivity.ride ? 'Indoor ride' : 'Treadmill ${_word(activity).toLowerCase()}')
+          : _word(activity));
 
   static String _word(RunActivity a) => switch (a) {
     RunActivity.run => 'Run',

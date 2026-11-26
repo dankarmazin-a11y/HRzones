@@ -116,37 +116,93 @@ final class LiveActivityPlugin: NSObject, FlutterPlugin {
 private enum LiveActivities {
   static var current: Activity<WorkoutAttributes>?
 
+  /// A card iOS refused because the app wasn't on screen (cards can only be
+  /// started from the foreground – owner locked the phone during the 3-2-1
+  /// before a run). Tried again as soon as the app is opened.
+  static var pending: (kind: String, name: String, state: WorkoutAttributes.ContentState)?
+  static var observer: NSObjectProtocol?
+
   static func start(kind: String, name: String, state: WorkoutAttributes.ContentState) async {
-    // Only one card at a time (also cleans up after the app was closed).
-    await endAll()
-    guard ActivityAuthorizationInfo().areActivitiesEnabled else {
-      LiveActivityPlugin.lastError = "Live Activities are off for HR Zones (iPhone Settings › HR Zones)."
-      return
+    await keepAwake {
+      // The same card is already up (the run countdown starts it, the run
+      // itself only fills it in): just update it – no end + new request,
+      // which fails when the phone is locked by then.
+      if let a = Activity<WorkoutAttributes>.activities.first(where: {
+        $0.attributes.kind == kind && $0.attributes.name == name && $0.activityState != .ended && $0.activityState != .dismissed
+      }) {
+        current = a
+        pending = nil
+        for other in Activity<WorkoutAttributes>.activities where other.id != a.id {
+          await other.end(nil, dismissalPolicy: .immediate)
+        }
+        await a.update(ActivityContent(state: state, staleDate: state.countdownEnd))
+        return
+      }
+      // Only one card at a time (also cleans up after the app was closed).
+      await endAll()
+      guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+        LiveActivityPlugin.lastError = "Live Activities are off for HR Zones (iPhone Settings › HR Zones)."
+        return
+      }
+      do {
+        current = try Activity.request(
+          attributes: WorkoutAttributes(kind: kind, name: name),
+          content: ActivityContent(state: state, staleDate: state.countdownEnd),
+          pushType: nil)
+        LiveActivityPlugin.lastError = nil
+        pending = nil
+      } catch {
+        let inBackground = await MainActor.run { UIApplication.shared.applicationState != .active }
+        LiveActivityPlugin.lastError =
+          inBackground ? "The app was not on screen when the card was started (\(error))." : "\(error)"
+        NSLog("Live Activity not started: \(error)")
+        if inBackground { waitForForeground(kind: kind, name: name, state: state) }
+      }
     }
-    do {
-      current = try Activity.request(
-        attributes: WorkoutAttributes(kind: kind, name: name),
-        content: ActivityContent(state: state, staleDate: state.countdownEnd),
-        pushType: nil)
-      LiveActivityPlugin.lastError = nil
-    } catch {
-      LiveActivityPlugin.lastError = "\(error)"
-      NSLog("Live Activity not started: \(error)")
+  }
+
+  private static func waitForForeground(kind: String, name: String, state: WorkoutAttributes.ContentState) {
+    pending = (kind, name, state)
+    guard observer == nil else { return }
+    observer = NotificationCenter.default.addObserver(
+      forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
+    ) { _ in
+      guard let p = LiveActivities.pending else { return }
+      LiveActivities.pending = nil
+      Task { await LiveActivities.start(kind: p.kind, name: p.name, state: p.state) }
     }
   }
 
   static func update(_ state: WorkoutAttributes.ContentState) async {
-    guard let a = current ?? Activity<WorkoutAttributes>.activities.first else { return }
-    current = a
-    // The countdown's end is the stale date: iOS redraws the card then by itself (the timer
-    // bar disappears) even when the app is asleep – it used to stay on "0:00".
-    await a.update(ActivityContent(state: state, staleDate: state.countdownEnd))
+    if let p = pending {
+      // Still waiting to be shown: show the newest numbers when it is.
+      pending = (p.kind, p.name, state)
+      return
+    }
+    await keepAwake {
+      guard let a = current ?? Activity<WorkoutAttributes>.activities.first else { return }
+      current = a
+      // The countdown's end is the stale date: iOS redraws the card then by itself even when
+      // the app is asleep (the countdown makes way for the clock).
+      await a.update(ActivityContent(state: state, staleDate: state.countdownEnd))
+    }
   }
 
   static func endAll() async {
+    pending = nil
     for a in Activity<WorkoutAttributes>.activities {
       await a.end(nil, dismissalPolicy: .immediate)
     }
     current = nil
+  }
+
+  /// Asks iOS for a few seconds more so a card change sent just as the
+  /// phone locks (end of a rest) isn't lost when the app is put to sleep.
+  private static func keepAwake(_ work: () async -> Void) async {
+    let id = await MainActor.run { UIApplication.shared.beginBackgroundTask(withName: "live-card") }
+    await work()
+    if id != .invalid {
+      await MainActor.run { UIApplication.shared.endBackgroundTask(id) }
+    }
   }
 }

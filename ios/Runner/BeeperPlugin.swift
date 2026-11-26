@@ -23,6 +23,13 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
   /// Between speak() and the end of the last sentence: the session must keep
   /// ducking the music and must not be switched off (that cuts the voice).
   private var talking = false
+  /// The current sentence turns the music down (setting "Lower music while
+  /// speaking", off by default – owner 26 Nov: ducking stopped or raised the
+  /// music now and then).
+  private var ducking = false
+  /// Bumped by every sentence: a sentence that follows straight on keeps the
+  /// session as it is instead of switching it off and on in between.
+  private var speechGeneration = 0
 
   override init() {
     super.init()
@@ -104,7 +111,9 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
         try play(repeated(makeSound(name), count: count))
         result(nil)
       case "speak":
-        try speak(args?["text"] as? String ?? "", voice: args?["voice"] as? String ?? "default")
+        try speak(
+          args?["text"] as? String ?? "", voice: args?["voice"] as? String ?? "default",
+          duck: (args?["duck"] as? NSNumber)?.boolValue ?? false)
         result(nil)
       case "setVolume":
         volume = Float((args?["volume"] as? NSNumber)?.doubleValue ?? 0.7)
@@ -141,7 +150,7 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
   /// must not undo the ducking.)
   private func applyCategory() throws {
     let session = AVAudioSession.sharedInstance()
-    if talking {
+    if talking && ducking {
       try session.setCategory(.playback, mode: .voicePrompt, options: [.mixWithOthers, .duckOthers])
     } else {
       try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
@@ -167,14 +176,21 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
     return voices.first ?? fallback
   }
 
-  private func speak(_ text: String, voice: String) throws {
+  private func speak(_ text: String, voice: String, duck: Bool) throws {
     guard !text.isEmpty else { return }
+    speechGeneration += 1
+    let wasDucking = talking && ducking
     talking = true
+    // Once ducked, stay ducked until the last sentence is over.
+    ducking = duck || wasDucking
     do {
-      try applyCategory()
+      // Only change the category when it really changes: switching it
+      // while music plays is what made the music stop or jump.
+      if ducking != wasDucking { try applyCategory() }
       try AVAudioSession.sharedInstance().setActive(true)
     } catch {
       talking = false
+      ducking = false
       throw error
     }
     let utterance = AVSpeechUtterance(string: text)
@@ -185,12 +201,32 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
 
   /// After speaking: other apps' music only comes back to full volume when
   /// our session is deactivated; then the beeper is started again if needed.
+  /// Waits a moment first: the next sentence often follows straight on
+  /// ("5 kilometres." … "New record!"), and switching the audio off and on
+  /// in between is what made music apps stop or come back louder.
+  private func speechEnded() {
+    let g = speechGeneration
+    DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(800)) { [weak self] in
+      guard let self, self.speechGeneration == g, !self.speech.isSpeaking else { return }
+      self.unduck()
+    }
+  }
+
   private func unduck() {
-    guard !speech.isSpeaking else { return }
+    guard talking, !speech.isSpeaking else { return }
+    let wasDucking = ducking
     talking = false
+    ducking = false
+    let session = AVAudioSession.sharedInstance()
+    if !wasDucking {
+      // The voice only played over the music: nothing to give back. Switch
+      // the audio off only when nothing else needs it (no "notify" – the
+      // music was never interrupted).
+      if !wanted && !engine.isRunning { try? session.setActive(false) }
+      return
+    }
     player.stop()
     engine.stop()
-    let session = AVAudioSession.sharedInstance()
     try? session.setActive(false, options: .notifyOthersOnDeactivation)
     try? applyCategory()
     if wanted { try? start() }
@@ -432,10 +468,10 @@ final class BeeperPlugin: NSObject, FlutterPlugin {
 
 extension BeeperPlugin: AVSpeechSynthesizerDelegate {
   func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-    DispatchQueue.main.async { [weak self] in self?.unduck() }
+    DispatchQueue.main.async { [weak self] in self?.speechEnded() }
   }
 
   func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
-    DispatchQueue.main.async { [weak self] in self?.unduck() }
+    DispatchQueue.main.async { [weak self] in self?.speechEnded() }
   }
 }
