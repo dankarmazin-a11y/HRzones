@@ -34,7 +34,26 @@ class WorkoutService : Service() {
   override fun onBind(intent: Intent?): IBinder? = null
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-    val notification = latest ?: return START_NOT_STICKY.also { stopSelf() }
+    val card = latest
+    if (card == null) {
+      // Ended before the service got going (a run's 3-2-1 countdown cancelled right away).
+      // A service started with startForegroundService must still call startForeground, or
+      // Android stops the whole app; show a blank card for a moment and go.
+      try {
+        ensureChannel(this)
+        val blank = Notification.Builder(this, CHANNEL_ID).setSmallIcon(R.drawable.ic_notification).build()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+          startForeground(NOTIFICATION_ID, blank, serviceType(this, kind).takeIf { it != 0 }
+            ?: ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
+        } else {
+          startForeground(NOTIFICATION_ID, blank)
+        }
+      } catch (_: Exception) {}
+      stopForeground(STOP_FOREGROUND_REMOVE)
+      stopSelf()
+      return START_NOT_STICKY
+    }
+    val notification = card
     try {
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         val type = serviceType(this, kind)
@@ -133,6 +152,13 @@ class WorkoutService : Service() {
       ensureChannel(context)
       this.kind = kind
       latest = notification
+      // Android 14+ without location / activity permission: no foreground service is allowed.
+      // Don't start one (a started service that never goes foreground stops the whole app);
+      // just show the card.
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && serviceType(context, kind) == 0) {
+        notificationManager(context).notify(NOTIFICATION_ID, notification)
+        return
+      }
       val intent = Intent(context, WorkoutService::class.java)
       try {
         context.startForegroundService(intent)
